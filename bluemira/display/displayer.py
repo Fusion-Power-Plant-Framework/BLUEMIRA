@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple, Union
 
 import matplotlib.colors as colors
 
-from bluemira.codes import _freecadapi as cadapi
 from bluemira.display.error import DisplayError
 from bluemira.display.palettes import BLUE_PALETTE
 from bluemira.display.plotter import DisplayOptions
@@ -154,6 +153,8 @@ def show_cad(
     options: Optional[Union[_PlotCADOptions, List[_PlotCADOptions]]]
         The options to use to display the parts.
     """
+    from bluemira.codes import _freecadapi as cadapi
+
     parts, options = _validate_display_inputs(parts, options)
 
     new_options = []

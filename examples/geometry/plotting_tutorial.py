@@ -28,9 +28,9 @@ import matplotlib.pyplot as plt
 import bluemira.display as display
 import bluemira.geometry.tools
 from bluemira.base.components import Component, PhysicalComponent
-from bluemira.display.plotter import FacePlotter, WirePlotter
-from bluemira.geometry.face import BluemiraFace
+from bluemira.geometry.face import BluemiraFace, FacePlotter
 from bluemira.geometry.parameterisations import PrincetonD
+from bluemira.geometry.wire import WirePlotter
 
 # %%[markdown]
 # ## Setup

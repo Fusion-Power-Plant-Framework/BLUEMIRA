@@ -27,14 +27,12 @@ from __future__ import annotations
 
 from typing import List
 
+import mpl_toolkits.mplot3d as a3
 import numpy as np
 
 import bluemira.codes._freecadapi as cadapi
-
-# import from bluemira
+from bluemira.display.plotter import BasePlotter, get_plotter, register_plotter
 from bluemira.geometry.base import BluemiraGeo
-
-# import from error
 from bluemira.geometry.error import DisjointedFace, NotClosedWire
 from bluemira.geometry.wire import BluemiraWire
 
@@ -164,3 +162,68 @@ class BluemiraFace(BluemiraGeo):
             else:
                 points.append(cadapi.discretize(w, ndiscr=ndiscr, dl=dl))
         return points
+
+
+class FacePlotter(BasePlotter):
+    """
+    Plotting class for bluemira faces.
+    """
+
+    _CLASS_PLOT_OPTIONS = {"show_points": False, "show_wires": False}
+
+    def _check_obj(self, obj):
+        if not isinstance(obj, BluemiraFace):
+            raise ValueError(f"{obj} must be a BluemiraFace")
+        return True
+
+    def _check_options(self):
+        # Check if nothing has to be plotted
+        if (
+            not self.options.show_points
+            and not self.options.show_wires
+            and not self.options.show_faces
+        ):
+            return False
+
+        return True
+
+    def _populate_data(self, face):
+        self._data = []
+        self._wplotters = []
+        # TODO: the for must be done using face._shape.Wires because FreeCAD
+        #  re-orient the Wires in the correct way for display. Find another way to do
+        #  it (maybe adding this function to the freecadapi.
+        for w in face._shape.Wires:
+            boundary = BluemiraWire(w)
+            wplotter = get_plotter(boundary)(self.options)
+            self._wplotters.append(wplotter)
+            wplotter._populate_data(boundary)
+            self._data.extend(wplotter._data.tolist())
+        self._data = np.array(self._data)
+
+        self._data_to_plot = [[], []]
+        for w in self._wplotters:
+            self._data_to_plot[0] += w._data_to_plot[0].tolist() + [None]
+            self._data_to_plot[1] += w._data_to_plot[1].tolist() + [None]
+
+    def _make_plot_2d(self):
+        if self.options.show_faces:
+            self.ax.fill(*self._data_to_plot, **self.options.face_options)
+
+        for w in self._wplotters:
+            w.ax = self.ax
+            w._make_plot_2d()
+        self._set_aspect_2d()
+
+    def _make_plot_3d(self):
+        if self.options.show_faces:
+            poly = a3.art3d.Poly3DCollection([self._data], **self.options.face_options)
+            self.ax.add_collection3d(poly)
+
+        for w in self._wplotters:
+            w.ax = self.ax
+            w._make_plot_3d()
+        self._set_aspect_3d()
+
+
+register_plotter(BluemiraFace, FacePlotter)

@@ -32,7 +32,12 @@ from anytree import NodeMixin, RenderTree
 
 from bluemira.base.error import ComponentError
 from bluemira.display.displayer import DisplayableCAD
-from bluemira.display.plotter import Plottable
+from bluemira.display.plotter import (
+    BasePlotter,
+    Plottable,
+    get_plotter,
+    register_plotter,
+)
 
 if TYPE_CHECKING:
     from bluemira.geometry.base import BluemiraGeo
@@ -248,3 +253,65 @@ class MagneticComponent(PhysicalComponent):
     @conductor.setter
     def conductor(self, value):
         self._conductor = value
+
+
+class ComponentPlotter(BasePlotter):
+    """
+    Plotting class for bluemira components.
+    """
+
+    _CLASS_PLOT_OPTIONS = {"show_points": False, "show_wires": False}
+
+    def _check_obj(self, obj):
+        if not isinstance(obj, Component):
+            raise ValueError(f"{obj} must be a BluemiraComponent")
+        return True
+
+    def _check_options(self):
+        # Check if nothing has to be plotted
+        if (
+            not self.options.show_points
+            and not self.options.show_wires
+            and not self.options.show_faces
+        ):
+            return False
+
+        return True
+
+    def _populate_data(self, comp: Component):
+        self._cplotters: List[BasePlotter] = []
+
+        def _populate_plotters(comp: Component):
+            if comp.is_leaf and hasattr(comp, "shape"):
+                options = (
+                    self.options if comp.plot_options is None else comp.plot_options
+                )
+                plotter = get_plotter(comp.shape)(options)
+                plotter._populate_data(comp.shape)
+                self._cplotters.append(plotter)
+            else:
+                for child in comp.children:
+                    _populate_plotters(child)
+
+        _populate_plotters(comp)
+
+    def _make_plot_2d(self):
+        for plotter in self._cplotters:
+            plotter.ax = self.ax
+            plotter._make_plot_2d()
+        self._set_aspect_2d()
+
+    def _make_plot_3d(self):
+        """
+        Internal function that makes the plot. It should use self._data and
+        self._data_to_plot, so _populate_data should be called before.
+        """
+        for plotter in self._cplotters:
+            plotter.ax = self.ax
+            plotter._make_plot_3d()
+
+    def _set_aspect_3d(self):
+        pass
+
+
+register_plotter(Component, ComponentPlotter)

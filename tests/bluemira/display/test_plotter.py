@@ -24,9 +24,10 @@ Tests for the plotter module.
 """
 
 import numpy as np
+import pytest
 
 import bluemira.geometry as geo
-from bluemira.base.components import Component, PhysicalComponent
+from bluemira.base.components import Component, ComponentPlotter, PhysicalComponent
 from bluemira.display import plot_3d, plotter
 from bluemira.utilities.plot_tools import Plot3D
 
@@ -134,6 +135,30 @@ class TestPlot3d:
         assert ax_2 is not ax_orig
 
 
+class TestPlottingRegister:
+    def test_default_classes(self):
+        assert plotter.get_plotter(list) is plotter.PointsPlotter
+        assert plotter.get_plotter(np.ndarray) is plotter.PointsPlotter
+        assert plotter.get_plotter(geo.coordinates.Coordinates) is plotter.PointsPlotter
+        assert plotter.get_plotter(geo.wire.BluemiraWire) is geo.wire.WirePlotter
+        assert plotter.get_plotter(geo.face.BluemiraFace) is geo.face.FacePlotter
+        assert plotter.get_plotter(Component) is ComponentPlotter
+        assert plotter.get_plotter(PhysicalComponent) is ComponentPlotter
+
+    def test_no_plotter(self):
+        class Thing:
+            pass
+
+        with pytest.raises(ValueError):
+            plotter.get_plotter(Thing)
+
+    def test_register_existing(self):
+        with pytest.raises(ValueError):
+            plotter.register_plotter(list, None)
+
+        assert plotter.get_plotter(list) is plotter.PointsPlotter
+
+
 class TestPointsPlotter:
     def test_plotting_2d(self):
         plotter.PointsPlotter().plot_2d(SQUARE_POINTS)
@@ -147,16 +172,16 @@ class TestWirePlotter:
         self.wire = geo.tools.make_polygon(SQUARE_POINTS)
 
     def test_plotting_2d(self):
-        plotter.WirePlotter().plot_2d(self.wire)
+        geo.wire.WirePlotter().plot_2d(self.wire)
 
     def test_plotting_2d_with_points(self):
-        plotter.WirePlotter(show_points=True).plot_2d(self.wire)
+        geo.wire.WirePlotter(show_points=True).plot_2d(self.wire)
 
     def test_plotting_3d(self):
-        plotter.WirePlotter().plot_3d(self.wire)
+        geo.wire.WirePlotter().plot_3d(self.wire)
 
     def test_plotting_3d_with_points(self):
-        plotter.WirePlotter(show_points=True).plot_3d(self.wire)
+        geo.wire.WirePlotter(show_points=True).plot_3d(self.wire)
 
 
 class TestFacePlotter:
@@ -166,16 +191,16 @@ class TestFacePlotter:
         self.face = geo.face.BluemiraFace(wire)
 
     def test_plotting_2d(self):
-        plotter.FacePlotter().plot_2d(self.face)
+        geo.face.FacePlotter().plot_2d(self.face)
 
     def test_plotting_2d_with_wire(self):
-        plotter.FacePlotter(show_wires=True).plot_2d(self.face)
+        geo.face.FacePlotter(show_wires=True).plot_2d(self.face)
 
     def test_plotting_3d(self):
-        plotter.FacePlotter().plot_3d(self.face)
+        geo.face.FacePlotter().plot_3d(self.face)
 
     def test_plotting_3d_with_wire_and_points(self):
-        plotter.FacePlotter(show_wires=True, show_points=True).plot_3d(self.face)
+        geo.face.FacePlotter(show_wires=True, show_points=True).plot_3d(self.face)
 
 
 class TestComponentPlotter:
@@ -190,13 +215,13 @@ class TestComponentPlotter:
         self.child2 = PhysicalComponent("Child2", shape=face2, parent=self.group)
 
     def test_plotting_2d(self):
-        plotter.ComponentPlotter().plot_2d(self.group)
+        ComponentPlotter().plot_2d(self.group)
 
     def test_plotting_2d_no_wires(self):
-        plotter.ComponentPlotter(show_wires=True).plot_2d(self.group)
+        ComponentPlotter(show_wires=True).plot_2d(self.group)
 
     def test_plotting_3d(self):
-        plotter.ComponentPlotter().plot_3d(self.group)
+        ComponentPlotter().plot_3d(self.group)
 
     def test_plotting_3d_with_wires_and_points(self):
-        plotter.ComponentPlotter(show_wires=True, show_points=True).plot_3d(self.group)
+        ComponentPlotter(show_wires=True, show_points=True).plot_3d(self.group)

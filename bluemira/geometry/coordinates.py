@@ -31,6 +31,7 @@ from pyquaternion import Quaternion
 
 from bluemira.base.constants import EPS
 from bluemira.base.look_and_feel import bluemira_warn
+from bluemira.display.plotter import PointsPlotter, register_plotter
 from bluemira.geometry.error import CoordinatesError
 
 # =============================================================================
@@ -929,3 +930,6 @@ class Coordinates:
         Array-like unpacking.
         """
         return self._array.__iter__()
+
+
+register_plotter(Coordinates, PointsPlotter)

@@ -39,13 +39,9 @@ from bluemira.codes._freecadapi import (
     translate_shape,
     wire_closure,
 )
-
-# import from bluemira
-# import from bluemira
+from bluemira.display.plotter import BasePlotter, PointsPlotter, register_plotter
 from bluemira.geometry.base import BluemiraGeo, _Orientation
 from bluemira.geometry.coordinates import Coordinates
-
-# import from error
 from bluemira.geometry.error import MixedOrientationWireError, NotClosedWire
 
 __all__ = ["BluemiraWire"]
@@ -220,3 +216,57 @@ class BluemiraWire(BluemiraGeo):
                 change_plane(o, plane._shape)
             else:
                 o.change_plane(plane)
+
+
+class WirePlotter(BasePlotter):
+    """
+    Plotting class for bluemira wires.
+    """
+
+    _CLASS_PLOT_OPTIONS = {"show_points": False}
+
+    def _check_obj(self, obj):
+        if not isinstance(obj, BluemiraWire):
+            raise ValueError(f"{obj} must be a BluemiraWire")
+        return True
+
+    def _check_options(self):
+        # Check if nothing has to be plotted
+        if not self.options.show_points and not self.options.show_wires:
+            return False
+
+        return True
+
+    def _populate_data(self, wire: BluemiraWire):
+        self._pplotter = PointsPlotter(self.options)
+        new_wire = wire.deepcopy()
+        # # change of plane integrated in PointsPlotter2D. Not necessary here.
+        # new_wire.change_plane(self.options._options['plane'])
+        pointsw = new_wire.discretize(
+            ndiscr=self.options._options["ndiscr"],
+            byedges=self.options._options["byedges"],
+        ).T
+        self._pplotter._populate_data(pointsw)
+        self._data = pointsw
+        self._data_to_plot = self._pplotter._data_to_plot
+
+    def _make_plot_2d(self):
+        if self.options.show_wires:
+            self.ax.plot(*self._data_to_plot, **self.options.wire_options)
+
+        if self.options.show_points:
+            self._pplotter.ax = self.ax
+            self._pplotter._make_plot_2d()
+        self._set_aspect_2d()
+
+    def _make_plot_3d(self):
+        if self.options.show_wires:
+            self.ax.plot(*self._data.T, **self.options.wire_options)
+
+        if self.options.show_points:
+            self._pplotter.ax = self.ax
+            self._pplotter._make_plot_3d()
+        self._set_aspect_3d()
+
+
+register_plotter(BluemiraWire, WirePlotter)
