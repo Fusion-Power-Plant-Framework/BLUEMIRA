@@ -54,6 +54,9 @@ class TestDivertorSilhouetteDesigner:
         self.wall.end_point().x = [11]
         self.wall.end_point().z = [self.x_points[0][1]]
 
+    def get_des(self):
+        return DivertorSilhouetteDesigner(self.params, self.eq, self.wall)
+
     def test_new_builder_sets_leg_lengths(self):
         self.params["div_L2D_ib"]["value"] = 5
         self.params["div_L2D_ob"]["value"] = 10
@@ -129,3 +132,11 @@ class TestDivertorSilhouetteDesigner:
             [outer_target, outer_baffle],
         ]:
             assert signed_distance(target, baffle) == 0
+
+
+# %%
+
+TestDivertorSilhouetteDesigner.setup_class()
+t = TestDivertorSilhouetteDesigner()
+t.setup_method()
+des = t.get_des()
