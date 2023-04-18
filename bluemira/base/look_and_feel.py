@@ -32,13 +32,164 @@ import subprocess  # noqa :S404
 import time
 from getpass import getuser
 from textwrap import dedent, wrap
+from typing import Tuple
+
+from rich import traceback
 
 from bluemira import __version__
 from bluemira.base.constants import ANSI_COLOR, EXIT_COLOR
 from bluemira.base.file import get_bluemira_path, get_bluemira_root
 from bluemira.base.logs import logger_setup
 
-LOGGER = logger_setup()
+traceback.install()
+
+# =============================================================================
+# Printing functions
+# =============================================================================
+
+
+def _print_color(string, color):
+    """
+    Create text to print. NOTE: Does not call print command
+
+    Parameters
+    ----------
+    string: str
+        The text to colour
+    color: str
+        The color to make the color-string for
+
+    Returns
+    -------
+    color_text: str
+        The string with ANSI color decoration
+    """
+    return f"{ANSI_COLOR[color]}{string}{EXIT_COLOR}"
+
+
+def _bm_print(string, width=73):
+    """
+    Create the text string for boxed text to print to the console.
+
+    Parameters
+    ----------
+    string: str
+        The string of text to colour and box
+    width: int (default = 73)
+        The width of the box (leave this alone for best results)
+
+    Returns
+    -------
+    ss: str
+        The text string of the boxed text
+    """
+    strings = [
+        " " if s == "\n" and i != 0 else s[:-1] if s.endswith("\n") else s
+        for i, s in enumerate(string.splitlines(keepends=True))
+    ]
+    bw = width - 4
+    t = [
+        wrap(s, width=bw, replace_whitespace=False, drop_whitespace=False)
+        for s in strings
+    ]
+
+    s = [dedent(item) for sublist in t for item in sublist]
+    lines = ["".join(["| "] + [i] + [" "] * (width - 2 - len(i)) + [" |"]) for i in s]
+    h = "".join(["+"] + ["-" * width] + ["+"])
+    return h + "\n" + "\n".join(lines) + "\n" + h
+
+
+def colourise(string, width=73, color="blue"):
+    """
+    Print coloured, boxed text to the console. Default template for bluemira
+    information.
+
+    Parameters
+    ----------
+    string: str
+        The string of text to colour and box
+    width: int (default = 73)
+        The width of the box (leave this alone for best results)
+    color: str from bluemira.base.constants.ANSI_COLOR
+        The color to print the text in
+    """
+    text = _bm_print(string, width=width)
+    color_text = _print_color(text, color)
+    return color_text
+
+
+# =============================================================================
+# Banner printing
+# =============================================================================
+
+
+BLUEMIRA_ASCII = r"""+-------------------------------------------------------------------------+
+|  _     _                      _                                         |
+| | |   | |                    (_)                                        |
+| | |__ | |_   _  ___ _ __ ___  _ _ __ __ _ __                            |
+| | '_ \| | | | |/ _ \ '_ ` _ \| | '__/ _| |_ \                           |
+| | |_) | | |_| |  __/ | | | | | | | | (_| |_) |                          |
+| |_.__/|_|\__,_|\___|_| |_| |_|_|_|  \__|_|__/                           |
++-------------------------------------------------------------------------+"""  # noqa
+
+
+def get_banner() -> Tuple[str, ...]:
+    """
+    Get the initial banner to the console upon running the bluemira code.
+    """
+    header = _print_color(BLUEMIRA_ASCII, color="blue")
+    v = version_banner()
+    v.extend(user_banner())
+    info = colourise("\n".join(v), color="blue")
+    return header, info
+
+
+def version_banner():
+    """
+    Get the string for the version banner.
+
+    Returns
+    -------
+    output: List[str]
+        The list of strings of text describing the version and code information
+    """
+    mapping = {
+        "SLOC": "total",
+    }
+    root = get_bluemira_root()
+    if not os.path.isdir(f"{root}/.git") or shutil.which("git") is None:
+        return [
+            f"Version    : {__version__}",
+            "git branch : docker",
+            "SLOC      : N/A",
+        ]
+    branch = get_git_branch(root)
+    sloc = count_slocs(get_bluemira_path().rstrip(os.sep), branch)
+    v = str(get_git_version(root))
+
+    output = [f"Version    : {v[2:-1]}", f"git branch : {branch}"]
+
+    for k, v in mapping.items():
+        if sloc[v] > 0:
+            line = k + " " * (11 - len(k)) + f": {int(sloc[v])}"
+            output.append(line)
+    return output
+
+
+def user_banner():
+    """
+    Get user and platform info and create text to print to banner.
+
+    Returns
+    -------
+    s: str
+        The text for the banner containing user and platform information
+    """
+    return [
+        f"User       : {getuser()}",
+        f"Platform   : {get_platform()}",
+    ]
+
 
 # Calculate the number of lines in this file
 try:
@@ -189,79 +340,7 @@ def count_slocs(
     return lines
 
 
-# =============================================================================
-# Printing functions
-# =============================================================================
-
-
-def _print_color(string, color):
-    """
-    Create text to print. NOTE: Does not call print command
-
-    Parameters
-    ----------
-    string: str
-        The text to colour
-    color: str
-        The color to make the color-string for
-
-    Returns
-    -------
-    color_text: str
-        The string with ANSI color decoration
-    """
-    return f"{ANSI_COLOR[color]}{string}{EXIT_COLOR}"
-
-
-def _bm_print(string, width=73):
-    """
-    Create the text string for boxed text to print to the console.
-
-    Parameters
-    ----------
-    string: str
-        The string of text to colour and box
-    width: int (default = 73)
-        The width of the box (leave this alone for best results)
-
-    Returns
-    -------
-    ss: str
-        The text string of the boxed text
-    """
-    strings = [
-        " " if s == "\n" and i != 0 else s[:-1] if s.endswith("\n") else s
-        for i, s in enumerate(string.splitlines(keepends=True))
-    ]
-    bw = width - 4
-    t = [
-        wrap(s, width=bw, replace_whitespace=False, drop_whitespace=False)
-        for s in strings
-    ]
-
-    s = [dedent(item) for sublist in t for item in sublist]
-    lines = ["".join(["| "] + [i] + [" "] * (width - 2 - len(i)) + [" |"]) for i in s]
-    h = "".join(["+"] + ["-" * width] + ["+"])
-    return h + "\n" + "\n".join(lines) + "\n" + h
-
-
-def colourise(string, width=73, color="blue"):
-    """
-    Print coloured, boxed text to the console. Default template for bluemira
-    information.
-
-    Parameters
-    ----------
-    string: str
-        The string of text to colour and box
-    width: int (default = 73)
-        The width of the box (leave this alone for best results)
-    color: str from bluemira.base.constants.ANSI_COLOR
-        The color to print the text in
-    """
-    text = _bm_print(string, width=width)
-    color_text = _print_color(text, color)
-    return color_text
+LOGGER = logger_setup(banner=get_banner)
 
 
 def bluemira_critical(string):
@@ -480,75 +559,3 @@ class BluemiraClock:
 
         if self.i == self.n_iter:
             print("\n")
-
-
-# =============================================================================
-# Banner printing
-# =============================================================================
-
-
-BLUEMIRA_ASCII = r"""+-------------------------------------------------------------------------+
-|  _     _                      _                                         |
-| | |   | |                    (_)                                        |
-| | |__ | |_   _  ___ _ __ ___  _ _ __ __ _ __                            |
-| | '_ \| | | | |/ _ \ '_ ` _ \| | '__/ _| |_ \                           |
-| | |_) | | |_| |  __/ | | | | | | | | (_| |_) |                          |
-| |_.__/|_|\__,_|\___|_| |_| |_|_|_|  \__|_|__/                           |
-+-------------------------------------------------------------------------+"""  # noqa
-
-
-def print_banner():
-    """
-    Print the initial banner to the console upon running the bluemira code.
-    """
-    LOGGER.info(_print_color(BLUEMIRA_ASCII, color="blue"))
-    v = version_banner()
-    v.extend(user_banner())
-    bluemira_print("\n".join(v))
-
-
-def version_banner():
-    """
-    Get the string for the version banner.
-
-    Returns
-    -------
-    output: List[str]
-        The list of strings of text describing the version and code information
-    """
-    mapping = {
-        "SLOC": "total",
-    }
-    root = get_bluemira_root()
-    if not os.path.isdir(f"{root}/.git") or shutil.which("git") is None:
-        return [
-            f"Version    : {__version__}",
-            "git branch : docker",
-            "SLOC      : N/A",
-        ]
-    branch = get_git_branch(root)
-    sloc = count_slocs(get_bluemira_path().rstrip(os.sep), branch)
-    v = str(get_git_version(root))
-
-    output = [f"Version    : {v[2:-1]}", f"git branch : {branch}"]
-
-    for k, v in mapping.items():
-        if sloc[v] > 0:
-            line = k + " " * (11 - len(k)) + f": {int(sloc[v])}"
-            output.append(line)
-    return output
-
-
-def user_banner():
-    """
-    Get user and platform info and create text to print to banner.
-
-    Returns
-    -------
-    s: str
-        The text for the banner containing user and platform information
-    """
-    return [
-        f"User       : {getuser()}",
-        f"Platform   : {get_platform()}",
-    ]

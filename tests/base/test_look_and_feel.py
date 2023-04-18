@@ -36,9 +36,9 @@ from bluemira.base.look_and_feel import (
     bluemira_print_flush,
     bluemira_warn,
     count_slocs,
+    get_banner,
     get_git_branch,
     get_git_version,
-    print_banner,
     user_banner,
     version_banner,
 )
@@ -157,9 +157,8 @@ def test_bluemira_print_flush(caplog):
 # mess up this test's 'len' assertion
 @mock.patch("bluemira.base.look_and_feel.get_git_branch", lambda _: "develop")
 @mock.patch("bluemira.base.look_and_feel.count_slocs", lambda _, __: {"total": 1})
-def test_print_banner(caplog):
-    result = capture_output(caplog, print_banner)
+def test_get_banner():
+    result = get_banner()
 
-    assert len(result) == 15
     assert ANSI_COLOR["blue"] in result[0]
-    assert EXIT_COLOR in result[-1]
+    assert EXIT_COLOR in result[0]

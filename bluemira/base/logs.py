@@ -25,6 +25,7 @@
 import logging
 import sys
 from enum import Enum
+from typing import Callable, Iterable, Optional
 
 from bluemira.base.error import LogsError
 
@@ -40,7 +41,22 @@ class LogLevel(Enum):
     NOTSET = 0
 
 
-def logger_setup(logfilename="bluemira.log", *, level="INFO"):
+class LevelFilter(logging.Filter):
+    """
+    Filter out some logging levels
+    """
+
+    def __init__(self, *filtered: LogLevel):
+        self.filter_list = filtered
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Filter out logs with a specific level"""
+        return LogLevel[record.levelname] not in self.filter_list
+
+
+def logger_setup(
+    logfilename="bluemira.log", *, level="INFO", banner: Optional[Callable] = None
+):
     """
     Create logger with two handlers.
 
@@ -69,6 +85,15 @@ def logger_setup(logfilename="bluemira.log", *, level="INFO"):
 
     on_screen_handler = logging.StreamHandler(stream=sys.stderr)
     on_screen_handler.setLevel(py_level)
+    on_screen_handler.addFilter(
+        LevelFilter(LogLevel.NOTSET, LogLevel.DEBUG, LogLevel.INFO)
+    )
+
+    on_screen_handler_stdout = logging.StreamHandler(stream=sys.stdout)
+    on_screen_handler_stdout.setLevel(py_level)
+    on_screen_handler_stdout.addFilter(
+        LevelFilter(LogLevel.WARNING, LogLevel.ERROR, LogLevel.CRITICAL)
+    )
 
     # what will be written to a file
 
@@ -79,15 +104,22 @@ def logger_setup(logfilename="bluemira.log", *, level="INFO"):
     recorded_handler.setLevel(logging.DEBUG)
     recorded_handler.setFormatter(recorded_formatter)
 
-    bm_logger.setLevel(logging.DEBUG)
-
-    root_logger.addHandler(on_screen_handler)
+    root_logger.setLevel(logging.DEBUG)
     root_logger.addHandler(recorded_handler)
+
+    bm_logger.setLevel(logging.DEBUG)
+    bm_logger.addHandler(on_screen_handler)
+    bm_logger.addHandler(on_screen_handler_stdout)
+
+    if banner:
+        header, info = banner()
+        bm_logger.info(header)
+        bm_logger.info(info)
 
     return bm_logger
 
 
-def set_log_level(verbose=1, increase=False, logger_names=["bluemira"]):
+def set_log_level(verbose=1, increase=False, logger_names: Optional[Iterable] = None):
     """
     Get new log level and check if it is possible.
 
@@ -100,7 +132,9 @@ def set_log_level(verbose=1, increase=False, logger_names=["bluemira"]):
     logger_names: List[str] (default = ["bluemira"])
         The loggers for which to set the level
     """
-    # change loggers level
+    if logger_names is None:
+        logger_names = [name for name in logging.root.manager.loggerDict]
+
     for logger_name in logger_names:
         logger = logging.getLogger(logger_name)
 

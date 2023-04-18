@@ -36,12 +36,7 @@ from typing import Dict, Optional, Set
 from setuptools import find_packages
 
 from bluemira.base.logs import set_log_level
-from bluemira.base.look_and_feel import (
-    bluemira_debug,
-    bluemira_print,
-    bluemira_warn,
-    print_banner,
-)
+from bluemira.base.look_and_feel import bluemira_debug, bluemira_print, bluemira_warn
 from bluemira.base.parameter_frame import ParameterFrame
 from bluemira.base.parameter_frame._parameter import ParamDictT
 from bluemira.utilities.tools import get_module, json_writer
@@ -144,7 +139,6 @@ def parse_args():
     args.directory = str(Path(args.directory).resolve())
 
     set_log_level(min(max(0, 2 + args.q - args.v), 5))
-    print_banner()
     return args
 
 
