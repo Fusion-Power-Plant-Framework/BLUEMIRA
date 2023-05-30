@@ -45,5 +45,4 @@ An example central solenoid winding pack design
 #
 # In this example we will make a central solenoid winding pack
 # %%
-import matplotlib.pyplot as plt
-import numpy as np
+import numpy as np  # noqa: F401
