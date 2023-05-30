@@ -38,3 +38,11 @@
 """
 An example central solenoid winding pack design
 """
+
+# %% [markdown]
+# # Simple central solenoid winding pack design example
+# ## Introduction
+#
+# In this example we will make a central solenoid winding pack
+# %%
+import numpy as np  # noqa: F401
