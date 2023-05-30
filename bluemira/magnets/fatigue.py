@@ -64,8 +64,36 @@ class ParisFatigueSafetyFactors:
     sf_fracture: float
 
 
-def _ellipse_shape_factor(ratio) -> float:
-    return 1.0 + 1.464 * ratio**1.65  # noqa: N806
+def _stress_intensity_factor(
+    hoop_stress: float, bend_stress: float, a: float, H: float, Q: float, F: float
+) -> float:
+    """
+    Equation 1a of Newman and Raju, 1984
+    """
+    return (hoop_stress + H * bend_stress) * np.sqrt(np.pi * a / Q) * F
+
+
+def _boundary_correction_factor(
+    a_d_t, m1: float, m2: float, m3: float, g: float, f_phi: float, f_w: float
+) -> float:
+    """
+    Equation 1b of Newman and Raju, 1984
+    """
+    return (m1 + m2 * a_d_t**2 + m3 * a_d_t**4) * g * f_phi * f_w
+
+
+def _bending_correction_factor(h1: float, h2: float, p: float, phi: float) -> float:
+    """
+    Equation 1c of Newman and Raju, 1984
+    """
+    return h1 + (h2 - h1) * np.sin(phi) ** p
+
+
+def _ellipse_shape_factor(ratio: float) -> float:
+    """
+    Equation 2 of Newman and Raju, 1984
+    """
+    return 1.0 + 1.464 * ratio**1.65
 
 
 class Crack(abc.ABC):
@@ -109,8 +137,6 @@ class Crack(abc.ABC):
         """
         Calculate the crack stress intensity factor
         """
-        a_d_t = a / t
-
         pass
 
 
@@ -168,7 +194,6 @@ class SemiEllipticalSurface(Crack):
             m3 = 0.5 - 1.0 / (0.65 + ratio) + 14.0 * (1 - ratio) ** 24
             g = 1.0 + (0.1 + 0.35 * a_d_t**2) * (1 - np.sin(phi)) ** 2
             f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 4
-            f_w = np.sqrt(1.0 / np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))
             g21 = -1.22 - 0.12 * ratio
             g22 = 0.55 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5
             h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t
@@ -180,6 +205,7 @@ class SemiEllipticalSurface(Crack):
             m2 = 0.2 * ratio**4
             m3 = -0.11 * ratio**4
             g = 1.0 + (0.1 + 0.35 * ratio * a_d_t**2) * (1 - np.sin(phi)) ** 2
+            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** (0.25)
             g11 = -0.04 - 0.41 * ratio
             g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5
             g21 = -2.11 + 0.77 * ratio
@@ -187,12 +213,12 @@ class SemiEllipticalSurface(Crack):
             h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2
             h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
 
+        f_w = np.sqrt(1.0 / np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))
         p = 0.2 + ratio + 0.6 * a_d_t
-        H_s = h1 + (h2 - h1) * np.sin(phi) ** p  # noqa: N806
-        Q = 1.0 + 1.464 * ratio**1.65  # noqa: N806
-        F_s = (m1 + m2 * a_d_t**2 + m3 * a_d_t**4) * g * f_phi * f_w  # noqa: N806
-
-        return hoop_stress + H_s * bend_stress * F_s * np.sqrt(np.pi * a / Q)
+        H = _bending_correction_factor(h1, h2, p, phi)  # noqa: N806
+        Q = _ellipse_shape_factor(ratio)  # noqa: N806
+        F = _boundary_correction_factor(a_d_t, m1, m2, m3, g, f_phi, f_w)  # noqa: N806
+        return _stress_intensity_factor(hoop_stress, bend_stress, a, H, Q, F)
 
 
 class EllipticalEmbedded(Crack):
@@ -208,7 +234,27 @@ class EllipticalEmbedded(Crack):
         c: float,
         phi: float,
     ) -> float:
-        pass
+        a_d_t = a / t
+
+        if a <= c:  # a/c <= 1
+            ratio = a / c
+            m1 = 1.0
+            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 0.25
+        else:  # a/c > 1
+            ratio = c / a
+            m1 = np.sqrt(ratio)
+            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** 0.25
+
+        m2 = 0.05 / (0.11 + ratio**1.5)
+        m3 = 0.29 / (0.23 + ratio**1.5)
+        g = 1.0 - (a_d_t**4 * np.sqrt(2.6 - 2 * a_d_t)) / (1 + 4 * ratio) * np.abs(
+            np.cos(phi)
+        )
+        f_w = np.sqrt(1.0 / np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))
+
+        Q = _ellipse_shape_factor(ratio)  # noqa: N806
+        F = _boundary_correction_factor(a_d_t, m1, m2, m3, g, f_phi, f_w)  # noqa: N806
+        return _stress_intensity_factor(hoop_stress, bend_stress, a, 0.0, Q, F)
 
 
 def calculate_n_pulses(
@@ -285,11 +331,3 @@ def calculate_n_pulses(
     n_cycles /= safety.sf_n_cycle
 
     return n_cycles // 2
-
-
-def _calc_stress_intensity_factor(
-    crack: Crack, hoop_stress: float, t: float, w: float, a: float, c: float, phi: float
-) -> float:
-    """ """
-    if isinstance(crack, SemiEllipticalSurface):
-        pass
