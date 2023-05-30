@@ -22,8 +22,22 @@
 """
 Fatigue model
 """
-
 from dataclasses import dataclass
+
+import numpy as np
+
+
+@dataclass
+class ConductorInfo:
+    """
+    Cable in conduit conductor information for Paris fatigue model
+    """
+
+    tk_radial: float
+    width: float  # in the loaded direction
+    max_hoop_stress: float
+    residual_stress: float
+    walker_coeff: float
 
 
 @dataclass
@@ -45,7 +59,7 @@ class ParisFatigueSafetyFactors:
 
     sf_n_cycle: float
     sf_radial_crack: float
-    sf_vertical_crack: float
+    sf_width_crack: float
     sf_fracture: float
 
 
@@ -57,14 +71,11 @@ class Crack:
 
     depth: float  # a
     width: float  # c
+    angle: float = 0.5 * np.pi
 
 
 def calculate_n_pulses(
-    tk_radial: float,
-    tk_vertical: float,
-    max_hoop_stress: float,
-    residual_stress: float,
-    walker_coeff: float,
+    conductor: ConductorInfo,
     initial_crack: Crack,
     material: ParisFatigueMaterial,
     safety: ParisFatigueSafetyFactors,
@@ -82,19 +93,36 @@ def calculate_n_pulses(
     Notes
     -----
     Assumes two stress cycles per pulse.
-    Calculates using the cycle-by-cycle method.
+    Calculates using the lifecycle method.
     """
-    mean_stress_ratio = residual_stress / (max_hoop_stress + residual_stress)
+    mean_stress_ratio = conductor.residual_stress / (
+        conductor.max_hoop_stress + conductor.residual_stress
+    )
 
-    C_r = material.C * (1 - mean_stress_ratio) ** (material.m * (walker_coeff - 1))
+    C_r = material.C * (1 - mean_stress_ratio) ** (
+        material.m * (conductor.walker_coeff - 1)
+    )
+
+    max_crack_depth = conductor.tk_radial / safety.sf_radial_crack
+    max_crack_width = conductor.width / safety.sf_width_crack
+    max_stress_intensity = material.K_ic / safety.sf_fracture
 
     a = initial_crack.depth
     c = initial_crack.width
+    K_max = 0.0
     n_cycles = 0
 
-    while True:
-        a += 0
-        c += 0
-        n_cycles += 0
+    delta = 1e-4  # Crack size increment
+
+    while a < max_crack_depth and c < max_crack_width and K_max < max_stress_intensity:
+        Ka = 0.0
+        Km = 0.0
+        K_max = max(Ka, Km)
+
+        a += delta / (Ka / K_max) ** material.m
+        c += delta / (Km / K_max) ** material.m
+        n_cycles += delta / (C_r * K_max**material.m)
+
+    n_cycles /= safety.sf_n_cycle
 
     return n_cycles // 2
