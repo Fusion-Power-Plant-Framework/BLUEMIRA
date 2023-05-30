@@ -28,6 +28,10 @@ from dataclasses import dataclass
 
 @dataclass
 class ParisFatigueMaterial:
+    """
+    Material properties for the Paris fatigue model
+    """
+
     C: float  # Paris law material constant
     m: float  # Paris law material exponent
     m_w: float  # Walker coefficient
@@ -36,6 +40,10 @@ class ParisFatigueMaterial:
 
 @dataclass
 class ParisFatigueSafetyFactors:
+    """
+    Safety factors for the Paris fatigue model
+    """
+
     sf_n_cycle: float
     sf_radial_crack: float
     sf_vertical_crack: float
@@ -44,5 +52,9 @@ class ParisFatigueSafetyFactors:
 
 @dataclass
 class Crack:
+    """
+    Crack description for the Paris fatigue model
+    """
+
     depth: float  # a
     width: float  # c
