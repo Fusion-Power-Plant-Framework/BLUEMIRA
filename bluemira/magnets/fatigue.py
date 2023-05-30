@@ -64,13 +64,13 @@ class ParisFatigueSafetyFactors:
     sf_fracture: float
 
 
-def _stress_intensity_factor(  # noqa: N803
+def _stress_intensity_factor(
     hoop_stress: float,
     bend_stress: float,
     a: float,
-    H: float,
-    Q: float,
-    F: float,
+    H: float,  # noqa: N803
+    Q: float,  # noqa: N803
+    F: float,  # noqa: N803
 ) -> float:
     """
     Equation 1a of Newman and Raju, 1984
@@ -490,7 +490,7 @@ def calculate_n_pulses(
             c,
             0.0,
         )
-        K_max = max(Ka, Kc)
+        K_max = max(Ka, Kc)  # noqa: N806
 
         a += delta / (Ka / K_max) ** material.m
         c += delta / (Kc / K_max) ** material.m
