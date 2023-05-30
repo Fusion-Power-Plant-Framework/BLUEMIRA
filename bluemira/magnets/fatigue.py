@@ -65,7 +65,12 @@ class ParisFatigueSafetyFactors:
 
 
 def _stress_intensity_factor(
-    hoop_stress: float, bend_stress: float, a: float, H: float, Q: float, F: float
+    hoop_stress: float,
+    bend_stress: float,
+    a: float,
+    H: float,
+    Q: float,
+    F: float,  # noqa: N803
 ) -> float:
     """
     Equation 1a of Newman and Raju, 1984
@@ -98,7 +103,7 @@ def _ellipse_shape_factor(ratio: float) -> float:
 
 class Crack(abc.ABC):
     """
-    Crack description for the Paris fatigue model
+    Crack description ABC for the Paris fatigue model
 
     Parameters
     ----------
@@ -147,7 +152,18 @@ class Crack(abc.ABC):
         pass
 
 
-class QuarterEllipticalCorner(Crack):
+class QuarterEllipticalCornerCrack(Crack):
+    """
+    Quarter-elliptical corner crack
+
+    Parameters
+    ----------
+    depth:
+        Crack depth in the plate thickness direction
+    width:
+        Crack width along the plate length direction
+    """
+
     alpha = 0.25
 
     def stress_intensity_factor(
@@ -207,7 +223,18 @@ class QuarterEllipticalCorner(Crack):
         return _stress_intensity_factor(hoop_stress, bend_stress, a, H, Q, F)
 
 
-class SemiEllipticalSurface(Crack):
+class SemiEllipticalSurfaceCrack(Crack):
+    """
+    Semi-elliptical surface crack
+
+    Parameters
+    ----------
+    depth:
+        Crack depth in the plate thickness direction
+    width:
+        Crack width along the plate length direction
+    """
+
     alpha = 0.5
 
     def stress_intensity_factor(
@@ -272,7 +299,18 @@ class SemiEllipticalSurface(Crack):
         return _stress_intensity_factor(hoop_stress, bend_stress, a, H, Q, F)
 
 
-class EllipticalEmbedded(Crack):
+class EllipticalEmbeddedCrack(Crack):
+    """
+    Full elliptical embedded crack
+
+    Parameters
+    ----------
+    depth:
+        Crack depth in the plate thickness direction
+    width:
+        Crack width along the plate length direction
+    """
+
     alpha = 1.0
 
     def stress_intensity_factor(
