@@ -132,7 +132,14 @@ class Crack(abc.ABC):
 
     @abc.abstractmethod
     def stress_intensity_factor(
-        self, hoop_stress: float, t: float, w: float, a: float, c: float, phi: float
+        self,
+        hoop_stress: float,
+        bend_stress: float,
+        t: float,
+        w: float,
+        a: float,
+        c: float,
+        phi: float,
     ) -> float:
         """
         Calculate the crack stress intensity factor
@@ -153,7 +160,51 @@ class QuarterEllipticalCorner(Crack):
         c: float,
         phi: float,
     ) -> float:
-        pass
+        a_d_t = a / t
+
+        if a <= c:  # a/c <= 1
+            ratio = a / c
+            m1 = 1.08 - 0.03 * ratio
+            m2 = -0.44 + 1.06 / (0.3 + ratio)
+            m3 = -0.5 + 0.25 * ratio + 14.8 * (1 - ratio) ** 15
+            g1 = 1 + (0.08 + 0.4 * a_d_t**2) * (1 - np.sin(phi)) ** 3
+            g2 = 1 + (0.08 + 0.15 * a_d_t**2) * (1 - np.cos(phi)) ** 3
+            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 0.25
+            g21 = -1.22 - 0.12 * ratio
+            g22 = 0.64 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5
+            h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
+        else:  # a/c > 1
+            ratio = c / a
+            m1 = np.sqrt(ratio) * (1.08 - 0.03 * ratio)
+            m2 = 0.375 * ratio**2
+            m3 = -0.25 * ratio**2
+            g1 = 1 + (0.08 + 0.4 * (c / t) ** 2) * (1 - np.sin(phi)) ** 3
+            g2 = 1 + (0.08 + 0.15 * (c / t) ** 2) * (1 - np.cos(phi)) ** 3
+            g11 = -0.04 - 0.41 * ratio
+            g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5
+            g21 = -2.11 + 0.77 * ratio
+            g22 = 0.64 - 0.72 * ratio**0.75 + 0.14 * ratio**1.5
+            h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
+            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** 0.25
+
+        llambda = c / w * np.sqrt(a_d_t)
+        f_w = (
+            1.0
+            - 0.2 * llambda
+            + 9.4 * llambda**2
+            - 19.4 * llambda**3
+            + 27.1 * llambda**4
+        )
+
+        p = 0.2 + ratio + 0.6 * a_d_t
+        H = _bending_correction_factor(h1, h2, p, phi)  # noqa: N806
+        Q = _ellipse_shape_factor(ratio)  # noqa: N806
+        F = _boundary_correction_factor(
+            a_d_t, m1, m2, m3, g1 * g2, f_phi, f_w
+        )  # noqa: N806
+        return _stress_intensity_factor(hoop_stress, bend_stress, a, H, Q, F)
 
 
 class SemiEllipticalSurface(Crack):
@@ -193,7 +244,7 @@ class SemiEllipticalSurface(Crack):
             m2 = -0.54 + 0.89 / (0.2 + ratio)
             m3 = 0.5 - 1.0 / (0.65 + ratio) + 14.0 * (1 - ratio) ** 24
             g = 1.0 + (0.1 + 0.35 * a_d_t**2) * (1 - np.sin(phi)) ** 2
-            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 4
+            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 0.25
             g21 = -1.22 - 0.12 * ratio
             g22 = 0.55 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5
             h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t
@@ -205,7 +256,7 @@ class SemiEllipticalSurface(Crack):
             m2 = 0.2 * ratio**4
             m3 = -0.11 * ratio**4
             g = 1.0 + (0.1 + 0.35 * ratio * a_d_t**2) * (1 - np.sin(phi)) ** 2
-            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** (0.25)
+            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** 0.25
             g11 = -0.04 - 0.41 * ratio
             g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5
             g21 = -2.11 + 0.77 * ratio
@@ -234,6 +285,9 @@ class EllipticalEmbedded(Crack):
         c: float,
         phi: float,
     ) -> float:
+        t = (
+            0.5 * t
+        )  # NOTE: for embedded cracks, t is defined as one-half the plate thickness
         a_d_t = a / t
 
         if a <= c:  # a/c <= 1
@@ -259,7 +313,7 @@ class EllipticalEmbedded(Crack):
 
 def calculate_n_pulses(
     conductor: ConductorInfo,
-    initial_crack: Crack,
+    crack: Crack,
     material: ParisFatigueMaterial,
     safety: ParisFatigueSafetyFactors,
 ) -> int:
@@ -270,7 +324,7 @@ def calculate_n_pulses(
     ----------
     conductor:
         Conductor information
-    initial_crack:
+    crack:
         Postulated initiating crack size
     material:
         Material values
@@ -298,24 +352,26 @@ def calculate_n_pulses(
     max_crack_width = conductor.width / safety.sf_width_crack
     max_stress_intensity = material.K_ic / safety.sf_fracture
 
-    a = initial_crack.depth
-    c = initial_crack.width
+    a = crack.depth
+    c = crack.width
     K_max = 0.0  # noqa: N806
     n_cycles = 0
 
     delta = 1e-4  # Crack size increment
 
     while a < max_crack_depth and c < max_crack_width and K_max < max_stress_intensity:
-        Ka = _calc_semi_elliptical_surface_SIF(  # noqa: N806
+        Ka = crack.stress_intensity_factor(  # noqa: N806
             conductor.max_hoop_stress,
+            0.0,
             conductor.tk_radial,
             conductor.width,
             a,
             c,
             0.5 * np.pi,
         )
-        Kc = _calc_semi_elliptical_surface_SIF(  # noqa: N806
+        Kc = crack.stress_intensity_factor(  # noqa: N806
             conductor.max_hoop_stress,
+            0.0,
             conductor.tk_radial,
             conductor.width,
             a,
