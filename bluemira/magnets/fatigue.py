@@ -64,13 +64,13 @@ class ParisFatigueSafetyFactors:
     sf_fracture: float
 
 
-def _stress_intensity_factor(
+def _stress_intensity_factor(  # noqa: N803
     hoop_stress: float,
     bend_stress: float,
     a: float,
     H: float,
     Q: float,
-    F: float,  # noqa: N803
+    F: float,
 ) -> float:
     """
     Equation 1a of Newman and Raju, 1984
@@ -176,6 +176,36 @@ class QuarterEllipticalCornerCrack(Crack):
         c: float,
         phi: float,
     ) -> float:
+        """
+        Calculate quarter-elliptical corner crack stress intensity factor.
+
+        Parameters
+        ----------
+        hoop_stress:
+            Hoop stress in the plate
+        bend_stress:
+            Bending stress in the plate
+        t:
+            Plate thickness
+        w:
+            Plate width
+        a:
+            Crack depth
+        c:
+            Crack width
+        phi:
+            Crack angle
+
+        Returns
+        -------
+        Stress intensity factor
+
+        Notes
+        -----
+        Newman and Raju, 1984, Stress-intensity factor equations for cracks in
+        three-dimensional finite bodies subjected to tension and bending loads
+        https://ntrs.nasa.gov/api/citations/19840015857/downloads/19840015857.pdf
+        """
         a_d_t = a / t
 
         if a <= c:  # a/c <= 1
@@ -248,10 +278,24 @@ class SemiEllipticalSurfaceCrack(Crack):
         phi: float,
     ) -> float:
         """
-        Calculate semi-elliptical surface crack stress intensity factor (SIF).
+        Calculate semi-elliptical surface crack stress intensity factor.
 
         Parameters
         ----------
+        hoop_stress:
+            Hoop stress in the plate
+        bend_stress:
+            Bending stress in the plate
+        t:
+            Plate thickness
+        w:
+            Plate width
+        a:
+            Crack depth
+        c:
+            Crack width
+        phi:
+            Crack angle
 
         Returns
         -------
@@ -323,6 +367,36 @@ class EllipticalEmbeddedCrack(Crack):
         c: float,
         phi: float,
     ) -> float:
+        """
+        Calculate elliptical embedded crack stress intensity factor.
+
+        Parameters
+        ----------
+        hoop_stress:
+            Hoop stress in the plate
+        bend_stress:
+            Bending stress in the plate
+        t:
+            Plate thickness
+        w:
+            Plate width
+        a:
+            Crack depth
+        c:
+            Crack width
+        phi:
+            Crack angle
+
+        Returns
+        -------
+        Stress intensity factor
+
+        Notes
+        -----
+        Newman and Raju, 1984, Stress-intensity factor equations for cracks in
+        three-dimensional finite bodies subjected to tension and bending loads
+        https://ntrs.nasa.gov/api/citations/19840015857/downloads/19840015857.pdf
+        """
         t = (
             0.5 * t
         )  # NOTE: for embedded cracks, t is defined as one-half the plate thickness
