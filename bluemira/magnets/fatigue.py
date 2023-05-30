@@ -34,7 +34,6 @@ class ParisFatigueMaterial:
 
     C: float  # Paris law material constant
     m: float  # Paris law material exponent
-    m_w: float  # Walker coefficient
     K_ic: float  # Fracture toughness
 
 
@@ -58,3 +57,44 @@ class Crack:
 
     depth: float  # a
     width: float  # c
+
+
+def calculate_n_pulses(
+    tk_radial: float,
+    tk_vertical: float,
+    max_hoop_stress: float,
+    residual_stress: float,
+    walker_coeff: float,
+    initial_crack: Crack,
+    material: ParisFatigueMaterial,
+    safety: ParisFatigueSafetyFactors,
+) -> int:
+    """
+    Calculate the number of plasma pulses possible prior to fatigue.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    Number of plasma pulses
+
+    Notes
+    -----
+    Assumes two stress cycles per pulse.
+    Calculates using the cycle-by-cycle method.
+    """
+    mean_stress_ratio = residual_stress / (max_hoop_stress + residual_stress)
+
+    C_r = material.C * (1 - mean_stress_ratio) ** (material.m * (walker_coeff - 1))
+
+    a = initial_crack.depth
+    c = initial_crack.width
+    n_cycles = 0
+
+    while True:
+        a += 0
+        c += 0
+        n_cycles += 0
+
+    return n_cycles // 2
