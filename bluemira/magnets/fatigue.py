@@ -22,6 +22,7 @@
 """
 Fatigue model
 """
+import abc
 from dataclasses import dataclass
 
 import numpy as np
@@ -63,15 +64,151 @@ class ParisFatigueSafetyFactors:
     sf_fracture: float
 
 
-@dataclass
-class Crack:
+def _ellipse_shape_factor(ratio) -> float:
+    return 1.0 + 1.464 * ratio**1.65  # noqa: N806
+
+
+class Crack(abc.ABC):
     """
     Crack description for the Paris fatigue model
+
+    Parameters
+    ----------
+    depth:
+        Crack depth in the plate thickness direction
+    width:
+        Crack width along the plate length direction
     """
 
-    depth: float  # a
-    width: float  # c
-    angle: float = 0.5 * np.pi
+    alpha = None
+
+    def __init__(self, depth: float, width: float):
+        self.depth = depth  # a
+        self.width = width  # c
+
+    @classmethod
+    def from_area(cls, area: float, aspect_ratio: float):
+        """
+        Instatiate a crack from an area and aspect ratio
+        """
+        depth = np.sqrt(area / (cls.alpha * np.pi * aspect_ratio))
+        width = aspect_ratio * depth
+        return cls(depth, width)
+
+    @property
+    def area(self) -> float:
+        """
+        Cross-sectional area of the crack
+        """
+        return self.alpha * np.pi * self.depth * self.width
+
+    @abc.abstractmethod
+    def stress_intensity_factor(
+        self, hoop_stress: float, t: float, w: float, a: float, c: float, phi: float
+    ) -> float:
+        """
+        Calculate the crack stress intensity factor
+        """
+        a_d_t = a / t
+
+        pass
+
+
+class QuarterEllipticalCorner(Crack):
+    alpha = 0.25
+
+    def stress_intensity_factor(
+        self,
+        hoop_stress: float,
+        bend_stress: float,
+        t: float,
+        w: float,
+        a: float,
+        c: float,
+        phi: float,
+    ) -> float:
+        pass
+
+
+class SemiEllipticalSurface(Crack):
+    alpha = 0.5
+
+    def stress_intensity_factor(
+        self,
+        hoop_stress: float,
+        bend_stress: float,
+        t: float,
+        w: float,
+        a: float,
+        c: float,
+        phi: float,
+    ) -> float:
+        """
+        Calculate semi-elliptical surface crack stress intensity factor (SIF).
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        Stress intensity factor
+
+        Notes
+        -----
+        Newman and Raju, 1984, Stress-intensity factor equations for cracks in
+        three-dimensional finite bodies subjected to tension and bending loads
+        https://ntrs.nasa.gov/api/citations/19840015857/downloads/19840015857.pdf
+        """
+        a_d_t = a / t
+
+        if a <= c:  # a/c <= 1
+            ratio = a / c
+            m1 = 1.13 - 0.09 * ratio
+            m2 = -0.54 + 0.89 / (0.2 + ratio)
+            m3 = 0.5 - 1.0 / (0.65 + ratio) + 14.0 * (1 - ratio) ** 24
+            g = 1.0 + (0.1 + 0.35 * a_d_t**2) * (1 - np.sin(phi)) ** 2
+            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 4
+            f_w = np.sqrt(1.0 / np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))
+            g21 = -1.22 - 0.12 * ratio
+            g22 = 0.55 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5
+            h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
+
+        else:  # a/c > 1
+            ratio = c / a
+            m1 = np.sqrt(ratio) * (1.0 + 0.04 * ratio)
+            m2 = 0.2 * ratio**4
+            m3 = -0.11 * ratio**4
+            g = 1.0 + (0.1 + 0.35 * ratio * a_d_t**2) * (1 - np.sin(phi)) ** 2
+            g11 = -0.04 - 0.41 * ratio
+            g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5
+            g21 = -2.11 + 0.77 * ratio
+            g22 = 0.55 - 0.72 * ratio**0.75 + 0.14 * ratio**1.5
+            h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
+
+        p = 0.2 + ratio + 0.6 * a_d_t
+        H_s = h1 + (h2 - h1) * np.sin(phi) ** p  # noqa: N806
+        Q = 1.0 + 1.464 * ratio**1.65  # noqa: N806
+        F_s = (m1 + m2 * a_d_t**2 + m3 * a_d_t**4) * g * f_phi * f_w  # noqa: N806
+
+        return hoop_stress + H_s * bend_stress * F_s * np.sqrt(np.pi * a / Q)
+
+
+class EllipticalEmbedded(Crack):
+    alpha = 1.0
+
+    def stress_intensity_factor(
+        self,
+        hoop_stress: float,
+        bend_stress: float,
+        t: float,
+        w: float,
+        a: float,
+        c: float,
+        phi: float,
+    ) -> float:
+        pass
 
 
 def calculate_n_pulses(
@@ -85,6 +222,14 @@ def calculate_n_pulses(
 
     Parameters
     ----------
+    conductor:
+        Conductor information
+    initial_crack:
+        Postulated initiating crack size
+    material:
+        Material values
+    safety:
+        Safety factors
 
     Returns
     -------
@@ -99,7 +244,7 @@ def calculate_n_pulses(
         conductor.max_hoop_stress + conductor.residual_stress
     )
 
-    C_r = material.C * (1 - mean_stress_ratio) ** (
+    C_r = material.C * (1 - mean_stress_ratio) ** (  # noqa: N806
         material.m * (conductor.walker_coeff - 1)
     )
 
@@ -121,13 +266,20 @@ def calculate_n_pulses(
             conductor.width,
             a,
             c,
-            initial_crack.angle,
+            0.5 * np.pi,
         )
-        Km = 0.0  # noqa: N806
-        K_max = max(Ka, Km)
+        Kc = _calc_semi_elliptical_surface_SIF(  # noqa: N806
+            conductor.max_hoop_stress,
+            conductor.tk_radial,
+            conductor.width,
+            a,
+            c,
+            0.0,
+        )
+        K_max = max(Ka, Kc)
 
         a += delta / (Ka / K_max) ** material.m
-        c += delta / (Km / K_max) ** material.m
+        c += delta / (Kc / K_max) ** material.m
         n_cycles += delta / (C_r * K_max**material.m)
 
     n_cycles /= safety.sf_n_cycle
@@ -135,56 +287,9 @@ def calculate_n_pulses(
     return n_cycles // 2
 
 
-def _calc_semi_elliptical_surface_SIF(  # noqa: N802
-    hoop_stress: float, t: float, w: float, a: float, c: float, phi: float
+def _calc_stress_intensity_factor(
+    crack: Crack, hoop_stress: float, t: float, w: float, a: float, c: float, phi: float
 ) -> float:
-    """
-    Calculate semi-elliptical surface crack stress intensity factor (SIF).
-
-    Parameters
-    ----------
-
-    Returns
-    -------
-
-    Notes
-    -----
-    Newman and Raju, 1984, Stress-intensity factor equations for cracks in
-    three-dimensional finite bodies subjected to tension and bending loads
-    https://ntrs.nasa.gov/api/citations/19840015857/downloads/19840015857.pdf
-    """
-    bend_stress = 0.0
-    a_d_t = a / t
-
-    if a <= c:  # a/c <= 1
-        ratio = a / c
-        m1 = 1.13 - 0.09 * ratio
-        m2 = -0.54 + 0.89 / (0.2 + ratio)
-        m3 = 0.5 - 1.0 / (0.65 + ratio) + 14.0 * (1 - ratio) ** 24
-        g = 1.0 + (0.1 + 0.35 * ratio**2) * (1 - np.sin(phi)) ** 2
-        f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 4
-        f_w = np.sqrt(1.0 / np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))
-        g21 = -1.22 - 0.12 * ratio
-        g22 = 0.55 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5
-        h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t
-        h2 = 1 + g21 * a_d_t + g22 * a_d_t**2
-
-    else:  # a/c > 1
-        ratio = c / a
-        m1 = np.sqrt(ratio) * (1.0 + 0.04 * ratio)
-        m2 = 0.2 * ratio**4
-        m3 = -0.11 * ratio**4
-        g = 1.0 + (0.1 + 0.35 * ratio * a_d_t**2) * (1 - np.sin(phi)) ** 2
-        g11 = -0.04 - 0.41 * ratio
-        g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5
-        g21 = -2.11 + 0.77 * ratio
-        g22 = 0.55 - 0.72 * ratio**0.75 + 0.14 * ratio**1.5
-        h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2
-        h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
-
-    p = 0.2 + ratio + 0.6 * a_d_t
-    H_s = h1 + (h2 - h1) * np.sin(phi) ** p  # noqa: N806
-    Q = 1.0 + 1.464 * ratio**1.65  # noqa: N806
-    F_s = (m1 + m2 * a_d_t**2 + m3 * a_d_t**4) * g * f_phi * f_w  # noqa: N806
-
-    return hoop_stress + H_s * bend_stress * F_s * np.sqrt(np.pi * a / Q)
+    """ """
+    if isinstance(crack, SemiEllipticalSurface):
+        pass
