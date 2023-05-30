@@ -452,6 +452,7 @@ def calculate_n_pulses(
     Assumes two stress cycles per pulse.
     Calculates using the lifecycle method.
     """
+    # TODO: Stress units probs need to be in MPa
     mean_stress_ratio = conductor.residual_stress / (
         conductor.max_hoop_stress + conductor.residual_stress
     )
