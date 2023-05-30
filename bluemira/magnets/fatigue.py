@@ -109,13 +109,13 @@ def calculate_n_pulses(
 
     a = initial_crack.depth
     c = initial_crack.width
-    K_max = 0.0
+    K_max = 0.0  # noqa: N806
     n_cycles = 0
 
     delta = 1e-4  # Crack size increment
 
     while a < max_crack_depth and c < max_crack_width and K_max < max_stress_intensity:
-        Ka = _calc_semi_elliptical_surface_SIF(
+        Ka = _calc_semi_elliptical_surface_SIF(  # noqa: N806
             conductor.max_hoop_stress,
             conductor.tk_radial,
             conductor.width,
@@ -123,7 +123,7 @@ def calculate_n_pulses(
             c,
             initial_crack.angle,
         )
-        Km = 0.0
+        Km = 0.0  # noqa: N806
         K_max = max(Ka, Km)
 
         a += delta / (Ka / K_max) ** material.m
@@ -135,7 +135,7 @@ def calculate_n_pulses(
     return n_cycles // 2
 
 
-def _calc_semi_elliptical_surface_SIF(
+def _calc_semi_elliptical_surface_SIF(  # noqa: N802
     hoop_stress: float, t: float, w: float, a: float, c: float, phi: float
 ) -> float:
     """
@@ -146,6 +146,12 @@ def _calc_semi_elliptical_surface_SIF(
 
     Returns
     -------
+
+    Notes
+    -----
+    Newman and Raju, 1984, Stress-intensity factor equations for cracks in
+    three-dimensional finite bodies subjected to tension and bending loads
+    https://ntrs.nasa.gov/api/citations/19840015857/downloads/19840015857.pdf
     """
     bend_stress = 0.0
     a_d_t = a / t
@@ -177,8 +183,8 @@ def _calc_semi_elliptical_surface_SIF(
         h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
 
     p = 0.2 + ratio + 0.6 * a_d_t
-    H_s = h1 + (h2 - h1) * np.sin(phi) ** p
-    Q = 1.0 + 1.464 * ratio**1.65
-    F_s = (m1 + m2 * a_d_t**2 + m3 * a_d_t**4) * g * f_phi * f_w
+    H_s = h1 + (h2 - h1) * np.sin(phi) ** p  # noqa: N806
+    Q = 1.0 + 1.464 * ratio**1.65  # noqa: N806
+    F_s = (m1 + m2 * a_d_t**2 + m3 * a_d_t**4) * g * f_phi * f_w  # noqa: N806
 
     return hoop_stress + H_s * bend_stress * F_s * np.sqrt(np.pi * a / Q)
