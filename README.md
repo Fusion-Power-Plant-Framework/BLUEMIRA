@@ -48,6 +48,7 @@ Below is an overview of our development roadmap for 2024:
 * `fuel_cycle`: fuel cycle model
 * `geometry`: the geometry "engine" of the ``bluemira`` framework
 * `magnetostatics`: magnetostatics solvers
+* `magnets` **[WIP]**: magnet design module
 * `materials`: materials module
 * `optimisation`: interface to optimisers and associated tools
 * `plasma_physics`: 0-D plasma physics tools
