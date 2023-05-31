@@ -34,10 +34,10 @@ class ConductorInfo:
     Cable in conduit conductor information for Paris fatigue model
     """
 
-    tk_radial: float
-    width: float  # in the loaded direction
-    max_hoop_stress: float
-    residual_stress: float
+    tk_radial: float  # [m] in the loaded direction
+    width: float  # [m] in the loaded direction
+    max_hoop_stress: float  # [Pa]
+    residual_stress: float  # [Pa]
     walker_coeff: float
 
 
@@ -49,7 +49,7 @@ class ParisFatigueMaterial:
 
     C: float  # Paris law material constant
     m: float  # Paris law material exponent
-    K_ic: float  # Fracture toughness
+    K_ic: float  # Fracture toughness  [Pa/m^(1/2)]
 
 
 @dataclass
@@ -199,19 +199,19 @@ class QuarterEllipticalCornerCrack(Crack):
         Parameters
         ----------
         hoop_stress:
-            Hoop stress in the plate
+            Hoop stress in the plate [Pa]
         bend_stress:
-            Bending stress in the plate
+            Bending stress in the plate [Pa]
         t:
-            Plate thickness
+            Plate thickness [m]
         w:
-            Plate width
+            Plate width [m]
         a:
-            Crack depth
+            Crack depth [m]
         c:
-            Crack width
+            Crack width [m]
         phi:
-            Crack angle
+            Crack angle [rad]
 
         Returns
         -------
@@ -301,19 +301,19 @@ class SemiEllipticalSurfaceCrack(Crack):
         Parameters
         ----------
         hoop_stress:
-            Hoop stress in the plate
+            Hoop stress in the plate [Pa]
         bend_stress:
-            Bending stress in the plate
+            Bending stress in the plate [Pa]
         t:
-            Plate thickness
+            Plate thickness [m]
         w:
-            Plate width
+            Plate width [m]
         a:
-            Crack depth
+            Crack depth [m]
         c:
-            Crack width
+            Crack width [m]
         phi:
-            Crack angle
+            Crack angle [rad]
 
         Returns
         -------
@@ -392,19 +392,19 @@ class EllipticalEmbeddedCrack(Crack):
         Parameters
         ----------
         hoop_stress:
-            Hoop stress in the plate
+            Hoop stress in the plate [Pa]
         bend_stress:
-            Bending stress in the plate
+            Bending stress in the plate [Pa]
         t:
-            Plate thickness
+            Plate thickness [m]
         w:
-            Plate width
+            Plate width [m]
         a:
-            Crack depth
+            Crack depth [m]
         c:
-            Crack width
+            Crack width [m]
         phi:
-            Crack angle
+            Crack angle [rad]
 
         Returns
         -------
@@ -470,7 +470,6 @@ def calculate_n_pulses(
     Assumes two stress cycles per pulse.
     Calculates using the lifecycle method.
     """
-    # TODO: Stress units probs need to be in MPa
     mean_stress_ratio = conductor.residual_stress / (
         conductor.max_hoop_stress + conductor.residual_stress
     )
