@@ -101,6 +101,23 @@ def _ellipse_shape_factor(ratio: float) -> float:
     return 1.0 + 1.464 * ratio**1.65
 
 
+def _angular_location_correction(a: float, c: float, phi: float) -> float:
+    """
+    Equation 10 and 13 of Newman and Raju, 1984
+    """
+    if a <= c:
+        return ((a / c) ** 2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 0.25  # (10)
+    else:
+        return ((c / a) ** 2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** 0.25  # (13)
+
+
+def _finite_width_correction(a_d_t: float, c: float, w: float) -> float:
+    """
+    Equation 11 of Newman and Raju, 1984
+    """
+    return 1.0 / np.sqrt(np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))  # (11)
+
+
 class Crack(abc.ABC):
     """
     Crack description ABC for the Paris fatigue model
@@ -210,41 +227,42 @@ class QuarterEllipticalCornerCrack(Crack):
 
         if a <= c:  # a/c <= 1
             ratio = a / c
-            m1 = 1.08 - 0.03 * ratio
-            m2 = -0.44 + 1.06 / (0.3 + ratio)
-            m3 = -0.5 + 0.25 * ratio + 14.8 * (1 - ratio) ** 15
-            g1 = 1 + (0.08 + 0.4 * a_d_t**2) * (1 - np.sin(phi)) ** 3
-            g2 = 1 + (0.08 + 0.15 * a_d_t**2) * (1 - np.cos(phi)) ** 3
-            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 0.25
-            g21 = -1.22 - 0.12 * ratio
-            g22 = 0.64 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5
-            h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t
-            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
+            m1 = 1.08 - 0.03 * ratio  # (39)
+            m2 = -0.44 + 1.06 / (0.3 + ratio)  # (40)
+            m3 = -0.5 + 0.25 * ratio + 14.8 * (1 - ratio) ** 15  # (41)
+            g1 = 1 + (0.08 + 0.4 * a_d_t**2) * (1 - np.sin(phi)) ** 3  # (42)
+            g2 = 1 + (0.08 + 0.15 * a_d_t**2) * (1 - np.cos(phi)) ** 3  # (43)
+
+            g21 = -1.22 - 0.12 * ratio  # (24)
+            g22 = 0.64 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5  # (46)
+            h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t  # (22)
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2  # (23)
         else:  # a/c > 1
             ratio = c / a
-            m1 = np.sqrt(ratio) * (1.08 - 0.03 * ratio)
-            m2 = 0.375 * ratio**2
-            m3 = -0.25 * ratio**2
-            g1 = 1 + (0.08 + 0.4 * (c / t) ** 2) * (1 - np.sin(phi)) ** 3
-            g2 = 1 + (0.08 + 0.15 * (c / t) ** 2) * (1 - np.cos(phi)) ** 3
-            g11 = -0.04 - 0.41 * ratio
-            g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5
-            g21 = -2.11 + 0.77 * ratio
-            g22 = 0.64 - 0.72 * ratio**0.75 + 0.14 * ratio**1.5
-            h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2
-            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
-            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** 0.25
+            m1 = np.sqrt(ratio) * (1.08 - 0.03 * ratio)  # (47)
+            m2 = 0.375 * ratio**2  # (48)
+            m3 = -0.25 * ratio**2  # (49)
+            g1 = 1 + (0.08 + 0.4 * (c / t) ** 2) * (1 - np.sin(phi)) ** 3  # (50)
+            g2 = 1 + (0.08 + 0.15 * (c / t) ** 2) * (1 - np.cos(phi)) ** 3  # (51)
+
+            g11 = -0.04 - 0.41 * ratio  # (33)
+            g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5  # (34)
+            g21 = -2.11 + 0.77 * ratio  # (35)
+            g22 = 0.64 - 0.72 * ratio**0.75 + 0.14 * ratio**1.5  # (52)
+            h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2  # (31)
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2  # (32)
 
         llambda = c / w * np.sqrt(a_d_t)
-        f_w = (
+        f_w = (  # (44)
             1.0
             - 0.2 * llambda
             + 9.4 * llambda**2
             - 19.4 * llambda**3
             + 27.1 * llambda**4
         )
+        f_phi = _angular_location_correction(a, c, phi)
 
-        p = 0.2 + ratio + 0.6 * a_d_t
+        p = 0.2 + ratio + 0.6 * a_d_t  # (21 & 30)
         H = _bending_correction_factor(h1, h2, p, phi)  # noqa: N806
         Q = _ellipse_shape_factor(ratio)  # noqa: N806
         F = _boundary_correction_factor(  # noqa: N806
@@ -311,32 +329,33 @@ class SemiEllipticalSurfaceCrack(Crack):
 
         if a <= c:  # a/c <= 1
             ratio = a / c
-            m1 = 1.13 - 0.09 * ratio
-            m2 = -0.54 + 0.89 / (0.2 + ratio)
-            m3 = 0.5 - 1.0 / (0.65 + ratio) + 14.0 * (1 - ratio) ** 24
-            g = 1.0 + (0.1 + 0.35 * a_d_t**2) * (1 - np.sin(phi)) ** 2
-            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 0.25
-            g21 = -1.22 - 0.12 * ratio
-            g22 = 0.55 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5
-            h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t
-            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
+            m1 = 1.13 - 0.09 * ratio  # (16)
+            m2 = -0.54 + 0.89 / (0.2 + ratio)  # (17)
+            m3 = 0.5 - 1.0 / (0.65 + ratio) + 14.0 * (1 - ratio) ** 24  # (18)
+            g = 1.0 + (0.1 + 0.35 * a_d_t**2) * (1 - np.sin(phi)) ** 2  # (19)
+
+            g21 = -1.22 - 0.12 * ratio  # (24)
+            g22 = 0.55 - 1.05 * ratio**0.75 + 0.47 * ratio**1.5  # (25)
+            h1 = 1.0 - 0.34 * a_d_t - 0.11 * ratio * a_d_t  # (22)
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2  # (23)
 
         else:  # a/c > 1
             ratio = c / a
-            m1 = np.sqrt(ratio) * (1.0 + 0.04 * ratio)
-            m2 = 0.2 * ratio**4
-            m3 = -0.11 * ratio**4
-            g = 1.0 + (0.1 + 0.35 * ratio * a_d_t**2) * (1 - np.sin(phi)) ** 2
-            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** 0.25
-            g11 = -0.04 - 0.41 * ratio
-            g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5
-            g21 = -2.11 + 0.77 * ratio
-            g22 = 0.55 - 0.72 * ratio**0.75 + 0.14 * ratio**1.5
-            h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2
-            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2
+            m1 = np.sqrt(ratio) * (1.0 + 0.04 * ratio)  # (26)
+            m2 = 0.2 * ratio**4  # (27)
+            m3 = -0.11 * ratio**4  # (28)
+            g = 1.0 + (0.1 + 0.35 * ratio * a_d_t**2) * (1 - np.sin(phi)) ** 2  # (29)
 
-        f_w = np.sqrt(1.0 / np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))
-        p = 0.2 + ratio + 0.6 * a_d_t
+            g11 = -0.04 - 0.41 * ratio  # (33)
+            g12 = 0.55 - 1.93 * ratio**0.75 + 1.38 * ratio**1.5  # (34)
+            g21 = -2.11 + 0.77 * ratio  # (35)
+            g22 = 0.55 - 0.72 * ratio**0.75 + 0.14 * ratio**1.5  # (36)
+            h1 = 1.0 + g11 * a_d_t + g12 * a_d_t**2  # (31)
+            h2 = 1.0 + g21 * a_d_t + g22 * a_d_t**2  # (32)
+
+        f_phi = _angular_location_correction(a, c, phi)
+        f_w = _finite_width_correction(a_d_t, c, w)
+        p = 0.2 + ratio + 0.6 * a_d_t  # (21 & 30)
         H = _bending_correction_factor(h1, h2, p, phi)  # noqa: N806
         Q = _ellipse_shape_factor(ratio)  # noqa: N806
         F = _boundary_correction_factor(a_d_t, m1, m2, m3, g, f_phi, f_w)  # noqa: N806
@@ -403,19 +422,19 @@ class EllipticalEmbeddedCrack(Crack):
 
         if a <= c:  # a/c <= 1
             ratio = a / c
-            m1 = 1.0
-            f_phi = (ratio**2 * np.cos(phi) ** 2 + np.sin(phi) ** 2) ** 0.25
+            m1 = 1.0  # (6)
+
         else:  # a/c > 1
             ratio = c / a
-            m1 = np.sqrt(ratio)
-            f_phi = (ratio**2 * np.sin(phi) ** 2 + np.cos(phi) ** 2) ** 0.25
+            m1 = np.sqrt(ratio)  # (12)
 
-        m2 = 0.05 / (0.11 + ratio**1.5)
-        m3 = 0.29 / (0.23 + ratio**1.5)
-        g = 1.0 - (a_d_t**4 * np.sqrt(2.6 - 2 * a_d_t)) / (1 + 4 * ratio) * np.abs(
+        m2 = 0.05 / (0.11 + (a / c) ** 1.5)  # (7)
+        m3 = 0.29 / (0.23 + (a / c) ** 1.5)  # (8)
+        g = 1.0 - (a_d_t**4 * np.sqrt(2.6 - 2 * a_d_t)) / (1 + 4 * a / c) * np.abs(
             np.cos(phi)
-        )
-        f_w = np.sqrt(1.0 / np.cos(np.sqrt(a_d_t) * np.pi * c / (2 * w)))
+        )  # (9)
+        f_phi = _angular_location_correction(a, c, phi)
+        f_w = _finite_width_correction(a_d_t, c, w)
 
         Q = _ellipse_shape_factor(ratio)  # noqa: N806
         F = _boundary_correction_factor(a_d_t, m1, m2, m3, g, f_phi, f_w)  # noqa: N806
