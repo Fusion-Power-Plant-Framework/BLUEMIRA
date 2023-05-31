@@ -32,7 +32,12 @@ from bluemira.magnets.fatigue import (
 
 class TestFatigueCracks:
     @pytest.mark.parametrize(
-        "crack_cls", [SemiEllipticalSurfaceCrack, QuarterEllipticalCornerCrack]
+        "crack_cls",
+        [
+            SemiEllipticalSurfaceCrack,
+            QuarterEllipticalCornerCrack,
+            EllipticalEmbeddedCrack,
+        ],
     )
     @pytest.mark.parametrize("area,aspect_ratio", [[1, 3], [2e-6, 2]])
     def test_init_by_area(self, crack_cls, area, aspect_ratio):
