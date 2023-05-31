@@ -59,7 +59,7 @@ class ParisFatigueSafetyFactors:
     """
 
     sf_n_cycle: float
-    sf_radial_crack: float
+    sf_depth_crack: float
     sf_width_crack: float
     sf_fracture: float
 
@@ -247,9 +247,9 @@ class QuarterEllipticalCornerCrack(Crack):
         p = 0.2 + ratio + 0.6 * a_d_t
         H = _bending_correction_factor(h1, h2, p, phi)  # noqa: N806
         Q = _ellipse_shape_factor(ratio)  # noqa: N806
-        F = _boundary_correction_factor(
+        F = _boundary_correction_factor(  # noqa: N806
             a_d_t, m1, m2, m3, g1 * g2, f_phi, f_w
-        )  # noqa: N806
+        )
         return _stress_intensity_factor(hoop_stress, bend_stress, a, H, Q, F)
 
 
@@ -397,9 +397,8 @@ class EllipticalEmbeddedCrack(Crack):
         three-dimensional finite bodies subjected to tension and bending loads
         https://ntrs.nasa.gov/api/citations/19840015857/downloads/19840015857.pdf
         """
-        t = (
-            0.5 * t
-        )  # NOTE: for embedded cracks, t is defined as one-half the plate thickness
+        # NOTE: for embedded cracks, t is defined as one-half the plate thickness
+        t = 0.5 * t
         a_d_t = a / t
 
         if a <= c:  # a/c <= 1
@@ -461,7 +460,7 @@ def calculate_n_pulses(
         material.m * (conductor.walker_coeff - 1)
     )
 
-    max_crack_depth = conductor.tk_radial / safety.sf_radial_crack
+    max_crack_depth = conductor.tk_radial / safety.sf_depth_crack
     max_crack_width = conductor.width / safety.sf_width_crack
     max_stress_intensity = material.K_ic / safety.sf_fracture
 
