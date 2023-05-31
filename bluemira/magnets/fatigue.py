@@ -20,12 +20,22 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 """
-Fatigue model
+Paris Law fatigue model with FE-inspired analytical crack propagation
 """
 import abc
 from dataclasses import dataclass
 
 import numpy as np
+
+__all__ = [
+    "ConductorInfo",
+    "ParisFatigueMaterial",
+    "ParisFatigueSafetyFactors",
+    "QuarterEllipticalCornerCrack",
+    "SemiEllipticalSurfaceCrack",
+    "EllipticalEmbeddedCrack",
+    "calculate_n_pulses",
+]
 
 
 @dataclass
