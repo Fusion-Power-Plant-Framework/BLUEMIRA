@@ -24,7 +24,6 @@ import pytest
 
 from bluemira.magnets.fatigue import (
     EllipticalEmbeddedCrack,
-    ParisFatigueMaterial,
     QuarterEllipticalCornerCrack,
     SemiEllipticalSurfaceCrack,
 )
