@@ -69,7 +69,7 @@ def _direction_cosine_matrix(dx: float, dy: float, dz: float) -> np.ndarray:
     c = dz / length
     d = np.hypot(a, b)
     # TODO: Why does the less intuitive, simpler algebra form work better??
-    # https://ocw.mit.edu/courses/civil-and-environmental-engineering/1-571-structural-analysis-and-control-spring-2004/readings/connor_ch5.pdf  # noqa
+    # https://ocw.mit.edu/courses/civil-and-environmental-engineering/1-571-structural-analysis-and-control-spring-2004/readings/connor_ch5.pdf
     if np.isclose(a, 0) and np.isclose(b, 0):
         dcm = np.array(
             [[0.0, 0.0, -np.sign(c)], [0.0, 1.0, 0.0], [np.sign(c), 0.0, 0.0]]
@@ -98,8 +98,7 @@ def _direction_cosine_matrix_debugging(dx, dy, dz, debug=False):
         dcm = np.eye(3)
         if debug:
             return dcm, globa
-        else:
-            return dcm
+        return dcm
     if x_local[0] == -1:
         # corresponds to the mirrored coordinate system
         dcm = np.eye(3)
@@ -108,8 +107,7 @@ def _direction_cosine_matrix_debugging(dx, dy, dz, debug=False):
         local[0][0] = -1
         if debug:
             return dcm, local
-        else:
-            return dcm
+        return dcm
     if abs(x_local[1]) == 1:
         # corresponds to a local y-vector sitting on the global x-vector
         # (rotation about z-axis)
@@ -121,8 +119,7 @@ def _direction_cosine_matrix_debugging(dx, dy, dz, debug=False):
         if debug:
             local = np.array([[0, sin_theta, 0], [-sin_theta, 0, 0], [0, 0, 1]])
             return dcm, local
-        else:
-            return dcm
+        return dcm
     if x_local[2] == 1:
         # corresponds to a local z-vector sitting on the global x-vector
         # rotation about the y-axis
@@ -134,8 +131,7 @@ def _direction_cosine_matrix_debugging(dx, dy, dz, debug=False):
         if debug:
             local = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
             return dcm, local
-        else:
-            return dcm
+        return dcm
 
     y_local = np.array([0, 1.0, 0])
     y_local -= np.dot(x_local, y_local) * x_local
@@ -147,8 +143,7 @@ def _direction_cosine_matrix_debugging(dx, dy, dz, debug=False):
     if not isinstance(dcm, int):
         if debug:
             return dcm, local
-        else:
-            return dcm
+        return dcm
     c11 = np.dot(x_global, x_local)
     c12 = np.dot(x_global, y_local)
     c13 = np.dot(x_global, z_local)
@@ -161,8 +156,7 @@ def _direction_cosine_matrix_debugging(dx, dy, dz, debug=False):
     dcm = np.array([[c11, c12, c13], [c21, c22, c23], [c31, c32, c33]])
     if not debug:
         return dcm
-    else:
-        return dcm, local
+    return dcm, local
 
 
 def lambda_matrix(dx: float, dy: float, dz: float) -> np.ndarray:
@@ -220,11 +214,10 @@ def cyclic_pattern(
 
     if include_first:
         patterned = deepcopy(geometry)
+    elif isinstance(geometry, DeformedGeometry):
+        patterned = DeformedGeometry(Geometry(), geometry._scale)
     else:
-        if isinstance(geometry, DeformedGeometry):
-            patterned = DeformedGeometry(Geometry(), geometry._scale)
-        else:
-            patterned = Geometry()
+        patterned = Geometry()
 
     for i in range(1, n):
         sector = deepcopy(geometry)

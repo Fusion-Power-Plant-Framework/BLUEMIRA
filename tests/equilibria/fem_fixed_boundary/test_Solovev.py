@@ -128,7 +128,7 @@ class Solovev:
         cplot = plot_scalar_field(
             points[:, 0], points[:, 1], psi, levels=levels, ax=axis, tofill=tofill
         )
-        return cplot + (points, psi)
+        return (*cplot, points, psi)
 
     @property
     def psi_ax(self):
@@ -149,10 +149,9 @@ class Solovev:
         """Normalized flux function in 2-D"""
 
         def myfunc(x):
-            value = np.sqrt(
+            return np.sqrt(
                 np.abs((self.psi(x) - self.psi_ax) / (self.psi_b - self.psi_ax))
             )
-            return value
 
         return myfunc
 
@@ -225,7 +224,7 @@ class TestSolovevZheng:
         # solve the Grad-Shafranov equation
         cls.fe_psi_calc = gs_solver.solve()
 
-    def test_psi_mesh_array(self):  # noqa: N803
+    def test_psi_mesh_array(self):
         """
         Compare the psi Solovev analytical solution as described in [Zheng1996] with the
         one calculated using the implemented magnetostic module.

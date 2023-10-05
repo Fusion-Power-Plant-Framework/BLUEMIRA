@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -36,7 +36,7 @@ DATA_PATH = get_bluemira_path("geometry", subfolder="data")
 
 def _setup_zl_class(cls, _up):
     cls.fig, cls.ax = plt.subplots()
-    tf = Coordinates.from_json(os.sep.join([DATA_PATH, "TFreference.json"]))
+    tf = Coordinates.from_json(Path(DATA_PATH, "TFreference.json"))
     x_off, z_off = offset(*tf.xz, 2.5)
     tf = Coordinates({"x": x_off, "z": z_off})
     clip = np.where(tf.x >= 3.5)

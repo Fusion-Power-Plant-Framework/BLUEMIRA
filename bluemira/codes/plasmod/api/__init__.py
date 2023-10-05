@@ -31,4 +31,5 @@ __all__ = [
     "Setup",
     "Solver",
     "Teardown",
+    "plot_default_profiles",
 ]

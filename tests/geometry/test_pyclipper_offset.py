@@ -20,7 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import json
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,17 +34,17 @@ from bluemira.geometry.tools import distance_to, make_polygon
 
 
 class TestClipperOffset:
-    options = [("square"), ("miter")]
+    options = ("square", "miter")
     # NOTE: "round" can be montrously slow..
 
     # fmt: off
-    x = [-4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -4]
-    y = [0, -2, -4, -3, -4, -2, 0, 1, 2, 3, 4, 5, 6, 6, 6, 6, 4, 3, 2, 1, 2, 2, 1, 0]
+    x = (-4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2, -4)
+    y = (0, -2, -4, -3, -4, -2, 0, 1, 2, 3, 4, 5, 6, 6, 6, 6, 4, 3, 2, 1, 2, 2, 1, 0)
     # fmt: on
 
     @pytest.mark.parametrize("method", options)
     @pytest.mark.parametrize(
-        "x, y, delta",
+        ("x", "y", "delta"),
         [
             (x, y, 1.0),
             (x[::-1], y[::-1], 1.0),
@@ -53,7 +53,8 @@ class TestClipperOffset:
         ],
     )
     def test_complex_polygon(self, x, y, delta, method):
-        coordinates = Coordinates({"x": x, "y": y, "z": np.random.rand()})
+        rng = np.random.default_rng()
+        coordinates = Coordinates({"x": x, "y": y, "z": rng.random()})
         c = offset_clipper(coordinates, delta, method=method)
 
         fig, ax = plt.subplots()
@@ -74,8 +75,7 @@ class TestClipperOffset:
 
     def test_blanket_offset(self):
         fp = get_bluemira_path("geometry/test_data", subfolder="tests")
-        fn = os.sep.join([fp, "bb_offset_test.json"])
-        with open(fn, "rb") as file:
+        with open(Path(fp, "bb_offset_test.json"), "rb") as file:
             data = json.load(file)
         coordinates = Coordinates(data)
         offsets = []

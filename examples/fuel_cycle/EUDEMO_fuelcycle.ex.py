@@ -150,10 +150,7 @@ t_exh = m_exhaust_systems / exhaust_influx
 
 vessel_outflux = 0.00032812
 
-if high_not_low:
-    fw_retention_flux = 1e20
-else:
-    fw_retention_flux = 1e19
+fw_retention_flux = 1e20 if high_not_low else 1e19
 
 # Numbers taken from KDI-2 report (R. Arrendondo, F. Franza, C. Moro)
 if HCPB_not_WCLL:
@@ -165,15 +162,14 @@ if HCPB_not_WCLL:
         eta_ivc = 0.0972729
         max_ivc_inventory = 0.37786173
         max_bb_inventory = 0.026
+elif high_not_low:
+    eta_ivc = 0.62037084
+    max_ivc_inventory = 1.65440323
+    max_bb_inventory = 0.18519
 else:
-    if high_not_low:
-        eta_ivc = 0.62037084
-        max_ivc_inventory = 1.65440323
-        max_bb_inventory = 0.18519
-    else:
-        eta_ivc = 0.13090036
-        max_ivc_inventory = 0.64900007
-        max_bb_inventory = 0.06314
+    eta_ivc = 0.13090036
+    max_ivc_inventory = 0.64900007
+    max_bb_inventory = 0.06314
 
 fw_flow = convert_flux_to_flow(fw_retention_flux, 1400)
 

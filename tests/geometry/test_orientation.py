@@ -88,13 +88,13 @@ class ExtrudeOrientation:
     Helper class for testing orientations are respected after an extrude operation.
     """
 
-    VERTS = [
+    VERTS = (
         [0.5, 0, -0.5],
         [1.5, 0, -0.5],
         [1.5, 0, 0.5],
         [0.5, 0, 0.5],
         [0.5, 0, -0.5],
-    ]
+    )
     _extrusion: float
 
     def setup_method(self):
@@ -112,7 +112,7 @@ class ExtrudeOrientation:
         shapes_fc = getattr(self.solid_fc, shapes_name)
         shapes_bm = getattr(self.solid_bm.shape, shapes_name)
         assert all(
-            [fc.Orientation == bm.Orientation for fc, bm in zip(shapes_fc, shapes_bm)]
+            fc.Orientation == bm.Orientation for fc, bm in zip(shapes_fc, shapes_bm)
         )
 
     def test_edges(self):
@@ -130,7 +130,10 @@ class TestExtrudeNegativeOrientation(ExtrudeOrientation):
     _extrusion = -1.0
 
     @pytest.mark.xfail(
-        reason="Inversion of shell orientation under investigation - no effect on other results seen so far."
+        reason=(
+            "Inversion of shell orientation under investigation - no effect on other"
+            " results seen so far."
+        )
     )
     def test_shells(self):
         super().test_shells()
@@ -144,7 +147,10 @@ class TestExtrudePositiveOrientation(ExtrudeOrientation):
     _extrusion = 1.0
 
     @pytest.mark.xfail(
-        reason="Mismatch of edge orientation under investigation - no effect on other results seen so far."
+        reason=(
+            "Mismatch of edge orientation under investigation - no effect on other"
+            " results seen so far."
+        )
     )
     def test_edges(self):
         super().test_edges()

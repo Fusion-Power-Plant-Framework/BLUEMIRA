@@ -86,22 +86,23 @@ class TestSurfaceFit:
         assert np.allclose(coeffs_true, coeffs)
 
     def test_bad_inputs(self):
+        rng = np.random.default_rng()
         x = np.array([1, 2, 3, 4, 5, 6, 7, 9, 2, 4, 10, 12])
         y = np.array([0, 2, 0, 1, 3, 5, 1, 2, 4, 5, 2, 0, 2])
-        z = np.random.rand(len(x))
-        with pytest.raises(ValueError):
+        z = rng.random(len(x))
+        with pytest.raises(ValueError):  # noqa: PT011
             surface_fit(x, y, z, order=1)
 
         x = np.array([1, 2, 3, 4, 5, 6, 7, 9, 2, 4, 10, 12])
         y = np.array([0, 2, 0, 1, 3, 5, 1, 2])
-        z = np.random.rand(len(x))
-        with pytest.raises(ValueError):
+        z = rng.random(len(x))
+        with pytest.raises(ValueError):  # noqa: PT011
             surface_fit(x, y, z, order=1)
 
         x = np.array([1, 2, 3, 4, 5, 6, 7, 9, 2, 4, 10, 12, 13])
         y = np.array([0, 2, 0, 1, 3, 5, 1, 2, 4, 5, 2, 0, 2])
-        z = np.random.rand(len(x) - 1)
-        with pytest.raises(ValueError):
+        z = rng.random(len(x) - 1)
+        with pytest.raises(ValueError):  # noqa: PT011
             surface_fit(x, y, z, order=1)
 
     def test_power_arange(self):

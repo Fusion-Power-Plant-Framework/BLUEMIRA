@@ -33,7 +33,7 @@ import bluemira.codes._freecadapi as cadapi
 # import from bluemira
 from bluemira.geometry.base import BluemiraGeo
 from bluemira.geometry.coordinates import Coordinates
-from bluemira.geometry.error import DisjointedSolid, GeometryError
+from bluemira.geometry.error import DisjointedSolidError, GeometryError
 from bluemira.geometry.face import BluemiraFace
 from bluemira.geometry.shell import BluemiraShell
 from bluemira.geometry.wire import BluemiraWire
@@ -68,12 +68,11 @@ class BluemiraSolid(BluemiraGeo):
             if len(solid.Solids) == 1:
                 solid = solid.Solids[0]
             else:
-                raise DisjointedSolid("Disjointed solids are not accepted.")
+                raise DisjointedSolidError("Disjointed solids are not accepted.")
 
         if check_reverse:
             return self._check_reverse(cadapi.apiSolid(solid))
-        else:
-            return solid
+        return solid
 
     def _create_shape(self):
         """Part.Solid: shape of the object as a single solid"""
@@ -83,15 +82,13 @@ class BluemiraSolid(BluemiraGeo):
     def _create(cls, obj: cadapi.apiSolid, label: str = ""):
         if isinstance(obj, cadapi.apiSolid):
             if len(obj.Solids) > 1:
-                raise DisjointedSolid("Disjointed solids are not accepted.")
+                raise DisjointedSolidError("Disjointed solids are not accepted.")
 
             if not obj.isValid():
                 # cadapi.save_as_STP(obj, "object_not_valid")
                 raise GeometryError(f"Solid {obj} is not valid.")
 
-            bm_shells = []
-            for shell in obj.Shells:
-                bm_shells.append(BluemiraShell._create(shell))
+            bm_shells = [BluemiraShell._create(shell) for shell in obj.Shells]
 
             # create an empty BluemiraSolid
             bmsolid = cls(None, label=label)
@@ -145,4 +142,4 @@ class BluemiraSolid(BluemiraGeo):
         """
         The solids of the solid. By definition a tuple of itself.
         """
-        return tuple([self])
+        return (self,)

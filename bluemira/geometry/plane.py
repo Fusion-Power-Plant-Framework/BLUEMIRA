@@ -168,8 +168,7 @@ class BluemiraPlane:
         the plane base position.
         """
         face = cadapi.face_from_plane(self._shape, width, height)
-        bmface = BluemiraFace._create(face, label)
-        return bmface
+        return BluemiraFace._create(face, label)
 
     def to_placement(self) -> BluemiraPlacement:
         """

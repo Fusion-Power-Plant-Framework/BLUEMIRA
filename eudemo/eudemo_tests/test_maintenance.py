@@ -37,23 +37,21 @@ from bluemira.geometry.tools import (
     make_polygon,
 )
 from bluemira.geometry.wire import BluemiraWire
-from bluemira.utilities.optimiser import Optimiser
 from eudemo.maintenance.duct_connection import (
-    UpperPortDuctBuilder,
-    UpperPortDuctBuilderParams,
+    VVUpperPortDuctBuilder,
+    VVUpperPortDuctBuilderParams,
 )
 from eudemo.maintenance.equatorial_port import (
-    CastellationBuilder,
     EquatorialPortDuctBuilder,
     EquatorialPortKOZDesigner,
 )
-from eudemo.maintenance.upper_port import UpperPortOP
+from eudemo.maintenance.upper_port import UpperPortKOZDesigner
 
 
-class TestUpperPortOP:
+class TestUpperPortDesigner:
     """Test Upper Port"""
 
-    def test_dummy_blanket_port_opt(self):
+    def test_dummy_blanket_port_design(self):
         """Test Upper Port Optimiser"""
         params = {
             "c_rm": {"value": 0.02, "unit": "m"},
@@ -61,25 +59,33 @@ class TestUpperPortOP:
             "bb_min_angle": {"value": 70, "unit": "degrees"},
             "tk_bb_ib": {"value": 0.8, "unit": "m"},
             "tk_bb_ob": {"value": 1.1, "unit": "m"},
+            "tk_vv_double_wall": {"value": 0.04, "unit": "m"},
+            "g_vv_ts": {"value": 0.05, "unit": "m"},
+            "tk_ts": {"value": 0.06, "unit": "m"},
+            "g_ts_tf": {"value": 0.07, "unit": "m"},
+            "pf_s_g": {"value": 0.08, "unit": "m"},
+            "pf_s_tk_plate": {"value": 0.09, "unit": "m"},
         }
         bb = make_polygon(
             {
                 "x": [5, 6, 6, 11, 11, 12, 12, 5],
-                "y": 0,
                 "z": [-5, -5, 5, 5, -5, -5, 6, 6],
             },
             closed=True,
         )
         bb = BluemiraFace(bb)
-        optimiser = Optimiser(
-            "SLSQP", opt_conditions={"max_eval": 1000, "ftol_rel": 1e-8}
-        )
+        designer = UpperPortKOZDesigner(params, {}, bb)
 
-        design_problem = UpperPortOP(params, optimiser, bb)
+        up_zone, r_cut, cut_angle = designer.run()
 
-        solution = design_problem.optimise()
-
-        assert design_problem.opt.check_constraints(solution)
+        bbox = up_zone.bounding_box
+        assert bbox.x_min == pytest.approx(6.37)
+        assert bbox.x_max == pytest.approx(12.41)
+        assert bbox.y_min == pytest.approx(bbox.y_max) == pytest.approx(0)
+        assert bbox.z_min == pytest.approx(0)
+        assert bbox.z_max == pytest.approx(10)
+        assert r_cut == pytest.approx(8.52)
+        assert cut_angle == pytest.approx(0)
 
 
 class TestDuctConnection:
@@ -93,10 +99,15 @@ class TestDuctConnection:
     )
 
     def setup_method(self):
-        self.params = UpperPortDuctBuilderParams(
+        self.params = VVUpperPortDuctBuilderParams(
             Parameter("n_TF", 12, ""),
-            Parameter("tk_upper_port_wall_side", 0.1, "m"),
-            Parameter("tk_upper_port_wall_end", 0.2, "m"),
+            Parameter("tf_wp_depth", 0.0, "m"),
+            Parameter("g_ts_tf", 0.00, "m"),
+            Parameter("tk_ts", 0.00, "m"),
+            Parameter("g_vv_ts", 0.00, "m"),
+            Parameter("g_cr_ts", 0.00, "m"),
+            Parameter("tk_vv_double_wall", 0.1, "m"),
+            Parameter("tk_vv_single_wall", 0.05, "m"),
         )
         self.port_koz = self.port_kozs[0]
 
@@ -128,9 +139,10 @@ class TestDuctConnection:
     def test_extrusion_shape(self, port_koz, n_TF, y_offset, port_wall):
         angle = 2 * np.rad2deg(np.pi / n_TF)
         self.params.n_TF.value = n_TF
-        self.params.tk_upper_port_wall_side.value = port_wall
-        self.params.tk_upper_port_wall_end.value = port_wall * 2
-        builder = UpperPortDuctBuilder(self.params, port_koz, y_offset)
+        self.params.tk_vv_single_wall.value = port_wall
+        self.params.tk_vv_double_wall.value = port_wall * 2
+        self.params.tf_wp_depth.value = y_offset
+        builder = VVUpperPortDuctBuilder(self.params, port_koz, port_koz)
         port = builder.build()
         xy = port.get_component("xy").get_component_properties("shape")
         diff = xy.wires[0].length - xy.wires[1].length
@@ -184,17 +196,18 @@ class TestDuctConnection:
         assert np.allclose(finalshape.volume, cylinder.volume)
 
     def test_ValueError_on_zero_wal_thickness(self):
-        self.params.tk_upper_port_wall_side.value = 0
+        self.params.tk_vv_single_wall.value = 0
 
-        with pytest.raises(ValueError):
-            UpperPortDuctBuilder(self.params, self.port_koz, 0)
+        with pytest.raises(ValueError):  # noqa: PT011
+            VVUpperPortDuctBuilder(self.params, self.port_koz, self.port_koz)
 
     @pytest.mark.parametrize("end", [1, 5])
     def test_BuilderError_on_too_small_port(self, end):
         # raises an error in two different places
-        self.params.tk_upper_port_wall_side.value = 0.5
-        self.params.tk_upper_port_wall_end.value = end
-        builder = UpperPortDuctBuilder(self.params, self.port_koz, 2)
+        self.params.tk_vv_single_wall.value = 0.5
+        self.params.tk_vv_double_wall.value = end
+        self.params.tf_wp_depth.value = 2.0
+        builder = VVUpperPortDuctBuilder(self.params, self.port_koz, self.port_koz)
 
         with pytest.raises(BuilderError):
             builder.build()
@@ -205,18 +218,26 @@ class TestEquatorialPortKOZDesigner:
 
     def setup_method(self) -> None:
         """Set-up Equatorial Port Designer"""
-        pass
 
     @pytest.mark.parametrize(
-        "xi, xo, zh", zip([9.0, 9.0, 6.0], [16.0, 15.0, 9.0], [5.0, 4.0, 2.0])
+        ("xi", "xo", "zh"), zip([9.0, 9.0, 6.0], [16.0, 15.0, 9.0], [5.0, 4.0, 2.0])
     )
     def test_ep_designer(self, xi, xo, zh):
         """Test Equatorial Port KOZ Designer"""
+        R_0 = xi
         self.params = {
+            "R_0": {"value": R_0, "unit": "m"},
             "ep_height": {"value": zh, "unit": "m"},
+            "ep_z_position": {"value": 0.0, "unit": "m"},
+            "g_vv_ts": {"value": 0.0, "unit": "m"},
+            "tk_ts": {"value": 0.0, "unit": "m"},
+            "g_ts_tf": {"value": 0.0, "unit": "m"},
+            "pf_s_g": {"value": 0.0, "unit": "m"},
+            "pf_s_tk_plate": {"value": 0.0, "unit": "m"},
+            "tk_vv_single_wall": {"value": 0.0, "unit": "m"},
         }
-        x_len = xo - xi
-        self.designer = EquatorialPortKOZDesigner(self.params, None, 0.0, xi, xo)
+        x_len = xo - R_0
+        self.designer = EquatorialPortKOZDesigner(self.params, None, xo)
         output = self.designer.execute()
 
         assert np.isclose(output.length, 2 * (x_len + zh))
@@ -228,10 +249,9 @@ class TestEquatorialPortDuctBuilder:
 
     def setup_method(self) -> None:
         """Set-up to Equatorial Port Duct Builder"""
-        pass
 
     @pytest.mark.parametrize(
-        "xi, xo, z, y, th",
+        ("xi", "xo", "z", "y", "th"),
         zip(
             [9.0, 9.0, 6.0],  # x_inboard
             [16.0, 15.0, 9.0],  # x_outboard
@@ -262,41 +282,3 @@ class TestEquatorialPortDuctBuilder:
         expectation = length * (2 * (th * (y + z - (2 * th))))
 
         assert np.isclose(out_port.shape.volume, expectation)
-
-
-class TestCastellationBuilder:
-    """Tests the Castellation Builder"""
-
-    def setup_method(self) -> None:
-        """Set-up Castellation Builder"""
-        self.params = {
-            "cst_r_corner": {"value": 0, "unit": "m"},
-        }
-
-    @pytest.mark.parametrize(
-        "xi, xo, zh, yw, vec, x_offsets, c_offsets, exp_v",
-        zip(
-            [9.0, 9.0, 6.0],  # x_inboard
-            [16.0, 15.0, 9.0],  # x_outboard
-            [5.0, 4.0, 2.0],  # z_height
-            [3.0, 2.0, 1.0],  # y_widths
-            [(1, 0, 0), (1, 0, 0), (1, 0, 0.5)],  # extrusion vectors
-            [[1.0], [1.0, 1.0], [0.5]],  # y/z castellation_offsets
-            [[3.0], [2.0, 4.0], [1.0]],  # x castellation_positions
-            [185.0, 160.0, 12.521980674],  # volume check value of Eq. Ports
-        ),
-    )
-    def test_cst_builder(self, xi, xo, zh, yw, vec, x_offsets, c_offsets, exp_v):
-        """Test Castellation Builder"""
-        y = (yw / 2.0, -yw / 2.0, -yw / 2.0, yw / 2.0)
-        z = (-zh / 2.0, -zh / 2.0, zh / 2.0, zh / 2.0)
-        yz_profile = BluemiraFace(make_polygon({"x": xi, "y": y, "z": z}, closed=True))
-
-        self.builder = CastellationBuilder(
-            self.params, {}, xo - xi, yz_profile, vec, x_offsets, c_offsets
-        )
-        output = self.builder.build()
-        out_cst = output.get_component("xyz").get_component("Castellation 1")
-        if out_cst is None:
-            out_cst = output.get_component("xyz").get_component("Castellation")
-        assert np.isclose(out_cst.shape.volume, exp_v)

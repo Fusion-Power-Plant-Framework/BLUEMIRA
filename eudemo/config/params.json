@@ -191,6 +191,12 @@
     "source": "Input",
     "long_name": "Gravity support radius. Used for TF and VV supports (assuming a supporting ring)"
   },
+  "lower_port_angle": {
+    "value": -15,
+    "unit": "degree",
+    "source": "Input",
+    "long_name": "Lower port angle (downwards from 0 degrees)"
+  },
   "x_gs_kink_diff": {
     "value": 2,
     "unit": "m",
@@ -731,6 +737,18 @@
     "source": "Input",
     "long_name": "Upper vacuum vessel thickness"
   },
+  "tk_vv_single_wall": {
+    "value": 0.06,
+    "unit": "meter",
+    "source": "Input",
+    "long_name": "Vacuum vessel single-walled shell thickness"
+  },
+  "tk_vv_double_wall": {
+    "value": 0.2,
+    "unit": "meter",
+    "source": "Input",
+    "long_name": "Vacuum vessel double-walled shell thickness"
+  },
   "vvpfrac": {
     "value": 0.04,
     "unit": "volt",
@@ -951,7 +969,7 @@
   },
   "bb_pump_eta_isen": {
     "value": 0.9,
-    "unit": "MN",
+    "unit": "",
     "long_name": "Breeding blanket pumping isentropic efficiency"
   },
   "bb_t_inlet": {
@@ -1003,17 +1021,5 @@
     "value": 150,
     "unit": "MW",
     "long_name": "Steady-state heating and current drive electrical power"
-  },
-  "tk_upper_port_wall_end": {
-    "value": 0.4,
-    "unit": "m",
-    "source": "Input",
-    "long_name": "Thickness of the upper port wall ends"
-  },
-  "tk_upper_port_wall_side": {
-    "value": 0.2,
-    "unit": "m",
-    "source": "Input",
-    "long_name": "Thickness of the upper port wall parallel with TF coil"
   }
 }

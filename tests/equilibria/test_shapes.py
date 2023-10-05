@@ -46,7 +46,7 @@ class TestCunningham:
         cls.f, cls.ax = plt.subplots(4, 2)
 
     @pytest.mark.parametrize(
-        "kappa, delta, delta2, ax, label",
+        ("kappa", "delta", "delta2", "ax", "label"),
         [
             pytest.param(1.6, 0.33, 0.5, [0, 0], "Normal", id="Normal"),
             pytest.param(1.6, -0.33, 0.0, [0, 1], "Negative delta", id="Negative delta"),
@@ -86,7 +86,7 @@ class TestHirschman:
         cls.f, cls.ax = plt.subplots(2, 2)
 
     @pytest.mark.parametrize(
-        "a, kappa, ax, label",
+        ("a", "kappa", "ax", "label"),
         [
             pytest.param(
                 2.0,
@@ -139,7 +139,7 @@ class TestManickam:
         cls.f, cls.ax = plt.subplots(4, 2)
 
     @pytest.mark.parametrize(
-        "kappa, delta, indent, ax, label",
+        ("kappa", "delta", "indent", "ax", "label"),
         [
             pytest.param(1.6, 0.33, 0, [0, 0], "Normal", id="Normal"),
             pytest.param(1.6, -0.33, 0, [0, 1], "Negative delta", id="Negative delta"),
@@ -176,21 +176,21 @@ class TestManickam:
 
 
 class TestKuiroukidis:
-    fixture = [
+    fixture = (
         pytest.param(6.2, 3.1, 1.55, 2.0, -0.5, -0.5, [0, 0]),
         pytest.param(6.2, 3.1, 1.55, 2.0, 0.5, 0.5, [0, 1]),
         pytest.param(6.2, 3.1, 1.55, 2.0, -0.5, 0.5, [0, 2]),
         pytest.param(6.2, 3.1, 1.55, 2.0, 0.5, -0.5, [1, 0]),
         pytest.param(1.717, 1.717 / 0.5151, 1.55, 2.0, 0.15, 0.15, [1, 1]),
         pytest.param(9, 9 / 3, 1.55, 1.8, 0.333, 0.333, [1, 2]),
-    ]
+    )
 
     @classmethod
     def setup_class(cls):
         cls.f, cls.ax = plt.subplots(2, 3)
 
     @pytest.mark.parametrize(
-        "R_0, A, kappa_u, kappa_l, delta_u, delta_l, ax",
+        ("R_0", "A", "kappa_u", "kappa_l", "delta_u", "delta_l", "ax"),
         fixture,
     )
     def test_kuiroukidis_coords(self, R_0, A, kappa_u, kappa_l, delta_u, delta_l, ax):
@@ -231,10 +231,12 @@ class TestKuiroukidis:
         )
 
     @pytest.mark.parametrize(
-        "R_0, A, kappa_u, kappa_l, delta_u, delta_l, ax",
+        ("R_0", "A", "kappa_u", "kappa_l", "delta_u", "delta_l", "ax"),
         fixture,
     )
-    def test_kuiroukidis_ccw(self, R_0, A, kappa_u, kappa_l, delta_u, delta_l, ax):
+    def test_kuiroukidis_ccw(
+        self, R_0, A, kappa_u, kappa_l, delta_u, delta_l, ax  # noqa: ARG002
+    ):
         flux_surface = flux_surface_kuiroukidis(
             R_0, 0, R_0 / A, kappa_u, kappa_l, delta_u, delta_l, 8, 100
         )

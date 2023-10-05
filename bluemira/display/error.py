@@ -29,5 +29,3 @@ class DisplayError(BluemiraError):
     """
     Exception class for Displayers.
     """
-
-    pass

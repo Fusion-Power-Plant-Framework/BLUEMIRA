@@ -25,7 +25,7 @@ Parameter definitions for Plasmod.
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Dict, Union
+from typing import ClassVar, Dict, Union
 
 from bluemira.base.parameter_frame import Parameter
 from bluemira.codes.params import MappedParameterFrame
@@ -126,7 +126,7 @@ class PlasmodSolverParams(MappedParameterFrame):
     v_burn: Parameter[float]
     """Target loop voltage (if lower than -1e-3, ignored)-> plasma loop voltage [V]."""
 
-    _mappings = deepcopy(mappings)
+    _mappings: ClassVar = deepcopy(mappings)
     _defaults = PlasmodInputs()
 
     @property

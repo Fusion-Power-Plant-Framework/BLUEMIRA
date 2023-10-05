@@ -94,7 +94,7 @@ class TestBluemiraFace:
 
 
 class TestNormalAt:
-    normals = [
+    normals = (
         (0, 1, 0),
         (1, 0, 0),
         (0, 0, 1),
@@ -103,13 +103,13 @@ class TestNormalAt:
         (0, 0, -1),
         (1, 3, -4),
         (-10, -135.2, 234.5),
-    ]
+    )
 
-    wires = [
+    wires = (
         make_circle(axis=(1, 0, 0)),
         make_ellipse(major_axis=(0, 0, 1), minor_axis=(0, 1, 0)),
         make_bezier([[0, 0, 0], [1, 0, 0], [1, 1, 0]], closed=True),
-    ]
+    )
 
     @pytest.mark.parametrize("normal", normals)
     def test_circle_normal(self, normal):
@@ -117,7 +117,9 @@ class TestNormalAt:
         circle = BluemiraFace(make_circle(axis=normal))
         np.testing.assert_allclose(circle.normal_at(), normal)
 
-    @pytest.mark.parametrize("alphas", [np.random.rand(2) for _ in range(5)])
+    @pytest.mark.parametrize(
+        "alphas", [np.random.default_rng().random(2) for _ in range(5)]
+    )
     def test_xy_polygon_normal(self, alphas):
         xy_polygon = BluemiraFace(
             make_polygon(

@@ -30,5 +30,3 @@ class StructuralError(BluemiraError):
     """
     Structural base error
     """
-
-    pass

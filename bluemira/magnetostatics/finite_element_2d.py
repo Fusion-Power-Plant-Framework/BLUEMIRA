@@ -68,7 +68,7 @@ def Bz_coil_axis(
 def _convert_const_to_dolfin(value: float):
     """Convert a constant value to a dolfin function"""
     if not isinstance(value, (int, float)):
-        raise ValueError("Value must be integer or float.")
+        raise TypeError("Value must be integer or float.")
 
     return dolfin.Constant(value)
 
@@ -104,18 +104,17 @@ class ScalarSubFunc(dolfin.UserExpression):
         self.markers = mark_list
         self.subdomains = subdomains
 
+    @staticmethod
     def check_functions(
-        self,
         functions: Union[Iterable[Union[float, Callable]], float, Callable],
     ) -> Iterable[Union[float, Callable]]:
-        """Check if the argument is a function or a list of fuctions"""
+        """Check if the argument is a function or a list of functions"""
         if not isinstance(functions, Iterable):
             functions = [functions]
         if all(isinstance(f, (float, Callable)) for f in functions):
             return functions
         raise ValueError(
-            "Accepted functions are instance of (int, float, Callable)"
-            "or a list of them."
+            "Accepted functions are instance of (int, float, Callable)or a list of them."
         )
 
     def eval_cell(self, values: List, x: float, cell):
@@ -125,7 +124,7 @@ class ScalarSubFunc(dolfin.UserExpression):
         else:
             m = self.subdomains[cell.index]
             func = (
-                self.functions[np.where(np.array(self.markers) == m)[0][0]]
+                self.functions[np.nonzero(np.array(self.markers) == m)[0][0]]
                 if m in self.markers
                 else 0
             )
@@ -134,9 +133,10 @@ class ScalarSubFunc(dolfin.UserExpression):
         elif isinstance(func, (int, float)):
             values[0] = func
         else:
-            raise ValueError(f"{func} is not callable or is not a constant")
+            raise TypeError(f"{func} is not callable or is not a constant")
 
-    def value_shape(self) -> Tuple:
+    @staticmethod
+    def value_shape() -> Tuple:
         """
         Value_shape function (necessary for a UserExpression)
         https://fenicsproject.discourse.group/t/problems-interpolating-a-userexpression-and-plotting-it/1303

@@ -23,9 +23,7 @@
 EU-DEMO Equatorial Port
 """
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
-
-import numpy as np
+from typing import Dict, Type, Union
 
 from bluemira.base.builder import Builder, ComponentManager
 from bluemira.base.components import Component, PhysicalComponent
@@ -33,15 +31,10 @@ from bluemira.base.designer import Designer
 from bluemira.base.parameter_frame import Parameter, ParameterFrame
 from bluemira.builders.tools import apply_component_display_options
 from bluemira.display.palettes import BLUE_PALETTE
-from bluemira.geometry.plane import BluemiraFace, BluemiraPlane
-from bluemira.geometry.solid import BluemiraSolid, BluemiraWire
-from bluemira.geometry.tools import (
-    boolean_fuse,
-    extrude_shape,
-    make_polygon,
-    offset_wire,
-    slice_shape,
-)
+from bluemira.geometry.face import BluemiraFace
+from bluemira.geometry.plane import BluemiraPlane
+from bluemira.geometry.solid import BluemiraWire
+from bluemira.geometry.tools import extrude_shape, make_polygon, offset_wire, slice_shape
 
 
 class EquatorialPort(ComponentManager):
@@ -64,6 +57,20 @@ class EquatorialPortKOZDesignerParams(ParameterFrame):
     Equatorial Port Designer parameters
     """
 
+    R_0: Parameter[float]
+    """Gap between VV and TS"""
+    g_vv_ts: Parameter[float]
+    """TS thickness"""
+    tk_ts: Parameter[float]
+    """Gap between TS and TF (used for short gap to PF)"""
+    g_ts_tf: Parameter[float]
+    """Gap between PF coil and support"""
+    pf_s_g: Parameter[float]
+    """PF coil support thickness"""
+    pf_s_tk_plate: Parameter[float]
+    tk_vv_single_wall: Parameter[float]
+
+    ep_z_position: Parameter[float]
     ep_height: Parameter[float]
 
 
@@ -80,48 +87,45 @@ class EquatorialPortKOZDesigner(Designer):
         self,
         params: Union[Dict, ParameterFrame, EquatorialPortKOZDesignerParams],
         build_config: Union[Dict, None],
-        koz_z_offset: float,
-        x_ib: float,
         x_ob: float,
-        z_pos: float = 0.0,
     ):
         """
-        Parameters:
-        -----------
+        Parameters
+        ----------
         params:
             Parameters for the equatorial port designer
         build_config:
             Build config for the equatorial port designer
-        koz_z_offset:
-            offset distance for the KOZ around the equatorial port
-        x_ib:
-            in-board x-position of the KOZ
         x_ob:
             out-board x-position of the KOZ
-        z_pos:
-            z-positional height of the KOZ x-y midplane, default: 0.0
         """
         super().__init__(params, build_config)
-        self.koz_offset = koz_z_offset
-        self.x_ib = x_ib
+        self.koz_offset = (
+            self.params.tk_vv_single_wall.value
+            + self.params.g_vv_ts.value
+            + self.params.tk_ts.value
+            + self.params.g_ts_tf.value
+            + self.params.pf_s_tk_plate.value
+            + self.params.pf_s_g.value
+        )
+        self.x_ib = self.params.R_0.value
         self.x_ob = x_ob
-        self.z_pos = z_pos
+        self.z_pos = self.params.ep_z_position.value
 
     def run(self) -> BluemiraWire:
         """
         Design the xz keep-out zone profile of the equatorial port
         """
-        z_h = (self.params.ep_height.value / 2.0) + self.koz_offset
+        z_h = 0.5 * self.params.ep_height.value + self.koz_offset
         z_o = self.z_pos
 
         x = (self.x_ib, self.x_ob, self.x_ob, self.x_ib)
         z = (z_o - z_h, z_o - z_h, z_o + z_h, z_o + z_h)
 
-        ep_boundary = BluemiraFace(
+        return BluemiraFace(
             make_polygon({"x": x, "y": 0, "z": z}, closed=True),
             label="equatorial_port_koz",
         )
-        return ep_boundary
 
 
 @dataclass
@@ -196,150 +200,3 @@ class EquatorialPortDuctBuilder(Builder):
         body = PhysicalComponent(self.NAME, self.port)
         apply_component_display_options(body, BLUE_PALETTE["VV"][0])
         return body
-
-
-@dataclass
-class CastellationBuilderParams(ParameterFrame):
-    """
-    Castellation Builder parameters
-    """
-
-    cst_r_corner: Parameter[float]
-
-
-class CastellationBuilder(Builder):
-    """
-    Castellation Builder
-    """
-
-    NAME = "Castellation"
-    param_cls: Type[CastellationBuilderParams] = CastellationBuilderParams
-
-    def __init__(
-        self,
-        params: Union[Dict, ParameterFrame, CastellationBuilderParams],
-        build_config: Union[Dict, None],
-        depth: float,
-        start_profile: BluemiraFace,
-        extrude_direction: Iterable,
-        offsets: Union[float, Iterable],
-        depth_offsets: Optional[Union[float, Iterable]] = None,
-        n_castellation: Optional[int] = None,
-    ):
-        super().__init__(params, build_config)
-        self.length = depth
-        self.face = start_profile
-        self.vec = np.array(extrude_direction)
-        self.off = offsets
-        self.cst = depth_offsets
-        self.n_cst = n_castellation
-
-    def build(self) -> Component:
-        """
-        Build the castellated component.
-        """
-        # TODO: Implement corner radii using PR #1992
-        self.r_rad = self.params.cst_r_corner.value
-
-        xyz_solid = self.build_castellations(
-            self.face, self.vec, self.length, self.off, self.cst, self.n_cst
-        )
-        xz_plane = BluemiraPlane(axis=(0, 1, 0))
-        xy_plane = BluemiraPlane(axis=(0, 0, 1))
-        xz_slice = BluemiraFace(slice_shape(xyz_solid, xz_plane))
-        xy_slice = BluemiraFace(slice_shape(xyz_solid, xy_plane))
-
-        return self.component_tree(
-            xz=[self.build_xz(xz_slice)],
-            xy=[self.build_xy(xy_slice)],
-            xyz=[self.build_xyz(xyz_solid)],
-        )
-
-    def build_xz(self, xz: BluemiraFace) -> PhysicalComponent:
-        """
-        Build the xz representation of the castellated component
-        """
-        body = PhysicalComponent(self.NAME, xz)
-        apply_component_display_options(body, BLUE_PALETTE["VV"][0])
-        return body
-
-    def build_xy(self, xy: BluemiraFace) -> List[PhysicalComponent]:
-        """
-        Build the xy representation of the castellated component
-        """
-        body = PhysicalComponent(self.NAME, xy)
-        apply_component_display_options(body, BLUE_PALETTE["VV"][0])
-        return body
-
-    def build_xyz(self, xyz: BluemiraSolid) -> List[PhysicalComponent]:
-        """
-        Build the xyz representation of the castellated component
-        """
-        cst_shape = PhysicalComponent(self.NAME, xyz)
-        apply_component_display_options(cst_shape, BLUE_PALETTE["VV"][0])
-        return cst_shape
-
-    def build_castellations(
-        self,
-        face: BluemiraFace,
-        vec: Tuple[float, float, float],
-        length: float,
-        offsets: Union[float, Iterable],
-        distances: Optional[Iterable] = None,
-        n_cast: Optional[int] = None,
-    ) -> BluemiraSolid:
-        """
-        Returns BluemiraSolid for a BluemiraFace castellated along a given vector
-
-        Parameters
-        ----------
-        face:
-            starting profile to be castellated
-        vec:
-            unit vector along which to extrude
-        length:
-            total length of castellated BluemiraSolid in vec direction
-        offsets:
-            castellations offset(s) for each position
-        distances:
-            (optional) parameter for manually spaced castellations
-        n_cast:
-            (optional) parameter for equally spaced castellations
-        """
-        base = face
-        sections = []
-
-        # Normalise vec
-        vec_mag = np.linalg.norm(vec)
-        if vec_mag != 1.0:
-            vec /= vec_mag
-
-        # Check/Set-up distances iterable
-        if not ((n_cast is None) or (n_cast == 0)):
-            interval = length / (n_cast + 1)
-            dist_iter = [interval * i for i in range(1, n_cast + 1)]
-        else:
-            if distances is not None:
-                dist_iter = distances
-            else:
-                raise ValueError("Both distance and n_cast parameters are None")
-
-        # Check/Set-up offsets iterable
-        if type(offsets) == float:
-            off_iter = [offsets] * len(dist_iter)
-        else:
-            if len(offsets) == len(dist_iter):
-                off_iter = offsets
-            else:
-                raise ValueError("Length of offsets doesn't match distances/n_cast")
-
-        parameter_array = list(zip(dist_iter, off_iter))
-        parameter_array.append((length, 0.0))
-        _prev_dist = 0
-        for dist, off in parameter_array:
-            ext_vec = np.array(vec) * (dist - _prev_dist)
-            sections.append(extrude_shape(base, ext_vec))
-            base.translate(ext_vec)
-            base = BluemiraFace(offset_wire(BluemiraWire(base.wires), off))
-            _prev_dist = dist
-        return boolean_fuse(sections)

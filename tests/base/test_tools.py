@@ -31,7 +31,7 @@ def dummy(a, *, b=4):
 
 
 @pytest.mark.parametrize(
-    "debug, records", [[False, ["INFO", "DEBUG"]], [True, ["DEBUG", "DEBUG"]]]
+    ("debug", "records"), [(False, ["INFO", "DEBUG"]), (True, ["DEBUG", "DEBUG"])]
 )
 def test_timing(debug, records, caplog):
     caplog.set_level(logging.DEBUG)

@@ -150,9 +150,10 @@ class TestPanellingDesigner:
         plt.show()
 
         panel_vecs = np.diff(panel_edges).T
-        angles = []
-        for i in range(len(panel_vecs) - 1):
-            angles.append(find_clockwise_angle_2d(panel_vecs[i], panel_vecs[i + 1]))
+        angles = [
+            find_clockwise_angle_2d(panel_vecs[i], panel_vecs[i + 1])
+            for i in range(len(panel_vecs) - 1)
+        ]
         assert (
             np.less_equal(angles, max_angle) | np.isclose(angles, max_angle, rtol=1e-3)
         ).all()

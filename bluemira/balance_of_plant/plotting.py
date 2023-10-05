@@ -43,7 +43,7 @@ class SuperSankey(Sankey):
     required to connect two sub-diagrams.
     """
 
-    def add(  # noqa :D102
+    def add(  # noqa: D102
         self,
         patchlabel="",
         flows=None,
@@ -57,7 +57,7 @@ class SuperSankey(Sankey):
         rotation=0,
         **kwargs,
     ):
-        __doc__ = super().__doc__  # noqa :F841
+        __doc__ = super().__doc__  # noqa: A001, F841
         # Here we first check if the "add" method has received arguments that
         # the Sankey class can't handle.
         if future is None:
@@ -312,7 +312,7 @@ class BalanceOfPlantPlotter:
             connect=None,
             trunklength=trunk_length,
             pathlengths=[l_m, l_s / 1.5, l_s, l_s],
-            facecolor=BLUEMIRA_PALETTE["blue"],
+            facecolor=BLUEMIRA_PALETTE["blue"].as_hex(),
         )
         # 1: H&CD (first block)
         self.sankey.add(
@@ -324,7 +324,7 @@ class BalanceOfPlantPlotter:
             connect=(1, 1),
             trunklength=trunk_length,
             pathlengths=[l_s, l_s / 1.5, l_s],
-            facecolor=BLUEMIRA_PALETTE["pink"],
+            facecolor=BLUEMIRA_PALETTE["pink"].as_hex(),
         )
         # 2: Neutrons
         self.sankey.add(
@@ -336,7 +336,7 @@ class BalanceOfPlantPlotter:
             connect=(2, 0),
             trunklength=trunk_length,
             pathlengths=[l_s, l_s, l_s, 3 * l_m, l_m],
-            facecolor=BLUEMIRA_PALETTE["orange"],
+            facecolor=BLUEMIRA_PALETTE["orange"].as_hex(),
         )
         # 3: Radiation and separatrix
         self.sankey.add(
@@ -348,7 +348,7 @@ class BalanceOfPlantPlotter:
             connect=(3, 0),
             trunklength=trunk_length,
             pathlengths=[l_s, l_s, l_s],
-            facecolor=BLUEMIRA_PALETTE["red"],
+            facecolor=BLUEMIRA_PALETTE["red"].as_hex(),
         )
         # 4: Blanket
         self.sankey.add(
@@ -360,7 +360,7 @@ class BalanceOfPlantPlotter:
             connect=(2, 0),
             trunklength=trunk_length,
             pathlengths=[l_s, l_s, l_s, l_s, l_s],
-            facecolor=BLUEMIRA_PALETTE["yellow"],
+            facecolor=BLUEMIRA_PALETTE["yellow"].as_hex(),
         )
         # 5: Divertor
         self.sankey.add(
@@ -372,7 +372,7 @@ class BalanceOfPlantPlotter:
             connect=(3, 0),
             trunklength=trunk_length,
             pathlengths=[l_m, l_s, l_s],
-            facecolor=BLUEMIRA_PALETTE["cyan"],
+            facecolor=BLUEMIRA_PALETTE["cyan"].as_hex(),
         )
         # 6: First wall
         self.sankey.add(
@@ -385,7 +385,7 @@ class BalanceOfPlantPlotter:
             connect=[(1, 0), (1, 2)],
             trunklength=trunk_length,
             pathlengths=[0, l_s, 0],
-            facecolor=BLUEMIRA_PALETTE["grey"],
+            facecolor=BLUEMIRA_PALETTE["grey"].as_hex(),
         )
         # 7: BoP
         self.sankey.add(
@@ -397,7 +397,7 @@ class BalanceOfPlantPlotter:
             connect=(4, 0),
             trunklength=trunk_length,
             pathlengths=[l_s, l_m, l_m, 0],
-            facecolor=BLUEMIRA_PALETTE["purple"],
+            facecolor=BLUEMIRA_PALETTE["purple"].as_hex(),
         )
         # 8: Electricity
         # Check if we have net electric power
@@ -438,7 +438,7 @@ class BalanceOfPlantPlotter:
                 3 * l_m,
                 l_s,
             ],
-            facecolor=BLUEMIRA_PALETTE["green"],
+            facecolor=BLUEMIRA_PALETTE["green"].as_hex(),
         )
         # 9: H&CD return leg
         self.sankey.add(
@@ -450,7 +450,7 @@ class BalanceOfPlantPlotter:
             connect=(5, 0),
             trunklength=trunk_length,
             pathlengths=[l_s / 2, 7 * l_m],
-            facecolor=BLUEMIRA_PALETTE["green"],
+            facecolor=BLUEMIRA_PALETTE["green"].as_hex(),
         )
         # 10: Divertor (second block)
         self.sankey.add(
@@ -463,7 +463,7 @@ class BalanceOfPlantPlotter:
             connect=[(2, 0), (1, 1)],
             trunklength=trunk_length,
             pathlengths=[0, 0],
-            facecolor=BLUEMIRA_PALETTE["cyan"],
+            facecolor=BLUEMIRA_PALETTE["cyan"].as_hex(),
         )
         # 11: H&CD return leg (second half)
         self.sankey.add(
@@ -476,7 +476,7 @@ class BalanceOfPlantPlotter:
             connect=[(1, 0), (0, 1)],
             trunklength=trunk_length,
             pathlengths=[0, 0],
-            facecolor=BLUEMIRA_PALETTE["green"],
+            facecolor=BLUEMIRA_PALETTE["green"].as_hex(),
         )
         # 12: Divertor back into BoP
         self.sankey.add(
@@ -489,7 +489,7 @@ class BalanceOfPlantPlotter:
             connect=[(2, 0), (1, 2)],
             trunklength=trunk_length,
             pathlengths=[0, l_s / 2, 0],
-            facecolor=BLUEMIRA_PALETTE["cyan"],
+            facecolor=BLUEMIRA_PALETTE["cyan"].as_hex(),
         )
         # 13: BB electrical pumping loss turn leg
         self.sankey.add(
@@ -501,7 +501,7 @@ class BalanceOfPlantPlotter:
             connect=(7, 0),
             trunklength=trunk_length,
             pathlengths=[l_s, l_s, l_m * 3],
-            facecolor=BLUEMIRA_PALETTE["green"],
+            facecolor=BLUEMIRA_PALETTE["green"].as_hex(),
         )
         # 14: BB electrical pumping return leg into blanket
         self.sankey.add(
@@ -514,7 +514,7 @@ class BalanceOfPlantPlotter:
             connect=[(2, 0), (2, 1)],
             trunklength=trunk_length,
             pathlengths=[0, 0],
-            facecolor=BLUEMIRA_PALETTE["green"],
+            facecolor=BLUEMIRA_PALETTE["green"].as_hex(),
         )
         # 15: Divertor electrical pumping loss turn leg
         self.sankey.add(
@@ -526,7 +526,7 @@ class BalanceOfPlantPlotter:
             connect=(6, 0),
             trunklength=trunk_length,
             pathlengths=[l_s, l_s / 2, l_m],
-            facecolor=BLUEMIRA_PALETTE["green"],
+            facecolor=BLUEMIRA_PALETTE["green"].as_hex(),
         )
         # 16: Divertor electrical pumping return into divertor
         self.sankey.add(
@@ -539,7 +539,7 @@ class BalanceOfPlantPlotter:
             connect=[(2, 0), (1, 1)],
             trunklength=trunk_length,
             pathlengths=[0, 0],
-            facecolor=BLUEMIRA_PALETTE["green"],
+            facecolor=BLUEMIRA_PALETTE["green"].as_hex(),
         )
 
     def _polish(self):

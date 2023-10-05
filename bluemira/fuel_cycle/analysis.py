@@ -24,7 +24,7 @@ Fuel cycle analysis class for Monte Carlo statistics
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Iterable, Union
+from typing import TYPE_CHECKING, ClassVar, Dict, Iterable, Union
 
 if TYPE_CHECKING:
     from bluemira.fuel_cycle.cycle import EUDEMOFuelCycleModel
@@ -48,7 +48,7 @@ class FuelCycleAnalysis:
         The model for the fuel cycle on a single timeline
     """
 
-    build_tweaks = {
+    build_tweaks: ClassVar = {
         "timestep": 1200,
         "n": None,
         "conv_thresh": 0.0002,
@@ -135,16 +135,15 @@ class FuelCycleAnalysis:
             return min(self.__dict__[p])
         if s == "max":
             return max(self.__dict__[p])
-        elif s == "mean":
+        if s == "mean":
             return np.mean(self.__dict__[p])
-        elif s == "median":
+        if s == "median":
             return np.median(self.__dict__[p])
-        elif s == "95th":
+        if s == "95th":
             return np.percentile(self.__dict__[p], 95)
-        else:
-            raise ValueError(f"Unknown query: '{s}'")
+        raise ValueError(f"Unknown query: '{s}'")
 
-    def plot(self, figsize=[12, 6], bins=20, **kwargs):
+    def plot(self, figsize=(12, 6), bins=20, **kwargs):
         """
         Plot the distributions of m_T_start and t_d.
         """

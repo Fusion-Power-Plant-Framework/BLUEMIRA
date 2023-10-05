@@ -23,6 +23,7 @@
 Coil and coil grouping objects
 """
 
+
 from bluemira.equilibria.coils._coil import Coil, CoilType
 from bluemira.equilibria.coils._grouping import (
     Circuit,
@@ -36,3 +37,16 @@ from bluemira.equilibria.coils._tools import (
     get_max_current,
     make_mutual_inductance_matrix,
 )
+
+__all__ = [
+    "Coil",
+    "CoilType",
+    "Circuit",
+    "CoilGroup",
+    "CoilSet",
+    "SymmetricCircuit",
+    "symmetrise_coilset",
+    "check_coilset_symmetric",
+    "get_max_current",
+    "make_mutual_inductance_matrix",
+]

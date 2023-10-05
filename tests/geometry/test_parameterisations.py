@@ -19,9 +19,10 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
 import shutil
 import tempfile
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Type
 
 import numpy as np
@@ -40,8 +41,7 @@ from bluemira.geometry.parameterisations import (
 )
 from bluemira.geometry.tools import make_polygon
 from bluemira.geometry.wire import BluemiraWire
-from bluemira.utilities.error import OptVariablesError
-from bluemira.utilities.opt_variables import BoundedVariable, OptVariables
+from bluemira.utilities.opt_variables import OptVariable, OptVariablesFrame, ov
 
 
 @pytest.mark.parametrize(
@@ -57,12 +57,12 @@ from bluemira.utilities.opt_variables import BoundedVariable, OptVariables
 def test_read_write(param_class: Type[GeometryParameterisation]):
     tempdir = tempfile.mkdtemp()
     try:
-        the_path = os.sep.join([tempdir, f"{param_class.__name__}.json"])
+        the_path = Path(tempdir, f"{param_class.__name__}.json")
         param = param_class()
         param.to_json(the_path)
         new_param = param_class.from_json(the_path)
         for attr in GeometryParameterisation.__slots__:
-            if attr == "variables":
+            if attr == "_variables":
                 assert new_param.variables.as_dict() == param.variables.as_dict()
             else:
                 assert getattr(new_param, attr) == getattr(param, attr)
@@ -70,28 +70,28 @@ def test_read_write(param_class: Type[GeometryParameterisation]):
         shutil.rmtree(tempdir)
 
 
+@dataclass
+class TGeometryParameterisationOptVariables(OptVariablesFrame):
+    a: OptVariable = ov("a", 0, -1, 1)
+    b: OptVariable = ov("b", 2, 0, 4)
+    c: OptVariable = ov("c", 4, 2, 6, fixed=True)
+
+
 class TestGeometryParameterisation:
     def test_subclass(self):
-        class TestPara(GeometryParameterisation):
+        class TestPara(GeometryParameterisation[TGeometryParameterisationOptVariables]):
             def __init__(self):
-                variables = OptVariables(
-                    [
-                        BoundedVariable("a", 0, -1, 1),
-                        BoundedVariable("b", 2, 0, 4),
-                        BoundedVariable("c", 4, 2, 6, fixed=True),
-                    ],
-                    frozen=True,
-                )
+                variables = TGeometryParameterisationOptVariables()
                 super().__init__(variables)
 
-            def create_shape(self, **kwargs):
+            def create_shape(self, **kwargs):  # noqa: ARG002
                 return BluemiraWire(
                     make_polygon(
                         [
-                            [self.variables["a"], 0, 0],
-                            [self.variables["b"], 0, 0],
-                            [self.variables["c"], 0, 1],
-                            [self.variables["a"], 0, 1],
+                            [self.variables.a, 0, 0],
+                            [self.variables.b, 0, 0],
+                            [self.variables.c, 0, 1],
+                            [self.variables.a, 0, 1],
                         ]
                     )
                 )
@@ -117,14 +117,6 @@ class TestPrincetonD:
     def test_error(self):
         with pytest.raises(GeometryParameterisationError):
             PrincetonD._princeton_d(10, 3, 0)
-
-    def test_bad_behaviour(self):
-        p = PrincetonD()
-        with pytest.raises(OptVariablesError):
-            p.variables.add_variable(BoundedVariable("new", 0, 0, 0))
-
-        with pytest.raises(OptVariablesError):
-            p.variables.remove_variable("x1")
 
     def test_instantiation_fixed(self):
         p = PrincetonD(
@@ -190,44 +182,53 @@ class TestPictureFrame:
 
 class TestComplexPictureFrame:
     @pytest.mark.parametrize(
-        "upper, lower, inner, result",
+        ("upper", "lower", "inner", "result"),
         [
-            ["CURVED", "CURVED", "TAPERED_INNER", 56.331],
-            ["CURVED", "FLAT", "TAPERED_INNER", 54.714],
-            ["FLAT", "CURVED", "TAPERED_INNER", 54.714],
-            [
+            ("CURVED", "CURVED", "TAPERED_INNER", 56.331),
+            ("CURVED", "FLAT", "TAPERED_INNER", 54.714),
+            ("FLAT", "CURVED", "TAPERED_INNER", 54.714),
+            (
                 PFrameSection.CURVED,
                 PFrameSection.CURVED,
                 PFrameSection.TAPERED_INNER,
                 56.331,
-            ],
-            [
+            ),
+            (
                 PFrameSection.CURVED,
                 PFrameSection.FLAT,
                 PFrameSection.TAPERED_INNER,
                 54.714,
-            ],
-            [
+            ),
+            (
                 PFrameSection.FLAT,
                 PFrameSection.CURVED,
                 PFrameSection.TAPERED_INNER,
                 54.714,
-            ],
-            ["CURVED", "CURVED", None, 57.6308],
-            ["CURVED", "FLAT", None, 56.014],
-            ["FLAT", "CURVED", None, 56.014],
-            [PFrameSection.CURVED, PFrameSection.CURVED, None, 57.6308],
-            [PFrameSection.CURVED, PFrameSection.FLAT, None, 56.014],
-            [PFrameSection.FLAT, PFrameSection.CURVED, None, 56.014],
+            ),
+            ("CURVED", "CURVED", None, 57.6308),
+            ("CURVED", "FLAT", None, 56.014),
+            ("FLAT", "CURVED", None, 56.014),
+            (PFrameSection.CURVED, PFrameSection.CURVED, None, 57.6308),
+            (PFrameSection.CURVED, PFrameSection.FLAT, None, 56.014),
+            (PFrameSection.FLAT, PFrameSection.CURVED, None, 56.014),
         ],
     )
     def test_length(self, upper, lower, inner, result):
         p = PictureFrame(upper=upper, lower=lower, inner=inner)
         wire = p.create_shape()
         assert np.isclose(wire.length, result, rtol=1e-4, atol=1e-5)
+        if p.upper == PFrameSection.CURVED and p.lower == PFrameSection.CURVED:
+            assert p.variables.ro.fixed
+        if p.upper == PFrameSection.FLAT and p.lower == PFrameSection.FLAT:
+            assert p.variables.x3.fixed
+            assert p.variables.z1_peak.fixed
+            assert p.variables.z2_peak.fixed
+        if p.inner != PFrameSection.TAPERED_INNER:
+            assert p.variables.x4.fixed
+            assert p.variables.z3.fixed
 
     @pytest.mark.parametrize(
-        "upper, lower, inner",
+        ("upper", "lower", "inner"),
         [
             pytest.param("FLAT", "FLAT", "TAPERED_INNER", marks=pytest.mark.xfail),
             pytest.param("CURVED", "CURVED", "TAPERED_INNER", marks=pytest.mark.xfail),
@@ -257,14 +258,14 @@ class TestComplexPictureFrame:
                 PFrameSection.TAPERED_INNER,
                 marks=pytest.mark.xfail,
             ),
-            ["FLAT", "FLAT", None],
-            ["CURVED", "CURVED", None],
-            ["CURVED", "FLAT", None],
-            ["FLAT", "CURVED", None],
-            [PFrameSection.FLAT, PFrameSection.FLAT, None],
-            [PFrameSection.CURVED, PFrameSection.CURVED, None],
-            [PFrameSection.CURVED, PFrameSection.FLAT, None],
-            [PFrameSection.FLAT, PFrameSection.CURVED, None],
+            ("FLAT", "FLAT", None),
+            ("CURVED", "CURVED", None),
+            ("CURVED", "FLAT", None),
+            ("FLAT", "CURVED", None),
+            (PFrameSection.FLAT, PFrameSection.FLAT, None),
+            (PFrameSection.CURVED, PFrameSection.CURVED, None),
+            (PFrameSection.CURVED, PFrameSection.FLAT, None),
+            (PFrameSection.FLAT, PFrameSection.CURVED, None),
         ],
     )
     def test_ordering(self, upper, lower, inner):
@@ -293,8 +294,8 @@ class TestComplexPictureFrame:
         ],
     )
     def test_bad_combinations_raise_ValueError(self, vals):
-        with pytest.raises(ValueError):
-            PictureFrame(**vals)
+        with pytest.raises(ValueError):  # noqa: PT011
+            PictureFrame(**vals).create_shape()
 
     @pytest.mark.parametrize(
         "vals", [{"inner": "hiiii"}, {"upper": "tpi"}, {"lower": "hello"}]

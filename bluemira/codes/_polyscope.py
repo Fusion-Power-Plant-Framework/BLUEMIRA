@@ -1,25 +1,46 @@
+# bluemira is an integrated inter-disciplinary design tool for future fusion
+# reactors. It incorporates several modules, some of which rely on other
+# codes, to carry out a range of typical conceptual fusion reactor design
+# activities.
+#
+# Copyright (C) 2021-2023 M. Coleman, J. Cook, F. Franza, I.A. Maione, S. McIntosh,
+#                         J. Morris, D. Short
+#
+# bluemira is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# bluemira is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 from __future__ import annotations
 
 import functools
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Tuple, Union
 
-if TYPE_CHECKING:
-    from bluemira.geometry.base import BluemiraGeo
-
-import matplotlib.colors as colors
 import numpy as np
 import polyscope as ps
+from matplotlib import colors
 
 import bluemira.codes._freecadapi as cadapi
 from bluemira.base.look_and_feel import bluemira_warn
+from bluemira.utilities.tools import ColourDescriptor
+
+if TYPE_CHECKING:
+    from bluemira.display.palettes import ColorPalette
 
 
 @dataclass
 class DefaultDisplayOptions:
     """Polyscope default display options"""
 
-    colour: Union[Tuple, str]
+    colour: ColourDescriptor = ColourDescriptor()
     transparency: float = 0.0
     material: str = "wax"
     tesselation: float = 0.05
@@ -27,33 +48,19 @@ class DefaultDisplayOptions:
     wire_radius: float = 0.001
     smooth: bool = True
 
-    _colour: Union[Tuple, str] = field(
-        init=False, repr=False, default_factory=lambda: colors.to_hex((0.5, 0.5, 0.5))
-    )
-
     @property
-    def colour(self):
-        """Colour as rbg"""
-        return colors.to_hex(self._colour)
-
-    @colour.setter
-    def colour(self, value):
-        """Set colour"""
-        self._colour = value
-
-    @property
-    def color(self):
+    def color(self) -> str:
         """See colour"""
         return self.colour
 
     @color.setter
-    def color(self, value):
+    def color(self, value: Union[str, Tuple[float, float, float], ColorPalette]):
         """See colour"""
         self.colour = value
 
 
 def show_cad(
-    parts: Union[BluemiraGeo, List[BluemiraGeo]],
+    parts: Union[cadapi.apiShape, List[cadapi.apiShape]],
     part_options: List[Dict],
     labels: List[str],
     **kwargs,
@@ -159,7 +166,7 @@ def _init_polyscope():
 
 def add_features(
     labels: List[str],
-    parts: Union[BluemiraGeo, List[BluemiraGeo]],
+    parts: Union[cadapi.apiShape, List[cadapi.apiShape]],
     options: Union[Dict, List[Dict]],
 ) -> Tuple[List[ps.SurfaceMesh], List[ps.CurveNetwork]]:
     """
@@ -184,7 +191,7 @@ def add_features(
     for shape_i, (label, part, option) in enumerate(
         zip(labels, parts, options),
     ):
-        verts, faces = cadapi.collect_verts_faces(part._shape, option["tesselation"])
+        verts, faces = cadapi.collect_verts_faces(part, option["tesselation"])
 
         if not (verts is None or faces is None):
             m = ps.register_surface_mesh(
@@ -199,7 +206,7 @@ def add_features(
             meshes.append(m)
 
         if option["wires_on"] or (verts is None or faces is None):
-            verts, edges = cadapi.collect_wires(part._shape, Deflection=0.01)
+            verts, edges = cadapi.collect_wires(part, Deflection=0.01)
             c = ps.register_curve_network(
                 clean_name(label, f"{shape_i}_wire"),
                 verts,
@@ -235,5 +242,4 @@ def clean_name(label: str, index_label: str) -> str:
     index_label = index_label.replace("#", "_")
     if len(label) == 0 or label == "_":
         return f"{index_label}: NO LABEL"
-    else:
-        return f"{index_label}: {label}"
+    return f"{index_label}: {label}"

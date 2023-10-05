@@ -23,9 +23,9 @@ Designer for an `Equilibrium` solving an unconstrained Tikhnov current
 gradient coil-set optimisation problem.
 """
 
-import os
 import shutil
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Optional, Tuple, Type, Union
 
 import matplotlib.pyplot as plt
@@ -45,7 +45,9 @@ from bluemira.equilibria.fem_fixed_boundary.fem_magnetostatic_2D import (
 from bluemira.equilibria.fem_fixed_boundary.file import save_fixed_boundary_to_file
 from bluemira.equilibria.fem_fixed_boundary.utilities import get_mesh_boundary
 from bluemira.equilibria.file import EQDSKInterface
-from bluemira.equilibria.opt_problems import UnconstrainedTikhonovCurrentGradientCOP
+from bluemira.equilibria.optimisation.problem import (
+    UnconstrainedTikhonovCurrentGradientCOP,
+)
 from bluemira.equilibria.profiles import BetaLiIpProfile, CustomProfile, Profile
 from bluemira.equilibria.solve import DudsonConvergence, PicardIterator
 from bluemira.geometry.coordinates import Coordinates
@@ -149,7 +151,7 @@ class EquilibriumDesigner(Designer[Equilibrium]):
             fixed_coils=True,
             plot=self.plot_optimisation,
         )
-        iterator_program()
+        self._result = iterator_program()
         self._update_params_from_eq(eq)
         return eq
 
@@ -265,11 +267,10 @@ def get_plasmod_binary_path():
     Get the path to the PLASMOD binary.
     """
     if plasmod_binary := shutil.which("plasmod"):
-        PLASMOD_PATH = os.path.dirname(plasmod_binary)
+        PLASMOD_PATH = Path(plasmod_binary).parent
     else:
-        PLASMOD_PATH = os.path.join(os.path.dirname(get_bluemira_root()), "plasmod/bin")
-    binary = os.path.join(PLASMOD_PATH, "plasmod")
-    return binary
+        PLASMOD_PATH = Path(Path(get_bluemira_root()).parent, "plasmod/bin")
+    return Path(PLASMOD_PATH, "plasmod").as_posix()
 
 
 @dataclass
@@ -587,6 +588,7 @@ class ReferenceFreeBoundaryEquilibriumDesigner(Designer[Equilibrium]):
                 f"Cannot execute {type(self).__name__} in 'read' mode: "
                 "'file_path' missing from build config."
             )
+        self.opt_problem = None
 
         if self.run_mode == "run" and (
             (self.lcfs_coords is None) or (self.profiles is None)
@@ -627,7 +629,7 @@ class ReferenceFreeBoundaryEquilibriumDesigner(Designer[Equilibrium]):
         # eq.coilset.discretisation = settings.pop("coil_discretisation")
         eq.coilset.get_coiltype("CS").discretisation = discretisation
 
-        opt_problem = self._make_fbe_opt_problem(
+        self.opt_problem = self._make_fbe_opt_problem(
             eq, lcfs_shape, len(self.lcfs_coords.x), settings.pop("gamma")
         )
 
@@ -636,20 +638,20 @@ class ReferenceFreeBoundaryEquilibriumDesigner(Designer[Equilibrium]):
         settings["maxiter"] = max_iter  # TODO: Standardise name in PicardIterator
         iterator_program = PicardIterator(
             eq,
-            opt_problem,
+            self.opt_problem,
             convergence=DudsonConvergence(iter_err_max),
             plot=self.build_config.get("plot", False),
             fixed_coils=True,
             **settings,
         )
-        iterator_program()
+        self._result = iterator_program()
 
         if self.build_config.get("plot", False):
             _, ax = plt.subplots()
             eq.plot(ax=ax)
             eq.coilset.plot(ax=ax, label=True)
             ax.plot(self.lcfs_coords.x, self.lcfs_coords.z, "", marker="o")
-            opt_problem.targets.plot(ax=ax)
+            self.opt_problem.targets.plot(ax=ax)
             plt.show()
 
         self._update_params_from_eq(eq)
@@ -693,8 +695,9 @@ class ReferenceFreeBoundaryEquilibriumDesigner(Designer[Equilibrium]):
 
         return BluemiraWire([lower_wire, semi_circle, upper_wire])
 
+    @staticmethod
     def _make_fbe_opt_problem(
-        self, eq: Equilibrium, lcfs_shape: BluemiraWire, n_points: int, gamma: float
+        eq: Equilibrium, lcfs_shape: BluemiraWire, n_points: int, gamma: float
     ):
         """
         Create the `UnconstrainedTikhonovCurrentGradientCOP` optimisation problem.

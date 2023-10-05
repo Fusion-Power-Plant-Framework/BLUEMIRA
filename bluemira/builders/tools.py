@@ -24,12 +24,16 @@ A collection of tools used in the EU-DEMO design.
 """
 from __future__ import annotations
 
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
+from bluemira.display.palettes import ColorPalette
+
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from bluemira.geometry.solid import BluemiraSolid
     from bluemira.geometry.wire import BluemiraWire
+    from bluemira.materials.material import SerialisedMaterial
 
 import numpy as np
 from anytree import PreOrderIter
@@ -53,7 +57,6 @@ from bluemira.geometry.tools import (
     slice_shape,
     sweep_shape,
 )
-from bluemira.materials.material import SerialisedMaterial
 
 __all__ = [
     "apply_component_display_options",
@@ -71,12 +74,14 @@ __all__ = [
 
 def apply_component_display_options(
     phys_component: PhysicalComponent,
-    color: Iterable,
+    color: Union[Iterable, ColorPalette],
     transparency: Optional[float] = None,
 ):
     """
     Apply color and transparency to a PhysicalComponent for both plotting and CAD.
     """
+    if isinstance(color, ColorPalette):
+        color = color.as_hex()
     phys_component.plot_options.face_options["color"] = color
     phys_component.display_cad_options.color = color
     if transparency:
@@ -206,7 +211,7 @@ def pattern_revolved_silhouette(
     """
     sector_degree = 360 / n_sectors
 
-    if gap <= 0.0:
+    if gap <= 0.0:  # noqa: PLR2004
         # No gaps; just touching solids
         segment_degree = sector_degree / n_seg_p_sector
         shape = revolve_shape(
@@ -271,11 +276,8 @@ def pattern_lofted_silhouette(
         volume = sweep_shape([r_face.boundary[0], faces[i + 1].boundary[0]], wire)
         shapes.append(volume)
 
-    if gap > 0.0:
-        if len(shapes) > 1:
-            full_volume = boolean_fuse(shapes)
-        else:
-            full_volume = shapes[0]
+    if gap > 0.0:  # noqa: PLR2004
+        full_volume = boolean_fuse(shapes) if len(shapes) > 1 else shapes[0]
 
         gaps = _generate_gap_volumes(face, n_seg_p_sector, n_sectors, gap)
         shapes = boolean_cut(full_volume, gaps)
@@ -301,10 +303,7 @@ def _generate_gap_volumes(face, n_seg_p_sector, n_sectors, gap):
     gap_volume = extrude_shape(bb_face, (0, gap, 0))
     degree = 360 / n_sectors
     degree += degree / n_seg_p_sector
-    gap_volumes = circular_pattern(
-        gap_volume, degree=degree, n_shapes=n_seg_p_sector + 1
-    )
-    return gap_volumes
+    return circular_pattern(gap_volume, degree=degree, n_shapes=n_seg_p_sector + 1)
 
 
 def _order_shapes_anticlockwise(shapes):

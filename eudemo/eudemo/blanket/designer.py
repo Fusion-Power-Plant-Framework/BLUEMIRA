@@ -112,7 +112,7 @@ class BlanketDesigner(Designer[Tuple[BluemiraFace, BluemiraFace]]):
         self.boundary = blanket_boundary
         self.silhouette = blanket_silhouette
         self.r_inner_cut = r_inner_cut
-        if abs(cut_angle) >= 90:
+        if abs(cut_angle) >= 90:  # noqa: PLR2004
             raise ValueError(
                 "Cannot cut boundary silhouette at an angle greater than 90°."
             )
@@ -166,21 +166,22 @@ class BlanketDesigner(Designer[Tuple[BluemiraFace, BluemiraFace]]):
         p2 = [p0[0] - self.params.c_rm.value, 0, p1[2]]
         p3 = [p2[0], 0, p0[2] - np.sqrt(2) * self.params.c_rm.value]
         cut_zone = BluemiraFace(make_polygon([p0, p1, p2, p3], closed=True))
-        if self.cut_angle != 0.0:
+        if self.cut_angle != 0.0:  # noqa: PLR2004
             cut_zone.rotate(base=p0, direction=(0, -1, 0), degree=self.cut_angle)
         return cut_zone
 
     _GeomT = TypeVar("_GeomT", BluemiraFace, BluemiraWire)
 
-    def _cut_geom(self, geom: _GeomT, cut_tool: BluemiraFace) -> Tuple[_GeomT, _GeomT]:
+    @staticmethod
+    def _cut_geom(geom: _GeomT, cut_tool: BluemiraFace) -> Tuple[_GeomT, _GeomT]:
         """Cut the given geometry into two using the given cutting tool."""
         parts = boolean_cut(geom, cut_tool)
-        if len(parts) < 2:
+        if len(parts) < 2:  # noqa: PLR2004
             raise BuilderError(
                 f"BB poloidal segmentation only returned {len(parts)} part(s), expected "
                 "2."
             )
-        if len(parts) > 2:
+        if len(parts) > 2:  # noqa: PLR2004
             bluemira_warn(
                 "The BB poloidal segmentation operation returned more than 2 parts "
                 f"({len(parts)}); only taking the first two..."

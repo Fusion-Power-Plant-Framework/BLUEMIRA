@@ -27,4 +27,6 @@ from bluemira.display.auto_config import plot_defaults
 from bluemira.display.displayer import show_cad
 from bluemira.display.plotter import plot_2d, plot_3d
 
+__all__ = ["plot_2d", "plot_3d", "show_cad"]
+
 plot_defaults()

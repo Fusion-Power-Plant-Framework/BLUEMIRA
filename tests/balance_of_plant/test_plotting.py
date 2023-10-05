@@ -19,8 +19,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
 import tempfile
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.testing import compare as mpl_compare
@@ -81,5 +81,5 @@ class TestSuperSankey:
         plt.show()
 
         path = get_bluemira_path("balance_of_plant/test_data", subfolder="tests")
-        reference_file = os.path.join(path, "sankey_test.png")
+        reference_file = Path(path, "sankey_test.png")
         assert mpl_compare.compare_images(reference_file, new_file.name, 0.001) is None

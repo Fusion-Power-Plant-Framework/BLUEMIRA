@@ -31,15 +31,19 @@
     "fixed_equilibrium_settings": {
       "p_order": 2,
       "max_iter": 30,
-      "iter_err_max": 1e-4,
-      "relaxation": 0.05
+      "iter_err_max": 1e-3,
+      "relaxation": 0.0
     },
     "transport_eq_settings": {
-      "lcar_mesh": 0.3,
+      "lcar_mesh": 0.2,
       "max_iter": 15,
       "iter_err_max": 1e-1,
       "relaxation": 0.0,
-      "plot": false
+      "plot": false,
+      "refine": true,
+      "num_levels": 2,
+      "distance": 1.0,
+      "ny_fs_min": 40
     }
   },
   "Dummy fixed boundary equilibrium": {
@@ -86,9 +90,7 @@
         }
       },
       "run_mode": "run",
-      "name": "First Wall",
       "file_path": "config/FirstWallDesign.json",
-      "problem_class": "bluemira.geometry.optimisation::MinimiseLengthGOP",
       "problem_settings": {
         "n_koz_points": 100
       },
@@ -110,7 +112,10 @@
     "variables_map": {},
     "problem_class": "bluemira.builders.tf_coils::RippleConstrainedLengthGOP",
     "problem_settings": {
-      "n_rip_points": 10,
+      "ripple_selector": {
+        "cls": "bluemira.builders.tf_coils::EquispacedSelector",
+        "args": { "n_rip_points": 10 }
+      },
       "n_koz_points": 50,
       "nx": 1,
       "ny": 1
@@ -120,58 +125,6 @@
       "conditions": {
         "max_eval": 200,
         "ftol_rel": 1e-6
-      }
-    }
-  },
-  "Lower Port": {
-    "params": {
-      "lp_duct_tf_offset": {
-        "value": 3,
-        "unit": "m",
-        "source": "Input",
-        "long_name": "Lower duct TF Coil offset."
-      },
-      "lp_duct_div_pad_ob": {
-        "value": 0.3,
-        "unit": "m",
-        "source": "Input",
-        "long_name": "Padding applied towards the outboard from the divertor."
-      },
-      "lp_duct_div_pad_ib": {
-        "value": 0.1,
-        "unit": "m",
-        "source": "Input",
-        "long_name": "Padding applied towards the inboard from the divertor."
-      },
-      "lp_height": {
-        "value": 3,
-        "unit": "m",
-        "source": "Input",
-        "long_name": "Height of the lower port"
-      },
-      "lp_width": {
-        "value": 3,
-        "unit": "m",
-        "source": "Input",
-        "long_name": "Width of the lower port"
-      },
-      "lp_duct_angle": {
-        "value": -30,
-        "unit": "degrees",
-        "source": "Input",
-        "long_name": "Angle of the lower port duct to the divertor."
-      },
-      "tf_coil_thickness": {
-        "value": 0.65,
-        "unit": "m",
-        "source": "Input",
-        "long_name": "TF Coil thickness (temporary)."
-      },
-      "lp_duct_wall_tk": {
-        "value": 0.02,
-        "unit": "m",
-        "source": "Input",
-        "long_name": "Lower port duct wall thickness."
       }
     }
   },
@@ -187,8 +140,8 @@
       "grid_scale_z": 2.0
     },
     "breakdown_settings": {
-      "param_class": "bluemira.equilibria.opt_problems::OutboardBreakdownZoneStrategy",
-      "problem_class": "bluemira.equilibria.opt_problems::BreakdownCOP",
+      "param_class": "bluemira.equilibria.optimisation.problem::OutboardBreakdownZoneStrategy",
+      "problem_class": "bluemira.equilibria.optimisation.problem::BreakdownCOP",
       "B_stray_con_tol": 1e-6,
       "n_B_stray_points": 10,
       "optimisation_settings": {
@@ -200,7 +153,7 @@
       }
     },
     "equilibrium_settings": {
-      "problem_class": "bluemira.equilibria.opt_problems::TikhonovCurrentCOP",
+      "problem_class": "bluemira.equilibria.optimisation.problem::TikhonovCurrentCOP",
       "convergence_class": "bluemira.equilibria.solve::DudsonConvergence",
       "conv_limit": 1e-4,
       "gamma": 1e-12,
@@ -221,6 +174,101 @@
           "max_eval": 50,
           "ftol_rel": 1e-10
         }
+      }
+    }
+  },
+  "Upper Port": {},
+  "Equatorial Port": {
+    "params": {
+      "ep_width": {
+        "value": 2.0,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Equatorial port width (void width)"
+      },
+      "ep_height": {
+        "value": 2.0,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Equatorial port height (void height)"
+      },
+      "ep_z_position": {
+        "value": 0.0,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Equatorial port central axis z coordinate"
+      }
+    }
+  },
+  "Lower Port": {
+    "params": {
+      "lp_duct_div_pad_ob": {
+        "value": 0.3,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Padding applied towards the outboard from the divertor."
+      },
+      "lp_duct_div_pad_ib": {
+        "value": 0.1,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Padding applied towards the inboard from the divertor."
+      },
+      "lp_height": {
+        "value": 3.5,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Height of the lower port"
+      },
+      "lp_width": {
+        "value": 3,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Width of the lower port"
+      }
+    }
+  },
+  "Cryostat": {
+    "params": {
+      "g_plug": {
+        "value": 0.025,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Gap around the cryostat port plugs."
+      },
+      "n_plug_castellations": {
+        "value": 1,
+        "unit": "dimensionless",
+        "source": "Input",
+        "long_name": "Number of castellations in port plugs."
+      },
+      "tk_castellation": {
+        "value": 0.2,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Castellation offset value."
+      }
+    }
+  },
+  "RadiationShield": {
+    "params": {
+      "g_plug": {
+        "value": 0.025,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Gap around the cryostat port plugs."
+      },
+      "n_plug_castellations": {
+        "value": 4,
+        "unit": "dimensionless",
+        "source": "Input",
+        "long_name": "Number of castellations in port plugs."
+      },
+      "tk_castellation": {
+        "value": 0.1,
+        "unit": "m",
+        "source": "Input",
+        "long_name": "Castellation offset value."
       }
     }
   }

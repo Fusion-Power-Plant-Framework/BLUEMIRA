@@ -33,7 +33,7 @@ class TestCoulombLogarithm:
     """
 
     @pytest.mark.parametrize(
-        "density, temp_in_ev, ref_value",
+        ("density", "temp_in_ev", "ref_value"),
         [
             # Solar wind
             (10.0**7, 10.0, 26),

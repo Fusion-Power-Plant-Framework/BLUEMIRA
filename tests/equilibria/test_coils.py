@@ -171,14 +171,14 @@ class TestCoil:
         inside_z = [2, 2, 2, 3, 3, 3, 6, 6, 6]
         inside = coil._points_inside_coil(inside_x, inside_z)
 
-        assert np.alltrue(inside)
+        assert np.all(inside)
 
         outside_x = [0, 0, 0, 1, 1, 1, 10, 10, 10, 3, 3, 3]
         outside_z = [0, 4, 6, 0, 4, 6, 0, 4, 6, 1.9, 6.1, 10]
         outside = coil._points_inside_coil(outside_x, outside_z)
 
         assert np.all(~outside)
-        assert np.alltrue(coil._points_inside_coil(coil.x_boundary, coil.z_boundary))
+        assert np.all(coil._points_inside_coil(coil.x_boundary, coil.z_boundary))
 
     def test_position(self):
         coil = Coil(x=4, z=4, current=10, dx=1, dz=2)
@@ -326,7 +326,7 @@ class TestCoilGroup:
         assert not np.allclose(self.group.dx, initdx)
         assert not np.allclose(self.group.dz, initdz)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             self.group.resize([10, 10])
 
     def test_psi(self):
@@ -575,7 +575,7 @@ class TestCoilSetSymmetry:
         new = symmetrise_coilset(coilset)
         assert len(new._coils) == 1
         assert new.n_coils() == 2
-        assert isinstance(list(new._coils)[0], SymmetricCircuit)
+        assert isinstance(next(iter(new._coils)), SymmetricCircuit)
 
         coilset = CoilSet(
             SymmetricCircuit(

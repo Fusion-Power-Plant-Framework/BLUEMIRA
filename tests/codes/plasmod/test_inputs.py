@@ -39,30 +39,32 @@ class TestPlasmodInputs:
         params_dict = vars(params)
         assert len(lines) == len(params_dict)
         for param in params_dict:
-            assert any([param in line for line in lines])
+            assert any(param in line for line in lines)
 
-    @pytest.mark.parametrize("model, enum_cls", MODEL_MAP.items())
+    @pytest.mark.parametrize(("model", "enum_cls"), MODEL_MAP.items())
     def test_model_is_converted_to_enum_on_init(self, model, enum_cls):
         # Just get the first member of the enum to test with
-        enum_member = list(enum_cls.__members__.values())[0]
+        enum_member = next(iter(enum_cls.__members__.values()))
         values = {model: enum_member.value}
 
         params = PlasmodInputs(**values)
 
         assert getattr(params, model) == getattr(enum_cls, enum_member.name)
 
-    @pytest.mark.parametrize("model, enum_cls", MODEL_MAP.items())
+    @pytest.mark.parametrize(("model", "enum_cls"), MODEL_MAP.items())
     def test_model_is_converted_to_enum_on_init_using_name(self, model, enum_cls):
         # Just get the first member enum name to test with
-        enum_name = list(enum_cls.__members__.keys())[0]
+        enum_name = next(iter(enum_cls.__members__.keys()))
         values = {model: enum_name}
 
         params = PlasmodInputs(**values)
 
         assert getattr(params, model) == getattr(enum_cls, enum_name)
 
-    @pytest.mark.parametrize("model, enum_cls", MODEL_MAP.items())
-    def test_CodesError_if_model_not_convertible_to_enum(self, model, enum_cls):
+    @pytest.mark.parametrize(("model", "enum_cls"), MODEL_MAP.items())
+    def test_CodesError_if_model_not_convertible_to_enum(
+        self, model, enum_cls  # noqa: ARG002
+    ):
         values = {model: "NOT_AN_ENUM_VALUE"}
 
         with pytest.raises(CodesError):

@@ -51,7 +51,6 @@ class CoolantPumping(abc.ABC):
         """
         Calculate the pump work and electrical pumping power required for a given power.
         """
-        pass
 
 
 class HePumping(CoolantPumping):
@@ -167,7 +166,6 @@ class PowerCycleEfficiencyCalc(abc.ABC):
         """
         Calculate the efficiency of the power cycle
         """
-        pass
 
 
 class PredeterminedEfficiency(PowerCycleEfficiencyCalc):
@@ -183,7 +181,7 @@ class PredeterminedEfficiency(PowerCycleEfficiencyCalc):
     def __init__(self, efficiency: float):
         self.efficiency = efficiency
 
-    def calculate(self, p_blanket: float, p_divertor: float) -> float:
+    def calculate(self, p_blanket: float, p_divertor: float) -> float:  # noqa: ARG002
         """
         Calculate the efficiency of the power cycle
 
@@ -247,7 +245,6 @@ class FractionSplitStrategy(abc.ABC):
         """
         Split flows somehow.
         """
-        pass
 
     def check_fractions(self, fractions: List[float]) -> bool:
         """
@@ -299,11 +296,11 @@ class NeutronPowerStrategy(FractionSplitStrategy):
         self.f_divertor = f_divertor
         self.f_vessel = f_vessel
         self.f_other = f_other
-        if energy_multiplication < 1.0:
+        if energy_multiplication < 1.0:  # noqa: PLR2004
             raise BalanceOfPlantError(
                 "Energy multiplication factor cannot be less than 1.0"
             )
-        if decay_multiplication < 1.0:
+        if decay_multiplication < 1.0:  # noqa: PLR2004
             raise BalanceOfPlantError(
                 "Decay multiplication factor cannot be less than 1.0"
             )
@@ -443,7 +440,6 @@ class ParasiticLoadStrategy(abc.ABC):
         p_other:
             Parasitic loads to power other miscellaneous things
         """
-        pass
 
 
 @dataclass
@@ -490,7 +486,6 @@ class BalanceOfPlantModel:
 
     Notes
     -----
-
     .. math::
         P_{el}={\\eta}_{BOP}\\Bigg[\\Bigg(\\frac{4}{5}P_{fus}f_{nrgm}-\\
         P_{n_{aux}}-P_{n_{DIV}}+f_{SOL_{rad}}f_{SOL_{ch}}\\Big(\\frac{P_{fus}}{5}+P_{HCD}\\Big)\\Bigg)\\
@@ -498,7 +493,7 @@ class BalanceOfPlantModel:
         +\\Bigg(P_{n_{DIV}}+f_{SOL_{rad}}f_{SOL_{ch}}f_{fw}\\Big(\\frac{P_{fus}}{5}+P_{HCD}\\Big)\\Bigg)\\
         \\Big(1+\\frac{f_{p_{DIV}}}{1-f_{p_{DIV}}}\\Big)\\Bigg]
 
-    """  # noqa :W505
+    """
 
     _plotter = BalanceOfPlantPlotter
 
@@ -630,14 +625,16 @@ class BalanceOfPlantModel:
             delta = sum(flow)
             if round(delta) != 0:
                 bluemira_warn(
-                    f"Power block {label} is not self-consistent.. {delta:.2f} MW are missing"
+                    f"Power block {label} is not self-consistent.. {delta:.2f} MW are"
+                    " missing"
                 )
             delta_truth += delta
 
         # Global check
         if round(delta_truth) != 0:
             bluemira_warn(
-                f"The balance of plant model is inconsistent: {delta_truth:.2f} MW are lost somewhere."
+                f"The balance of plant model is inconsistent: {delta_truth:.2f} MW are"
+                " lost somewhere."
             )
 
     def plot(self, title: Optional[str] = None, **kwargs):

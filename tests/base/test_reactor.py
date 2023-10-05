@@ -21,6 +21,7 @@
 
 import time
 from copy import deepcopy
+from pathlib import Path
 from unittest.mock import patch
 
 import matplotlib.pyplot as plt
@@ -129,11 +130,10 @@ class TestReactor:
                 else:
                     reactor.show_cad(*dim, _filter=None)
 
+            elif material_filter:
+                reactor.show_cad(dim)
             else:
-                if material_filter:
-                    reactor.show_cad(dim)
-                else:
-                    reactor.show_cad(dim, _filter=None)
+                reactor.show_cad(dim, _filter=None)
 
         assert (
             len(mock_show.call_args[0][0]) == 0
@@ -142,6 +142,10 @@ class TestReactor:
             if isinstance(dim, tuple)
             else 1
         )
+
+    def test_save_cad(self, tmp_path):
+        self.reactor.save_cad("xyz", directory=tmp_path)
+        assert Path(tmp_path, f"{REACTOR_NAME}.stp").is_file()
 
     @staticmethod
     def _make_reactor() -> MyReactor:
@@ -173,6 +177,10 @@ class TestComponentMananger:
     def test_tree_contains_components(self):
         plasmatree = self.plasma.tree()
         assert all(dim in plasmatree for dim in ("xz", "xy", "xyz"))
+
+    def test_save_cad(self, tmp_path):
+        self.plasma.save_cad("xyz", directory=tmp_path)
+        assert Path(tmp_path, "Plasma.stp").is_file()
 
     @pytest.mark.parametrize("dim", ["xz", "xy", "xyz", ("xy", "xz")])
     def test_show_cad_contains_components(self, dim):
@@ -210,11 +218,10 @@ class TestComponentMananger:
                 else:
                     plasma.show_cad(*dim, _filter=None)
 
+            elif material_filter:
+                plasma.show_cad(dim)
             else:
-                if material_filter:
-                    plasma.show_cad(dim)
-                else:
-                    plasma.show_cad(dim, _filter=None)
+                plasma.show_cad(dim, _filter=None)
 
         assert (
             len(mock_show.call_args[0][0]) == 0

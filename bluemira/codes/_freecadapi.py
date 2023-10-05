@@ -30,13 +30,21 @@ import math
 import os
 import sys
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from functools import wraps
+from pathlib import Path
 from types import DynamicClassAttribute
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple, Union
-
-if TYPE_CHECKING:
-    from bluemira.geometry.base import BluemiraGeo
-
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Protocol,
+    Tuple,
+    Union,
+)
 from warnings import warn
 
 import FreeCAD
@@ -50,12 +58,12 @@ import BOPTools.SplitFeatures
 import BOPTools.Utils
 import DraftGeomUtils
 import FreeCADGui
-import matplotlib.colors as colors
-import numpy as np
 import Part
+import numpy as np
 from FreeCAD import Base
-from pivy import coin, quarter
 from PySide2.QtWidgets import QApplication
+from matplotlib import colors
+from pivy import coin, quarter
 
 from bluemira.base.constants import EPS, raw_uc
 from bluemira.base.file import force_file_extension
@@ -63,18 +71,22 @@ from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.codes._freecadconfig import _freecad_save_config
 from bluemira.codes.error import FreeCADError, InvalidCADInputsError
 from bluemira.geometry.constants import MINIMUM_LENGTH
+from bluemira.utilities.tools import ColourDescriptor
 
-apiVertex = Part.Vertex  # noqa :N816
-apiVector = Base.Vector  # noqa :N816
-apiEdge = Part.Edge  # noqa :N816
-apiWire = Part.Wire  # noqa :N816
-apiFace = Part.Face  # noqa :N816
-apiShell = Part.Shell  # noqa :N816
-apiSolid = Part.Solid  # noqa :N816
-apiShape = Part.Shape  # noqa :N816
-apiPlacement = Base.Placement  # noqa : N816
-apiPlane = Part.Plane  # noqa :N816
-apiCompound = Part.Compound  # noqa :N816
+if TYPE_CHECKING:
+    from bluemira.display.palettes import ColorPalette
+
+apiVertex = Part.Vertex  # noqa: N816
+apiVector = Base.Vector  # noqa: N816
+apiEdge = Part.Edge  # noqa: N816
+apiWire = Part.Wire  # noqa: N816
+apiFace = Part.Face  # noqa: N816
+apiShell = Part.Shell  # noqa: N816
+apiSolid = Part.Solid  # noqa: N816
+apiShape = Part.Shape  # noqa: N816
+apiPlacement = Base.Placement  # noqa:  N816
+apiPlane = Part.Plane  # noqa: N816
+apiCompound = Part.Compound  # noqa: N816
 
 WORKING_PRECISION = 1e-5
 MIN_PRECISION = 1e-5
@@ -149,10 +161,7 @@ def check_data_type(data_type):
             is_list = isinstance(objs, list)
             if not is_list:
                 objs = [objs]
-                if len(args) > 1:
-                    args = [objs, args[1:]]
-                else:
-                    args = [objs]
+                args = [objs, args[1:]] if len(args) > 1 else [objs]
             if all(isinstance(o, data_type) for o in objs):
                 output = func(*args, **kwargs)
                 if not is_list:
@@ -251,8 +260,7 @@ def make_polygon(points: Union[list, np.ndarray]) -> apiWire:
     """
     # Points must be converted into FreeCAD Vectors
     pntslist = [Base.Vector(x) for x in points]
-    wire = Part.makePolygon(pntslist)
-    return wire
+    return Part.makePolygon(pntslist)
 
 
 def make_bezier(points: Union[list, np.ndarray]) -> apiWire:
@@ -273,8 +281,7 @@ def make_bezier(points: Union[list, np.ndarray]) -> apiWire:
     pntslist = [Base.Vector(x) for x in points]
     bc = Part.BezierCurve()
     bc.setPoles(pntslist)
-    wire = Part.Wire(bc.toShape())
-    return wire
+    return Part.Wire(bc.toShape())
 
 
 def make_bspline(
@@ -319,8 +326,7 @@ def make_bspline(
     bspline.buildFromPolesMultsKnots(
         poles, mults, knots, periodic, degree, weights, check_rational
     )
-    wire = apiWire(bspline.toShape())
-    return wire
+    return apiWire(bspline.toShape())
 
 
 def interpolate_bspline(
@@ -356,15 +362,15 @@ def interpolate_bspline(
     # Recreate checks that are made in freecad/src/MOD/Draft/draftmake/make_bspline.py
     # function make_bspline, line 75
 
-    if len(pntslist) < 2:
+    if len(pntslist) < 2:  # noqa: PLR2004
         _err = "interpolate_bspline: not enough points"
         raise InvalidCADInputsError(_err + "\n")
     if np.allclose(pntslist[0], pntslist[-1], rtol=0, atol=EPS):
-        if len(pntslist) > 2:
+        if len(pntslist) > 2:  # noqa: PLR2004
+            if not closed:
+                bluemira_warn("interpolate_bspline: equal endpoints forced Closed")
             closed = True
             pntslist.pop()
-            _err = "interpolate_bspline: equal endpoints forced Closed"
-            bluemira_warn(_err)
         else:
             # len == 2 and first == last
             _err = "interpolate_bspline: Invalid pointslist (len == 2 and first == last)"
@@ -554,7 +560,7 @@ def offset_wire(
     -------
     Offset wire
     """
-    if thickness == 0.0:
+    if thickness == 0.0:  # noqa: PLR2004
         return deepcopy(wire)
 
     if _wire_is_straight(wire):
@@ -586,7 +592,7 @@ def offset_wire(
                 f"{error.args[0]['sErrMsg']}",
             ]
         )
-        raise FreeCADError(msg)
+        raise FreeCADError(msg) from None
 
     fix_wire(wire)
     return wire
@@ -613,12 +619,10 @@ def make_face(wire: apiWire) -> apiFace:
     face = apiFace(wire)
     if face.isValid():
         return face
-    else:
-        face.fix(WORKING_PRECISION, MIN_PRECISION, MAX_PRECISION)
-        if face.isValid():
-            return face
-        else:
-            raise FreeCADError("An invalid face has been generated")
+    face.fix(WORKING_PRECISION, MIN_PRECISION, MAX_PRECISION)
+    if face.isValid():
+        return face
+    raise FreeCADError("An invalid face has been generated")
 
 
 # ======================================================================================
@@ -628,7 +632,9 @@ def _get_api_attr(obj: apiShape, prop: str):
     try:
         return getattr(obj, prop)
     except AttributeError:
-        raise FreeCADError(f"FreeCAD object {obj} does not have an attribute: {prop}")
+        raise FreeCADError(
+            f"FreeCAD object {obj} does not have an attribute: {prop}"
+        ) from None
 
 
 def length(obj: apiShape) -> float:
@@ -705,7 +711,7 @@ def tessellate(obj: apiShape, tolerance: float) -> Tuple[np.ndarray, np.ndarray]
     Once tesselated an object's properties may change. Tesselation cannot be reverted
     to a previous lower value, but can be increased (irreversibly).
     """
-    if tolerance <= 0.0:
+    if tolerance <= 0.0:  # noqa: PLR2004
         raise ValueError("Cannot have a tolerance that is less than or equal to 0.0")
 
     vectors, indices = obj.tessellate(tolerance)
@@ -830,9 +836,9 @@ def discretize(w: apiWire, ndiscr: int = 10, dl: Optional[float] = None) -> np.n
         If dl <= 0.0
     """
     if dl is None:
-        if ndiscr < 2:
+        if ndiscr < 2:  # noqa: PLR2004
             raise ValueError("ndiscr must be greater than 2.")
-    elif dl <= 0.0:
+    elif dl <= 0.0:  # noqa: PLR2004
         raise ValueError("dl must be > 0.")
     else:
         # a dl is calculated for the discretisation of the different edges
@@ -879,7 +885,7 @@ def discretize_by_edges(
     if dl is None:
         # dl is calculated for the discretisation of the different edges
         dl = w.Length / float(ndiscr)
-    elif dl <= 0.0:
+    elif dl <= 0.0:  # noqa: PLR2004
         raise ValueError("dl must be > 0.")
 
     # edges are discretised taking into account their orientation
@@ -894,8 +900,7 @@ def discretize_by_edges(
     else:
         output += [pointse[-1]]
 
-    output = np.array(output)
-    return output
+    return np.array(output)
 
 
 def dist_to_shape(
@@ -942,14 +947,14 @@ def wire_value_at(wire: apiWire, distance: float) -> np.ndarray:
     -------
     Wire point value at distance
     """
-    if distance == 0.0:
+    if distance == 0.0:  # noqa: PLR2004
         return start_point(wire)
-    elif distance == wire.Length:
+    if distance == wire.Length:
         return end_point(wire)
-    elif distance < 0.0:
+    if distance < 0.0:  # noqa: PLR2004
         bluemira_warn("Distance must be greater than 0; returning start point.")
         return start_point(wire)
-    elif distance > wire.Length:
+    if distance > wire.Length:
         bluemira_warn("Distance greater than the length of wire; returning end point.")
         return end_point(wire)
 
@@ -972,7 +977,7 @@ def wire_value_at(wire: apiWire, distance: float) -> np.ndarray:
 
 
 def wire_parameter_at(
-    wire: apiWire, vertex: Iterable[float], tolerance: float = EPS
+    wire: apiWire, vertex: Iterable[float], tolerance: float = EPS * 10
 ) -> float:
     """
     Get the parameter value at a vertex along a wire.
@@ -998,8 +1003,7 @@ def wire_parameter_at(
     split_wire_1, _ = split_wire(wire, vertex, tolerance)
     if split_wire_1:
         return split_wire_1.Length / wire.Length
-    else:
-        return 0.0
+    return 0.0
 
 
 def split_wire(
@@ -1039,7 +1043,8 @@ def split_wire(
     distance, points, _ = wire.distToShape(vertex)
     if distance > tolerance:
         raise FreeCADError(
-            f"Vertex is not close enough to the wire, with a distance: {distance} > {tolerance}"
+            f"Vertex is not close enough to the wire, with a distance: {distance} >"
+            f" {tolerance}"
         )
 
     edges = wire.OrderedEdges
@@ -1089,8 +1094,7 @@ def _get_closest_edge_idx(wire, vertex):
     closest_vector = points[0][0]
     closest_vertex = apiVertex(closest_vector)
     distances = [edge.distToShape(closest_vertex)[0] for edge in wire.OrderedEdges]
-    idx = np.argmin(distances)
-    return idx
+    return np.argmin(distances)
 
 
 def slice_shape(
@@ -1119,11 +1123,10 @@ def slice_shape(
     """
     if isinstance(shape, apiWire):
         return _slice_wire(shape, plane_axis, plane_origin)
-    else:
-        if not isinstance(shape, (apiFace, apiSolid)):
-            bluemira_warn("The output structure of this function may not be as expected")
-        shift = np.dot(np.array(plane_origin), np.array(plane_axis))
-        return _slice_solid(shape, plane_axis, shift)
+    if not isinstance(shape, (apiFace, apiSolid)):
+        bluemira_warn("The output structure of this function may not be as expected")
+    shift = np.dot(np.array(plane_origin), np.array(plane_axis))
+    return _slice_solid(shape, plane_axis, shift)
 
 
 def _slice_wire(wire, normal_plane, shift, *, BIG_NUMBER=1e5):
@@ -1167,13 +1170,13 @@ def _setup_document(
 
     elif len(labels) != len(parts):
         raise ValueError(
-            f"Number of labels ({len(labels)}) != number of objects ({len(parts)}"
+            f"Number of labels ({len(labels)}) != number of objects ({len(parts)})"
         )
 
     for part, label in zip(parts, labels):
         new_part = part.copy()
         new_part.rotate((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), -90.0)
-        obj = doc.addObject("Part::Feature", label)
+        obj = doc.addObject("Part::FeaturePython", label)
         obj.Shape = new_part
         doc.recompute()
         yield obj
@@ -1193,17 +1196,17 @@ class CADFileType(enum.Enum):
     """
 
     # Commented out currently don't function
-    ACSII_STEREO_MESH = ("ast", "Mesh")
+    ASCII_STEREO_MESH = ("ast", "Mesh")
     ADDITIVE_MANUFACTURING = ("amf", "Mesh")
-    # ASC = ("asc", "Points")
-    # AUTOCAD = ("dwg", "importDWG")
+    ASC = ("asc", "Points")
+    AUTOCAD = ("dwg", "importDWG")
     AUTOCAD_DXF = ("dxf", "importDXF")
     # BDF = ("bdf", "feminout.exportNastranMesh")
     BINMESH = ("bms", "Mesh")
     BREP = ("brep", "Part")
     BREP_2 = ("brp", "Part")
     CSG = ("csg", "exportCSG")
-    # DAE = ("dae", "importDAE")
+    DAE = ("dae", "importDAE")
     # DAT = ("dat", "Fem")
     FREECAD = ("FCStd", None)
     # FENICS_FEM = ("xdmf", "feminout.importFenicsMesh")
@@ -1217,72 +1220,118 @@ class CADFileType(enum.Enum):
     # INP = ("inp", "Fem")
     INVENTOR_V2_1 = ("iv", "Mesh")
     JSON = ("json", "importJSON")
-    JSON_MESH = ("json", "feminout.importYamlJsonMesh")
+    # JSON_MESH = ("$json", "feminout.importYamlJsonMesh")
     # MED = ("med", "Fem")
     # MESHJSON = ("meshjson", "feminout.importYamlJsonMesh")
     # MESHPY = ("meshpy", "feminout.importPyMesh")
     # MESHYAML = ("meshyaml", "feminout.importYamlJsonMesh")
     OBJ = ("obj", "Mesh")
-    OBJ_WAVE = ("obj", "importOBJ")
+    OBJ_WAVE = ("$obj", "importOBJ")
     OFF = ("off", "Mesh")
     OPENSCAD = ("scad", "exportCSG")
     # PCD = ("pcd", "Points")
-    PDF = ("pdf", "FreeCADGui")
+    # PDF = ("pdf", "FreeCADGui")
     # PLY = ("ply", "Points")
     PLY_STANFORD = ("ply", "Mesh")
     SIMPLE_MODEL = ("smf", "Mesh")
     STEP = ("stp", "ImportGui")
     STEP_2 = ("step", "ImportGui")
-    # STEP_ZIP = ("stpz", "stepZ")
+    STEP_ZIP = ("stpZ", "stepZ")
     STL = ("stl", "Mesh")
     # SVG = ("svg", "DrawingGui")
-    # SVG_FLAT = ("svg", "importSVG")
+    # SVG_FLAT = ("$svg", "importSVG")
     # TETGEN_FEM = ("poly", "feminout.convert2TetGen")
     THREED_MANUFACTURING = ("3mf", "Mesh")
     # UNV = ("unv", "Fem")
-    VRML = ("vrml", "FreeCADGui")
-    VRML_2 = ("wrl", "FreeCADGui")
-    VRML_ZIP = ("wrl.gz", "FreeCADGui")
-    VRML_ZIP_2 = ("wrz", "FreeCADGui")
+    # VRML = ("vrml", "FreeCADGui")
+    # VRML_2 = ("wrl", "FreeCADGui")
+    # VRML_ZIP = ("wrl.gz", "FreeCADGui")
+    # VRML_ZIP_2 = ("wrz", "FreeCADGui")
     # VTK = ("vtk", "Fem")
     # VTU = ("vtu", "Fem")
     # WEBGL = ("html", "importWebGL")
-    WEBGL_X3D = ("xhtml", "FreeCADGui")
-    X3D = ("x3d", "FreeCADGui")
-    X3DZ = ("x3dz", "FreeCADGui")
+    # WEBGL_X3D = ("xhtml", "FreeCADGui")
+    # X3D = ("x3d", "FreeCADGui")
+    # X3DZ = ("x3dz", "FreeCADGui")
     # YAML = ("yaml", "feminout.importYamlJsonMesh")
     # Z88_FEM_MESH = ("z88", "Fem")
     # Z88_FEM_MESH_2 = ("i1.txt", "feminout.importZ88Mesh")
 
-    def __new__(cls, *args, **kwds):
+    def __new__(cls, *args, **kwds):  # noqa: ARG003
         """Create Enum from first half of tuple"""
         obj = object.__new__(cls)
         obj._value_ = args[0]
         return obj
 
-    def __init__(self, _, module):
+    def __init__(self, _, module: str = ""):
         self.module = module
 
+    @classmethod
+    def unitless_formats(cls) -> Tuple[CADFileType, ...]:
+        """CAD formats that don't need to be converted because they are unitless"""
+        return (cls.OBJ_WAVE, *[form for form in cls if form.module == "Mesh"])
+
+    @classmethod
+    def manual_mesh_formats(cls) -> Tuple[CADFileType, ...]:
+        """CAD formats that need to have meshed objects."""
+        return (
+            cls.GLTRANSMISSION,
+            cls.GLTRANSMISSION_2,
+            cls.PLY_STANFORD,
+            cls.SIMPLE_MODEL,
+        )
+
     @DynamicClassAttribute
-    def exporter(self):
+    def exporter(self) -> ExporterProtocol:
         """Get exporter module for each filetype"""
         try:
-            return __import__(self.module).export
+            export_func = __import__(self.module).export
         except AttributeError:
             modlist = self.module.split(".")
             if len(modlist) > 1:
                 return getattr(__import__(modlist[0]), modlist[1]).export
-            else:
-                raise FreeCADError(
-                    f"Unable to save to {self.value} please try through the main FreeCAD GUI"
-                )
+            raise FreeCADError(
+                f"Unable to save to {self.value} please try through the main FreeCAD GUI"
+            ) from None
         except TypeError:
             # Assume CADFileType.FREECAD
-            def FreeCADwriter(objs, filename):
+            def FreeCADwriter(objs, filename, **kwargs):  # noqa: ARG001
                 doc = objs[0].Document
                 doc.saveAs(filename)
 
             return FreeCADwriter
+        else:
+            if self in self.manual_mesh_formats():
+                return meshed_exporter(self, export_func)
+            return export_func
+
+
+class ExporterProtocol(Protocol):
+    """Typing for CAD exporter"""
+
+    def __call__(self, objs: List[Part.Feature], filename: str, **kwargs):
+        """Export CAD protocol"""
+
+
+def meshed_exporter(
+    cad_format: CADFileType, export_func: Callable[[Part.Feature, str], None]
+) -> ExporterProtocol:
+    """Meshing and then exporting CAD in certain formats."""
+
+    @wraps(export_func)
+    def wrapper(objs: Part.Feature, filename: str, *, tessellate: float = 0.5, **kwargs):
+        """
+        Tessellation should happen on a copied object
+        """
+        if cad_format in CADFileType.unitless_formats():
+            for no, obj in enumerate(objs):
+                objs[no].Shape = obj.Shape.copy()
+        for ob in objs:
+            ob.Shape.tessellate(tessellate)
+
+        export_func(objs, filename, **kwargs)
+
+    return wrapper
 
 
 def save_as_STP(
@@ -1323,6 +1372,7 @@ def save_as_STP(
         warn(
             "Using kwarg 'scale' is no longer supported. Please use 'unit_scale'",
             category=DeprecationWarning,
+            stacklevel=2,
         )
     else:
         scale = raw_uc(1, unit_scale, "mm")
@@ -1354,7 +1404,7 @@ def _scale_obj(objs, scale: float = 1000):
 def save_cad(
     shapes: Iterable[apiShape],
     filename: str,
-    formatt: Union[str, CADFileType] = "stp",
+    cad_format: Union[str, CADFileType] = "stp",
     labels: Optional[Iterable[str]] = None,
     unit_scale: str = "metre",
     **kwargs,
@@ -1367,9 +1417,9 @@ def save_cad(
     shapes:
         CAD shape objects to save
     filename:
-        filename (file extension will be forced base on `formatt`)
-    formatt:
-        file formatt
+        filename (file extension will be forced base on `cad_format`)
+    cad_format:
+        file cad_format
     labels:
         shape labels
     unit_scale:
@@ -1382,29 +1432,64 @@ def save_cad(
     Part builds in millimetres therefore we need to scale to metres to be
     consistent with our units
     """
-    formatt = CADFileType(formatt)
-    filename = force_file_extension(filename, f".{formatt.value}")
+    if kw_formatt := kwargs.pop("formatt", None):
+        warn(
+            "Using kwarg 'formatt' is no longer supported. Use cad_format instead.",
+            category=DeprecationWarning,
+            stacklevel=2,
+        )
+        cad_format = kw_formatt
 
-    _freecad_save_config(**kwargs)
+    try:
+        cad_format = CADFileType(cad_format)
+    except ValueError as ve:
+        try:
+            cad_format = CADFileType[cad_format.upper()]
+        except (KeyError, AttributeError):
+            raise ve from None
+
+    filename = force_file_extension(filename, f".{cad_format.value.strip('$')}")
+
+    _freecad_save_config(
+        **{
+            k: kwargs.pop(k)
+            for k in kwargs.keys() & {"unit", "no_dp", "author", "stp_file_scheme"}
+        }
+    )
 
     objs = list(_setup_document(shapes, labels))
 
-    # Part is always built in mm
-    _scale_obj(objs, scale=raw_uc(1, unit_scale, "mm"))
+    # Part is always built in mm but some formats are unitless
+    if cad_format not in CADFileType.unitless_formats():
+        _scale_obj(objs, scale=raw_uc(1, unit_scale, "mm"))
 
     # Some exporters need FreeCADGui to be setup before their import,
     # this is achieved in _setup_document
     try:
-        formatt.exporter(objs, filename)
+        cad_format.exporter(objs, filename, **kwargs)
     except ImportError as imp_err:
         raise FreeCADError(
-            f"Unable to save to {formatt.value} please try through the main FreeCAD GUI"
+            f"Unable to save to {cad_format.value} please try through the main"
+            " FreeCAD GUI"
         ) from imp_err
 
-    if not os.path.exists(filename):
-        raise FileNotFoundError(
-            f"{filename} not created, filetype not written by FreeCAD."
-            f"Possibly no object compatible with '{formatt.value}'"
+    if not Path(filename).exists():
+        mesg = f"{filename} not created, filetype not written by FreeCAD."
+        if cad_format is CADFileType.IFC_BIM:
+            mesg += " FreeCAD requires `ifcopenshell` to save in this format."
+        elif cad_format is CADFileType.DAE:
+            mesg += " FreeCAD requires `pycollada` to save in this format."
+        elif cad_format is CADFileType.IFC_BIM_JSON:
+            mesg += (
+                " FreeCAD requires `ifcopenshell` and"
+                " IFCJSON module to save in this format."
+            )
+        elif cad_format is CADFileType.AUTOCAD:
+            mesg += " FreeCAD requires `LibreDWG` to save in this format."
+
+        raise FreeCADError(
+            f"{mesg} Not able to save object with format:"
+            f" '{cad_format.value.strip('$')}'"
         )
 
 
@@ -1500,14 +1585,15 @@ def mirror_shape(
     mirrored_shape = shape.mirror(base, direction)
     if isinstance(shape, apiSolid):
         return mirrored_shape.Solids[0]
-    elif isinstance(shape, apiCompound):
+    if isinstance(shape, apiCompound):
         return mirrored_shape.Compounds[0]
-    elif isinstance(shape, apiFace):
+    if isinstance(shape, apiFace):
         return mirrored_shape.Faces[0]
-    elif isinstance(shape, apiWire):
+    if isinstance(shape, apiWire):
         return mirrored_shape.Wires[0]
-    elif isinstance(shape, apiShell):
+    if isinstance(shape, apiShell):
         return mirrored_shape.Shells[0]
+    return None
 
 
 def revolve_shape(
@@ -1619,7 +1705,8 @@ def sweep_shape(
 
     if not _wire_edges_tangent(path):
         raise FreeCADError(
-            "Sweep path contains edges that are not consecutively tangent. This will produce unexpected results."
+            "Sweep path contains edges that are not consecutively tangent. This will"
+            " produce unexpected results."
         )
 
     result = path.makePipeShell(profiles, True, frenet)
@@ -1627,8 +1714,7 @@ def sweep_shape(
     solid_result = apiSolid(result)
     if solid:
         return solid_result
-    else:
-        return solid_result.Shells[0]
+    return solid_result.Shells[0]
 
 
 def fillet_wire_2D(wire: apiWire, radius: float, chamfer: bool = False) -> apiWire:
@@ -1651,11 +1737,12 @@ def fillet_wire_2D(wire: apiWire, radius: float, chamfer: bool = False) -> apiWi
     # Temporarily suppress pesky print statement:
     # DraftGeomUtils.fillet: Warning: edges have same direction. Did nothing
     old_stdout = sys.stdout
-    try:
-        sys.stdout = open(os.devnull, "w")
-        result = DraftGeomUtils.filletWire(wire, radius, chamfer=chamfer)
-    finally:
-        sys.stdout = old_stdout
+    with open(os.devnull, "w") as fh:
+        try:
+            sys.stdout = fh
+            result = DraftGeomUtils.filletWire(wire, radius, chamfer=chamfer)
+        finally:
+            sys.stdout = old_stdout
 
     return result
 
@@ -1687,9 +1774,9 @@ def boolean_fuse(shapes: Iterable[apiShape], remove_splitter: bool = True) -> ap
         In case the boolean operation fails.
     """
     if not isinstance(shapes, list):
-        raise ValueError(f"{shapes} is not a list.")
+        raise TypeError(f"{shapes} is not a list.")
 
-    if len(shapes) < 2:
+    if len(shapes) < 2:  # noqa: PLR2004
         raise ValueError("At least 2 shapes must be given")
 
     _type = type(shapes[0])
@@ -1699,7 +1786,8 @@ def boolean_fuse(shapes: Iterable[apiShape], remove_splitter: bool = True) -> ap
         _check_shapes_coplanar(shapes)
         if not _shapes_are_coaxis(shapes):
             bluemira_warn(
-                "Boolean fuse on shapes that do not have the same planar axis. Reversing."
+                "Boolean fuse on shapes that do not have the same planar axis."
+                " Reversing."
             )
             _make_shapes_coaxis(shapes)
 
@@ -1707,42 +1795,39 @@ def boolean_fuse(shapes: Iterable[apiShape], remove_splitter: bool = True) -> ap
         if _type == apiWire:
             merged_shape = BOPTools.SplitAPI.booleanFragments(shapes, "Split")
             if len(merged_shape.Wires) > len(shapes):
-                raise FreeCADError(
-                    f"Fuse wire creation failed. Possible "
-                    f"overlap or internal intersection of "
+                raise FreeCADError(  # noqa: TRY301
+                    "Fuse wire creation failed. Possible "
+                    "overlap or internal intersection of "
                     f"input shapes {shapes}."
                 )
-            else:
-                merged_shape = merged_shape.fuse(merged_shape.Wires)
-                merged_shape = Part.Wire(merged_shape.Wires)
-                return merged_shape
+            merged_shape = merged_shape.fuse(merged_shape.Wires)
+            return Part.Wire(merged_shape.Wires)
 
-        elif _type == apiFace:
+        if _type == apiFace:
             merged_shape = shapes[0].fuse(shapes[1:])
             if remove_splitter:
                 merged_shape = merged_shape.removeSplitter()
             if len(merged_shape.Faces) > 1:
-                raise FreeCADError(
+                raise FreeCADError(  # noqa: TRY301
                     f"Boolean fuse operation on {shapes} gives more than one face."
                 )
             return merged_shape.Faces[0]
 
-        elif _type == apiSolid:
+        if _type == apiSolid:
             merged_shape = shapes[0].fuse(shapes[1:])
             if remove_splitter:
                 merged_shape = merged_shape.removeSplitter()
             if len(merged_shape.Solids) > 1:
-                raise FreeCADError(
+                raise FreeCADError(  # noqa: TRY301
                     f"Boolean fuse operation on {shapes} gives more than one solid."
                 )
             return merged_shape.Solids[0]
 
-        else:
-            raise ValueError(
-                f"Fuse function still not implemented for {_type} instances."
-            )
-    except Exception as e:
-        raise FreeCADError(str(e))
+        raise ValueError(  # noqa: TRY301
+            f"Fuse function still not implemented for {_type} instances."
+        )
+    except Exception as e:  # noqa: BLE001
+        raise FreeCADError(str(e)) from e
 
 
 def boolean_cut(
@@ -1775,7 +1860,7 @@ def boolean_cut(
         tools = [tools]
 
     if _is_wire_or_face(_type):
-        _check_shapes_coplanar([shape] + tools)
+        _check_shapes_coplanar([shape, *tools])
 
     cut_shape = shape.cut(tools)
     if split:
@@ -1817,8 +1902,8 @@ def boolean_fragments(
     """
     try:
         compound, fragment_map = shapes[0].generalFuse(shapes[1:], tolerance)
-    except Exception as e:
-        raise FreeCADError(f"Boolean fragments operation failed: {str(e)}")
+    except Exception as e:  # noqa: BLE001
+        raise FreeCADError(f"Boolean fragments operation failed: {e!s}") from None
     return compound, fragment_map
 
 
@@ -1868,12 +1953,11 @@ def _wire_edges_tangent(wire):
     if len(wire.Edges) <= 1:
         return True
 
-    else:
-        edges_tangent = []
-        for i in range(len(wire.OrderedEdges) - 1):
-            edge_1 = wire.OrderedEdges[i]
-            edge_2 = wire.OrderedEdges[i + 1]
-            edges_tangent.append(_edges_tangent(edge_1, edge_2))
+    edges_tangent = []
+    for i in range(len(wire.OrderedEdges) - 1):
+        edge_1 = wire.OrderedEdges[i]
+        edge_2 = wire.OrderedEdges[i + 1]
+        edges_tangent.append(_edges_tangent(edge_1, edge_2))
 
     if wire.isClosed():
         # Check last and first edge tangency
@@ -1899,7 +1983,7 @@ def _wire_is_straight(wire):
     """
     if len(wire.Edges) == 1:
         edge = wire.Edges[0]
-        if len(edge.Vertexes) == 2:
+        if len(edge.Vertexes) == 2:  # noqa: PLR2004
             straight = dist_to_shape(edge.Vertexes[0], edge.Vertexes[1])[0]
             if np.isclose(straight, wire.Length, rtol=EPS, atol=1e-8):
                 return True
@@ -1907,7 +1991,7 @@ def _wire_is_straight(wire):
 
 
 def _is_wire_or_face(shape_type):
-    return shape_type == apiWire or shape_type == apiFace
+    return shape_type in (apiWire, apiFace)
 
 
 def _check_shapes_same_type(shapes):
@@ -1922,7 +2006,8 @@ def _check_shapes_same_type(shapes):
 def _check_shapes_coplanar(shapes):
     if not _shapes_are_coplanar(shapes):
         raise ValueError(
-            "Shapes are not co-planar; this operation does not support non-co-planar wires or faces."
+            "Shapes are not co-planar; this operation does not support non-co-planar"
+            " wires or faces."
         )
 
 
@@ -1930,10 +2015,7 @@ def _shapes_are_coplanar(shapes):
     """
     Check if a list of shapes are all coplanar. First shape is taken as the reference.
     """
-    coplanar = []
-    for other in shapes[1:]:
-        coplanar.append(shapes[0].isCoplanar(other))
-    return all(coplanar)
+    return all(shapes[0].isCoplanar(other) for other in shapes[1:])
 
 
 def _shapes_are_coaxis(shapes):
@@ -2056,8 +2138,7 @@ def make_placement_from_vectors(
 ) -> apiPlacement:
     """Create a placement from three directional vectors"""
     rotation = Base.Rotation(vx, vy, vz, order)
-    placement = Base.Placement(base, rotation)
-    return placement
+    return Base.Placement(base, rotation)
 
 
 def change_placement(geo: apiShape, placement: apiPlacement):
@@ -2162,7 +2243,7 @@ def face_from_plane(plane: apiPlane, width: float, height: float) -> apiFace:
         Base.Vector(-width / 2, height / 2, 0),
     ]
     # create the closed border
-    border = Part.makePolygon(corners + [corners[0]])
+    border = Part.makePolygon([*corners, corners[0]])
     wall = Part.Face(border)
 
     wall.Placement = placement_from_plane(plane)
@@ -2172,8 +2253,7 @@ def face_from_plane(plane: apiPlane, width: float, height: float) -> apiFace:
 
 def plane_from_shape(shape: apiShape) -> apiPlane:
     """Return a plane if the shape is planar"""
-    plane = shape.findPlane()
-    return plane
+    return shape.findPlane()
 
 
 def placement_from_plane(plane: apiPlane) -> apiPlacement:
@@ -2244,8 +2324,7 @@ def collect_verts_faces(
 
     if len(solid.Faces) > 0:
         return np.vstack(verts), np.vstack(faces)
-    else:
-        return None, None
+    return None, None
 
 
 def collect_wires(solid: apiShape, **kwds) -> Tuple[np.ndarray, np.ndarray]:
@@ -2281,22 +2360,8 @@ def collect_wires(solid: apiShape, **kwds) -> Tuple[np.ndarray, np.ndarray]:
 class DefaultDisplayOptions:
     """Freecad default display options"""
 
-    colour: Union[Tuple, str]
+    colour: ColourDescriptor = ColourDescriptor()
     transparency: float = 0.0
-
-    _colour: Union[Tuple, str] = field(
-        init=False, repr=False, default_factory=lambda: colors.to_hex((0.5, 0.5, 0.5))
-    )
-
-    @property
-    def colour(self) -> str:
-        """Colour as rbg"""
-        return colors.to_hex(self._colour)
-
-    @colour.setter
-    def colour(self, value):
-        """Set colour"""
-        self._colour = value
 
     @property
     def color(self) -> str:
@@ -2304,16 +2369,16 @@ class DefaultDisplayOptions:
         return self.colour
 
     @color.setter
-    def color(self, value):
+    def color(self, value: Union[str, Tuple[float, float, float], ColorPalette]):
         """See colour"""
         self.colour = value
 
 
 def show_cad(
-    parts: Union[BluemiraGeo, List[BluemiraGeo]],
+    parts: Union[apiShape, List[apiShape]],
     options: Union[Dict, List[Optional[Dict]]],
     labels: List[str],
-    **kwargs,
+    **kwargs,  # noqa: ARG001
 ):
     """
     The implementation of the display API for FreeCAD parts.
@@ -2393,37 +2458,30 @@ def serialize_shape(shape):
     type_ = type(shape)
 
     if type_ == Part.Wire:
-        output = []
-        edges = shape.OrderedEdges
-        for edge in edges:
-            output.append(serialize_shape(edge))
-        return {"Wire": output}
+        return {"Wire": [serialize_shape(edge) for edge in shape.OrderedEdges]}
 
     if type_ == Part.Edge:
-        output = serialize_shape(_convert_edge_to_curve(shape))
-        return output
+        return serialize_shape(_convert_edge_to_curve(shape))
 
     if type_ in [Part.LineSegment, Part.Line]:
-        output = {
+        return {
             "LineSegment": {
                 "StartPoint": list(shape.StartPoint),
                 "EndPoint": list(shape.EndPoint),
             },
         }
-        return output
 
     if type_ == Part.BezierCurve:
-        output = {
+        return {
             "BezierCurve": {
                 "Poles": vector_to_list(shape.getPoles()),
                 "FirstParameter": shape.FirstParameter,
                 "LastParameter": shape.LastParameter,
             }
         }
-        return output
 
     if type_ == Part.BSplineCurve:
-        output = {
+        return {
             "BSplineCurve": {
                 "Poles": vector_to_list(shape.getPoles()),
                 "Mults": shape.getMultiplicities(),
@@ -2436,10 +2494,9 @@ def serialize_shape(shape):
                 "LastParameter": shape.LastParameter,
             }
         }
-        return output
 
     if type_ == Part.ArcOfCircle:
-        output = {
+        return {
             "ArcOfCircle": {
                 "Radius": shape.Radius,
                 "Center": list(shape.Center),
@@ -2450,10 +2507,9 @@ def serialize_shape(shape):
                 "EndPoint": list(shape.EndPoint),
             }
         }
-        return output
 
     if type_ == Part.ArcOfEllipse:
-        output = {
+        return {
             "ArcOfEllipse": {
                 "Center": list(shape.Center),
                 "MajorRadius": shape.MajorRadius,
@@ -2467,7 +2523,6 @@ def serialize_shape(shape):
                 "EndPoint": list(shape.EndPoint),
             }
         }
-        return output
 
     raise NotImplementedError(f"Serialization non implemented for {type_}")
 
@@ -2487,16 +2542,12 @@ def deserialize_shape(buffer):
     """
     for type_, v in buffer.items():
         if type_ == "Wire":
-            temp_list = []
-            for edge in v:
-                temp_list.append(deserialize_shape(edge))
-
-            return Part.Wire(temp_list)
+            return Part.Wire([deserialize_shape(edge) for edge in v])
         if type_ == "LineSegment":
             return make_polygon([v["StartPoint"], v["EndPoint"]])
-        elif type_ == "BezierCurve":
+        if type_ == "BezierCurve":
             return make_bezier(v["Poles"])
-        elif type_ == "BSplineCurve":
+        if type_ == "BSplineCurve":
             return make_bspline(
                 v["Poles"],
                 v["Mults"],
@@ -2506,11 +2557,11 @@ def deserialize_shape(buffer):
                 v["Weights"],
                 v["checkRational"],
             )
-        elif type_ == "ArcOfCircle":
+        if type_ == "ArcOfCircle":
             return make_circle(
                 v["Radius"], v["Center"], v["StartAngle"], v["EndAngle"], v["Axis"]
             )
-        elif type_ == "ArcOfEllipse":
+        if type_ == "ArcOfEllipse":
             return make_ellipse(
                 v["Center"],
                 v["MajorRadius"],
@@ -2520,8 +2571,8 @@ def deserialize_shape(buffer):
                 v["StartAngle"],
                 v["EndAngle"],
             )
-        else:
-            raise NotImplementedError(f"Deserialization non implemented for {type_}")
+        raise NotImplementedError(f"Deserialization non implemented for {type_}")
+    return None
 
 
 def _convert_edge_to_curve(edge: apiEdge) -> Part.Curve:
@@ -2588,6 +2639,6 @@ def _convert_edge_to_curve(edge: apiEdge) -> Part.Curve:
             c.reverse()
         output = _convert_edge_to_curve(Part.Edge(c))
     else:
-        bluemira_warn("Conversion of {} is still not supported!".format(type(curve)))
+        bluemira_warn(f"Conversion of {type(curve)} is still not supported!")
 
     return output

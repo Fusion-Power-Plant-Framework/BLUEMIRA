@@ -38,3 +38,4 @@ dependencies:
     - -r ../requirements-develop.txt
     - -r ../requirements-conda.txt
     - -r ../requirements-examples.txt
+    - -e ../

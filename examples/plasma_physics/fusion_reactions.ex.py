@@ -56,8 +56,8 @@ plot_defaults()
 
 temperature = np.linspace(10e6, 100e6, 1000)  # [K]
 
-sigma_v_DT = reactivity(temperature, "D-T")  # noqa: N816
-sigma_v_DD = reactivity(temperature, "D-D")  # noqa: N816
+sigma_v_DT = reactivity(temperature, "D-T")
+sigma_v_DD = reactivity(temperature, "D-D")
 sigma_v_DHe3 = reactivity(temperature, "D-He3")  # noqa: N816
 
 f, ax = plt.subplots()

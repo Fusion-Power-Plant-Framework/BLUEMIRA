@@ -16,20 +16,20 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 
-import os
+from pathlib import Path
 
 import pytest
 
-import bluemira.geometry.tools as tools
+from bluemira.geometry import tools
 from bluemira.geometry.face import BluemiraFace
 from bluemira.mesh import meshing
 from bluemira.mesh.tools import import_mesh, msh_to_xdmf
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "test_generated_data")
+DATA_DIR = Path(Path(__file__).parent, "test_generated_data")
 
 
 class TestMeshing:
-    @pytest.mark.parametrize("lcar, nodes_num", ((0.1, 40), (0.25, 16), (0.5, 8)))
+    @pytest.mark.parametrize(("lcar", "nodes_num"), [(0.1, 40), (0.25, 16), (0.5, 8)])
     def test_mesh_poly(self, lcar, nodes_num):
         poly = tools.make_polygon(
             [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], closed=True, label="poly"
@@ -41,7 +41,7 @@ class TestMeshing:
         surf.mesh_options = {"physical_group": "coil"}
 
         meshfiles = [
-            os.path.join(DATA_DIR, p) for p in ["Mesh.geo_unrolled", "Mesh.msh"]
+            Path(DATA_DIR, p).as_posix() for p in ["Mesh.geo_unrolled", "Mesh.msh"]
         ]
         m = meshing.Mesh(meshfile=meshfiles)
         m(surf)
@@ -57,7 +57,7 @@ class TestMeshing:
         arr = boundaries.array()
         assert (arr == labels["poly"]).sum() == nodes_num
 
-    @pytest.mark.parametrize("lcar, nodes_num", ((0.1, 40), (0.25, 16), (0.5, 8)))
+    @pytest.mark.parametrize(("lcar", "nodes_num"), [(0.1, 40), (0.25, 16), (0.5, 8)])
     def test_override_lcar_surf(self, lcar, nodes_num):
         poly = tools.make_polygon(
             [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], closed=True, label="poly"
@@ -69,7 +69,7 @@ class TestMeshing:
         surf.mesh_options = {"lcar": lcar / 2, "physical_group": "coil"}
 
         meshfiles = [
-            os.path.join(DATA_DIR, p) for p in ["Mesh.geo_unrolled", "Mesh.msh"]
+            Path(DATA_DIR, p).as_posix() for p in ["Mesh.geo_unrolled", "Mesh.msh"]
         ]
         m = meshing.Mesh(meshfile=meshfiles)
         m(surf)

@@ -21,6 +21,8 @@
 
 import copy
 import json
+from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -34,6 +36,7 @@ from bluemira.utilities.tools import (
     compare_dicts,
     consec_repeat_elem,
     cross,
+    deprecation_wrapper,
     dot,
     get_class_from_module,
     get_module,
@@ -77,7 +80,7 @@ class TestAsciiStr:
         for i in range(52):
             assert asciistr(i + 1) == alphabet[: i + 1]
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             asciistr(53)
 
 
@@ -111,23 +114,27 @@ class TestLeviCivitaTensor:
 
 
 class TestEinsumNorm:
+    rng = np.random.default_rng()
+
     def test_norm(self):
-        val = np.random.rand(999, 3)
+        val = self.rng.random((999, 3))
         np.testing.assert_allclose(norm(val, axis=1), np.linalg.norm(val, axis=1))
         np.testing.assert_allclose(norm(val, axis=0), np.linalg.norm(val, axis=0))
 
     def test_raise(self):
-        val = np.random.rand(999, 3)
+        val = self.rng.random((999, 3))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             norm(val, axis=3)
 
 
 class TestEinsumDot:
+    rng = np.random.default_rng()
+
     def test_dot(self):
-        val3 = np.random.rand(999, 3, 3)
-        val2 = np.random.rand(999, 3)
-        val = np.random.rand(3)
+        val3 = self.rng.random((999, 3, 3))
+        val2 = self.rng.random((999, 3))
+        val = self.rng.random(3)
 
         # ab, bc -> ac
         np.testing.assert_allclose(dot(val2, val2.T), np.dot(val2, val2.T))
@@ -142,7 +149,7 @@ class TestEinsumDot:
 
         # a, abc -> ac | ab, abc -> ac | abc, bc -> ac -- undefined behaviour
         for a, b in [(val, val3.T), (val2, val3), (val3, val3[1:])]:
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError):  # noqa: PT011
                 dot(a, b)
 
         # ab, b -> a
@@ -156,20 +163,22 @@ class TestEinsumDot:
 
 
 class TestEinsumCross:
-    def test_cross(self):
-        val3 = np.random.rand(999, 3)
-        val2 = np.random.rand(999, 2)
-        val = np.random.rand(999)
+    rng = np.random.default_rng()
 
-        for i, v in enumerate([val2, val3], start=2):
+    def test_cross(self):
+        val3 = self.rng.random((999, 3))
+        val2 = self.rng.random((999, 2))
+        val = self.rng.random(999)
+
+        for _i, v in enumerate([val2, val3], start=2):
             np.testing.assert_allclose(cross(v, v), np.cross(v, v))
 
         np.testing.assert_allclose(cross(val, val), val**2)
 
     def test_raises(self):
-        val = np.random.rand(5, 4)
+        val = self.rng.random((5, 4))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             cross(val, val)
 
 
@@ -279,10 +288,12 @@ def test_consec_repeat_elem():
 
 
 def test_polar_cartesian():
-    x = np.random.rand(100)
-    z = np.random.rand(100)
-    x_ref = np.random.rand()
-    z_ref = np.random.rand()
+    rng = np.random.default_rng()
+
+    x = rng.random(100)
+    z = rng.random(100)
+    x_ref = rng.random()
+    z_ref = rng.random()
     r, phi = cartesian_to_polar(x, z, x_ref, z_ref)
     xx, zz = polar_to_cartesian(r, phi, x_ref, z_ref)
     assert np.allclose(x, xx)
@@ -291,7 +302,7 @@ def test_polar_cartesian():
 
 class TestGetModule:
     test_mod = "bluemira.utilities.tools"
-    test_mod_loc = get_bluemira_path("utilities") + "/tools.py"
+    test_mod_loc = Path(get_bluemira_path("utilities"), "tools.py").as_posix()
     test_class_name = "NumpyJSONEncoder"
 
     def test_getmodule(self):
@@ -306,11 +317,11 @@ class TestGetModule:
 
         # Directory exists but not file
         with pytest.raises(FileNotFoundError):
-            get_module(get_bluemira_path() + "/README.md")
+            get_module(Path(get_bluemira_path(), "README.md").as_posix())
 
         # Not a python module
         with pytest.raises(ImportError):
-            get_module(get_bluemira_path() + "../README.md")
+            get_module(Path(get_bluemira_path(), "../README.md").as_posix())
 
     def test_get_weird_ext_python_file(self, tmpdir):
         path1 = tmpdir.join("file")
@@ -347,3 +358,38 @@ class TestGetModule:
         # Class not in module
         with pytest.raises(ImportError):
             get_class_from_module("Spam", default_module=self.test_mod)
+
+
+class TestDeprecationWrapper:
+    def test_no_message_wrap(self):
+        with patch("warnings.warn") as w_patch:
+            deprecation_wrapper(lambda x: 1)(1)  # noqa: ARG005
+
+        assert w_patch.call_args_list[0][0][1] is DeprecationWarning
+
+        @deprecation_wrapper
+        def func(x, *, xx):  # noqa: ARG001
+            return
+
+        with patch("warnings.warn") as w_patch:
+            func(1, xx=1)
+
+        assert w_patch.call_args_list[0][0][1] is DeprecationWarning
+
+    def test_message_wrap(self):
+        message = "message"
+        with patch("warnings.warn") as w_patch:
+            deprecation_wrapper(message)(lambda x: 1)(1)  # noqa: ARG005
+
+        assert w_patch.call_args_list[0][0][0] == message
+        assert w_patch.call_args_list[0][0][1] is DeprecationWarning
+
+        @deprecation_wrapper(message)
+        def func(x, *, xx):  # noqa: ARG001
+            return
+
+        with patch("warnings.warn") as w_patch:
+            func(1, xx=1)
+
+        assert w_patch.call_args_list[0][0][0] == message
+        assert w_patch.call_args_list[0][0][1] is DeprecationWarning

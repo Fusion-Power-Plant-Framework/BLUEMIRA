@@ -91,11 +91,10 @@ def get_separatrix_legs(
     # A flag specifying which end of the plasma (i.e., upper or lower)
     # we want the legs from will need to be added
     legs = get_legs(equilibrium)
-    separatrix_legs = {
+    return {
         LegPosition.INNER: [make_polygon(loop.xyz) for loop in legs["lower_inner"]],
         LegPosition.OUTER: [make_polygon(loop.xyz) for loop in legs["lower_outer"]],
     }
-    return separatrix_legs
 
 
 class DivertorSilhouetteDesigner(Designer[Tuple[BluemiraWire, ...]]):
@@ -242,8 +241,8 @@ class DivertorSilhouetteDesigner(Designer[Tuple[BluemiraWire, ...]]):
 
         return make_polygon(dome, label=label)
 
+    @staticmethod
     def _make_baffle(
-        self,
         label: str,
         start: Sequence[float],
         end: Sequence[float],
@@ -279,8 +278,7 @@ class DivertorSilhouetteDesigner(Designer[Tuple[BluemiraWire, ...]]):
         """
         if self.params.div_open.value:
             raise NotImplementedError("Open divertor baffles not yet supported")
-        else:
-            inner_target_start = self._get_wire_end_with_largest(target, "x")
+        inner_target_start = self._get_wire_end_with_largest(target, "x")
         return self._make_baffle(
             label=self.INNER_BAFFLE,
             start=np.array([x_lim, z_lim]),
@@ -298,8 +296,7 @@ class DivertorSilhouetteDesigner(Designer[Tuple[BluemiraWire, ...]]):
         """
         if self.params.div_open.value:
             raise NotImplementedError("Open divertor baffles not yet supported")
-        else:
-            outer_target_end = self._get_wire_end_with_largest(target, "x")
+        outer_target_end = self._get_wire_end_with_largest(target, "x")
         return self._make_baffle(
             label=self.OUTER_BAFFLE,
             start=outer_target_end,
@@ -312,10 +309,7 @@ class DivertorSilhouetteDesigner(Designer[Tuple[BluemiraWire, ...]]):
         """
         Get the selected scrape-off-leg layers from the separatrix legs.
         """
-        sols = []
-        for layer in layers:
-            sols.append(self.separatrix_legs[leg][layer])
-        return sols
+        return [self.separatrix_legs[leg][layer] for layer in layers]
 
     @staticmethod
     def _get_wire_end_with_smallest(wire: BluemiraWire, axis: str) -> np.ndarray:

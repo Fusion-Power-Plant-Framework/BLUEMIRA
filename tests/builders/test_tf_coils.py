@@ -35,7 +35,6 @@ from bluemira.builders.tf_coils import (
 from bluemira.geometry.coordinates import Coordinates
 from bluemira.geometry.parameterisations import PrincetonD
 from bluemira.geometry.tools import make_polygon
-from bluemira.utilities.optimiser import Optimiser
 
 
 class TestRippleConstrainedLengthGOP:
@@ -66,14 +65,12 @@ class TestRippleConstrainedLengthGOP:
         plt.show()
         plt.close("all")
 
-    def _make_optimiser(self):
-        return Optimiser("SLSQP", opt_conditions={"max_eval": 100, "ftol_rel": 1e-6})
-
     def test_default_setup(self):
-        optimiser = self._make_optimiser()
         problem = RippleConstrainedLengthGOP(
             self.princeton,
-            optimiser,
+            "SLSQP",
+            {"max_eval": 100, "ftol_rel": 1e-6},
+            {},
             self.params,
             self.wp_xs,
             self.lcfs,
@@ -102,10 +99,11 @@ class TestRippleConstrainedLengthGOP:
         ],
     )
     def test_selector_setup(self, selector):
-        optimiser = self._make_optimiser()
         problem = RippleConstrainedLengthGOP(
             self.princeton,
-            optimiser,
+            "SLSQP",
+            {"max_eval": 100, "ftol_rel": 1e-6},
+            {},
             self.params,
             self.wp_xs,
             self.lcfs,

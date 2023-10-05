@@ -67,7 +67,7 @@ TERMINATION_KEYS = [
 ]
 
 
-def process_NLOPT_conditions(  # noqa :N802
+def process_NLOPT_conditions(  # noqa: N802
     opt_conditions: Dict[str, float]
 ) -> Dict[str, float]:
     """
@@ -101,19 +101,21 @@ def process_NLOPT_conditions(  # noqa :N802
         elif v > 0:
             if k in ["ftol_abs", "ftol_res", "xtol_abs", "xtol_res"] and v < EPS:
                 bluemira_warn(
-                    "You are setting an optimisation termination condition to below machine precision. Don't.."
+                    "You are setting an optimisation termination condition to below"
+                    " machine precision. Don't.."
                 )
 
             conditions[k] = v
 
     if not conditions:
         raise OptUtilitiesError(
-            "You must specify at least one termination criterion for the optimisation algorithm."
+            "You must specify at least one termination criterion for the optimisation"
+            " algorithm."
         )
     return conditions
 
 
-def process_NLOPT_result(opt: nlopt.opt):  # noqa :N802
+def process_NLOPT_result(opt: nlopt.opt):  # noqa: N802
     """
     Handle a NLopt optimiser and check results.
 
@@ -126,7 +128,8 @@ def process_NLOPT_result(opt: nlopt.opt):  # noqa :N802
 
     if result == nlopt.MAXEVAL_REACHED:
         bluemira_warn(
-            "\nNLopt Optimiser succeeded but stopped at the maximum number of evaulations.\n"
+            "\nNLopt Optimiser succeeded but stopped at the maximum number of"
+            " evaulations.\n"
         )
     elif result == nlopt.MAXTIME_REACHED:
         bluemira_warn(
@@ -134,7 +137,8 @@ def process_NLOPT_result(opt: nlopt.opt):  # noqa :N802
         )
     elif result == nlopt.ROUNDOFF_LIMITED:
         bluemira_warn(
-            "\nNLopt Optimiser was halted due to round-off errors. A useful result was probably found...\n"
+            "\nNLopt Optimiser was halted due to round-off errors. A useful result was"
+            " probably found...\n"
         )
     elif result == nlopt.FAILURE:
         bluemira_warn("\nNLopt Optimiser failed real hard...\n")
@@ -198,7 +202,8 @@ class NLOPTOptimiser:
         def wrapper(self, *args, **kwargs):
             if not self._flag_built:
                 raise OptUtilitiesError(
-                    f"You must specify the dimensionality of the optimisation problem before using {func.__name__}."
+                    "You must specify the dimensionality of the optimisation problem"
+                    f" before using {func.__name__}."
                 )
             func(self, *args, **kwargs)
 
@@ -425,7 +430,8 @@ class NLOPTOptimiser:
         """
         if self._f_objective is None:
             raise OptUtilitiesError(
-                "You must first specify an objective function before performing the optimisation."
+                "You must first specify an objective function before performing the"
+                " optimisation."
             )
 
         if x0 is None:

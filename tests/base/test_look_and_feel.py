@@ -20,7 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import os
-import subprocess  # noqa :S404
+import subprocess
 from unittest import mock
 
 import pytest
@@ -46,8 +46,10 @@ from bluemira.base.look_and_feel import (
 ROOT = get_bluemira_root()
 
 
-GIT_WORKTREE = subprocess.run(  # noqa: S607
-    ["git", "rev-parse", "--is-inside-work-tree"], shell=False  # noqa: S603
+GIT_WORKTREE = subprocess.run(
+    ["git", "rev-parse", "--is-inside-work-tree"],  # noqa: S607
+    shell=False,  # noqa: S603
+    check=True,
 )
 
 
@@ -101,7 +103,7 @@ def capture_output(caplog, func, *inputs):
 
 
 @pytest.mark.parametrize(
-    "method, text, colour, default_text",
+    ("method", "text", "colour", "default_text"),
     [
         (bluemira_critical, "boom", "darkred", "CRITICAL:"),
         (bluemira_error, "oops", "red", "ERROR:"),
@@ -127,7 +129,8 @@ def test_bluemira_log(caplog, method, text, colour, default_text):
         result = capture_output(
             caplog,
             method,
-            "test a very long and verbacious warning message that is bound to be boxed in over two lines.",
+            "test a very long and verbacious warning message that is bound to be boxed"
+            " in over two lines.",
         )
 
     assert len(result) == 4
@@ -155,8 +158,12 @@ def test_bluemira_print_flush(caplog):
 
 # Mock out the git branch name as long names can cause new lines which
 # mess up this test's 'len' assertion
-@mock.patch("bluemira.base.look_and_feel.get_git_branch", lambda _: "develop")
-@mock.patch("bluemira.base.look_and_feel.count_slocs", lambda _, __: {"total": 1})
+@mock.patch(  # noqa: PT008
+    "bluemira.base.look_and_feel.get_git_branch", lambda _: "develop"
+)
+@mock.patch(  # noqa: PT008
+    "bluemira.base.look_and_feel.count_slocs", lambda _, __: {"total": 1}
+)
 def test_print_banner(caplog):
     result = capture_output(caplog, print_banner)
 

@@ -20,11 +20,12 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import json
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
 
+from bluemira.base.constants import EPS
 from bluemira.base.file import get_bluemira_path
 from bluemira.codes.error import InvalidCADInputsError
 from bluemira.geometry.error import GeometryError
@@ -113,8 +114,8 @@ class TestOffset:
 
     def test_1_offset(self):
         o_rect = offset_wire(self.rect_wire, 0.25, join="intersect")
-        assert self.rect_wire.length == 4.0
-        assert o_rect.length == 6.0
+        assert self.rect_wire.length == pytest.approx(4.0, rel=0, abs=EPS)
+        assert o_rect.length == pytest.approx(6.0, rel=0, abs=EPS)
 
     def test_errors(self):
         with pytest.raises(KeyError):
@@ -141,9 +142,8 @@ class TestFallBackOffset:
     @classmethod
     def setup_class(cls):
         fp = get_bluemira_path("geometry/test_data", subfolder="tests")
-        fn = os.sep.join([fp, "offset_wire2022-04-08_10-19-27.json"])
 
-        with open(fn, "r") as file:
+        with open(Path(fp, "offset_wire2022-04-08_10-19-27.json")) as file:
             data = json.load(file)
 
         cls.wire = deserialize_shape(data)

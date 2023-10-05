@@ -81,7 +81,7 @@ def cryo_power(
     return (1 + fmisc) * (nucl_heating + qcl + qac + qss)
 
 
-def He_pumping(  # noqa :N802
+def He_pumping(  # noqa: N802
     pressure_in: float,
     pressure_out: float,
     t_in: float,
@@ -128,7 +128,7 @@ def He_pumping(  # noqa :N802
     \t:math:`P_{pump,el} = \\dfrac{P_{pump}}{\\eta_{el}}` [W]\n
     **No longer in use:**
     \t:math:`f_{pump}=\\dfrac{dP}{dTc_P\\rho_{av}}`
-    """  # noqa :W505
+    """  # noqa: W505, E501
     d_temp = t_out - t_in
     t_bb_inlet = t_in
     # Ideal monoatomic gas - small compression ratios
@@ -144,7 +144,7 @@ def He_pumping(  # noqa :N802
     return p_pump_is, p_pump_el
 
 
-def H2O_pumping(  # noqa :N802
+def H2O_pumping(  # noqa: N802
     p_blanket: float, f_pump: float, eta_isen: float, eta_el: float
 ) -> Tuple[float, float]:
     """
@@ -197,7 +197,7 @@ def superheated_rankine(
     Efficiency of a superheated Rankine cycle
     """
     t_turb = bb_outlet_temp - delta_t_turbine
-    if t_turb < 657 or t_turb > 915:
+    if t_turb < 657 or t_turb > 915:  # noqa: PLR2004
         bluemira_warn("BoP turbine inlet temperature outside range of validity.")
     f_lgh = div_power / (blanket_power + div_power)
     delta_eta = 0.339 * f_lgh

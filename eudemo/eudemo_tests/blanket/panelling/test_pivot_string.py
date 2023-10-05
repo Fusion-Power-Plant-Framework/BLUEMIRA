@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -26,7 +26,7 @@ import pytest
 from bluemira.geometry.parameterisations import PrincetonD
 from eudemo.blanket.panelling._pivot_string import make_pivoted_string
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+DATA_DIR = Path(Path(__file__).parent, "data")
 
 
 class TestMakePivotedString:
@@ -62,7 +62,7 @@ class TestMakePivotedString:
             boundary_points, max_angle=20, dx_min=0.5, dx_max=2.5
         )
 
-        ref_data = np.load(os.path.join(DATA_DIR, "panelling_ref_data.npy"))
+        ref_data = np.load(Path(DATA_DIR, "panelling_ref_data.npy"))
         np.testing.assert_almost_equal(new_points, ref_data)
 
     @pytest.mark.parametrize("dx_max", [0, 0.5, 0.9999])
@@ -72,5 +72,5 @@ class TestMakePivotedString:
         ).create_shape()
         boundary_points = boundary.discretize().T
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             make_pivoted_string(boundary_points, max_angle=20, dx_min=1, dx_max=dx_max)

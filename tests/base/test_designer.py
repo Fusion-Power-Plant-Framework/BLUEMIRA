@@ -46,7 +46,7 @@ class TestDesigner:
         assert designer.execute() == 10
 
     @pytest.mark.parametrize(
-        "mode, output",
+        ("mode", "output"),
         [("run", 10), ("mock", 11), ("read", 12), ("custom_run_mode", 13)],
     )
     def test_execute_calls_function_given_by_run_mode(self, mode, output):
@@ -55,5 +55,5 @@ class TestDesigner:
         assert designer.execute() == output
 
     def test_ValueError_on_init_given_unknown_run_mode(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             SimpleDesigner(None, {"run_mode": "not_a_mode"}).execute()

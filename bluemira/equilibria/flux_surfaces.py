@@ -58,7 +58,7 @@ from bluemira.geometry.tools import _signed_distance_2D
 
 
 @nb.jit(nopython=True, cache=True)
-def _flux_surface_dl(x, z, dx, dz, Bp, Bt):
+def _flux_surface_dl(x, dx, dz, Bp, Bt):
     Bp = 0.5 * (Bp[1:] + Bp[:-1])
     Bt = Bt[:-1] * x[:-1] / (x[:-1] + 0.5 * dx)
     B_ratio = Bt / Bp
@@ -75,7 +75,7 @@ class FluxSurface:
         Flux surface geometry object
     """
 
-    __slots__ = "coords"
+    __slots__ = ("coords",)
 
     def __init__(self, geometry: Coordinates):
         self.coords = geometry
@@ -112,7 +112,7 @@ class FluxSurface:
         x, z = self.coords.x, self.coords.z
         Bp = eq.Bp(x, z)
         Bt = eq.Bt(x)
-        return _flux_surface_dl(x, z, np.diff(x), np.diff(z), Bp, Bt)
+        return _flux_surface_dl(x, np.diff(x), np.diff(z), Bp, Bt)
 
     def connection_length(self, eq: Equilibrium) -> float:
         """
@@ -614,7 +614,7 @@ class FieldLine:
 
         xz_plane = BluemiraPlane.from_3_points([0, 0, 0], [1, 0, 0], [0, 0, 1])
         xi, _, zi = coords_plane_intersect(self.coords, xz_plane).T
-        idx = np.where(xi >= 0)
+        idx = np.nonzero(xi >= 0)
         xi = xi[idx]
         zi = zi[idx]
         ax.plot(xi, zi, linestyle="", marker="o", color="r", ms=5)
@@ -658,14 +658,13 @@ class FieldLineTracer:
             self.boundary = boundary
             self.terminal = True
 
-        def __call__(self, phi, xz, *args):
+        def __call__(self, _phi, xz, *_args):
             """
             Function handle for the CollisionTerminator
             """
             if isinstance(self.boundary, Grid):
                 return self._call_grid(xz)
-            else:
-                return self._call_coordinates(xz)
+            return self._call_coordinates(xz)
 
         def _call_grid(self, xz):
             """
@@ -674,8 +673,7 @@ class FieldLineTracer:
             """
             if self.boundary.point_inside(xz[:2]):
                 return np.min(self.boundary.distance_to(xz[:2]))
-            else:
-                return -np.min(self.boundary.distance_to(xz[:2]))
+            return -np.min(self.boundary.distance_to(xz[:2]))
 
         def _call_coordinates(self, xz):
             """
@@ -691,7 +689,8 @@ class FieldLineTracer:
             first_wall = self.eq.grid
         elif isinstance(first_wall, Coordinates) and not first_wall.is_planar:
             raise EquilibriaError(
-                "When tracing a field line, the coordinates object of the boundary must be planar."
+                "When tracing a field line, the coordinates object of the boundary must"
+                " be planar."
             )
         self.first_wall = first_wall
 
@@ -741,7 +740,7 @@ class FieldLineTracer:
         coords = Coordinates({"x": x, "y": y, "z": z})
         return FieldLine(coords, connection_length)
 
-    def _dxzl_dphi(self, phi, xz, forward):
+    def _dxzl_dphi(self, _phi, xz, forward):
         """
         Credit: Dr. B. Dudson, FreeGS.
         """
@@ -875,10 +874,7 @@ def calculate_connection_length_fs(
             self.z = z
 
     lfs, hfs = f_s.split(Point(x=x, z=z))
-    if forward:
-        fs = lfs
-    else:
-        fs = hfs
+    fs = lfs if forward else hfs
 
     fs.clip(first_wall)
     return fs.connection_length(eq)

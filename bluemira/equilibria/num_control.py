@@ -51,7 +51,6 @@ class DummyController:
         """
         Dummy method to retain procedures with no effect on the equilibria.
         """
-        pass
 
     def psi(self) -> np.ndarray:
         """
@@ -59,29 +58,33 @@ class DummyController:
         """
         return np.zeros(self._shape)
 
+    @staticmethod
     def Bx(
-        self, x: Union[float, np.ndarray], z: Union[float, np.ndarray]
+        x: Union[float, np.ndarray], z: Union[float, np.ndarray]  # noqa: ARG004
     ) -> Union[float, np.ndarray]:
         """
         Dummy method to retain procedures with no effect on the equilibria.
         """
         try:
             float(x)
-            return 0.0
         except TypeError:
             return np.zeros_like(x)
+        else:
+            return 0.0
 
+    @staticmethod
     def Bz(
-        self, x: Union[float, np.ndarray], z: Union[float, np.ndarray]
+        x: Union[float, np.ndarray], z: Union[float, np.ndarray]  # noqa: ARG004
     ) -> Union[float, np.ndarray]:
         """
         Dummy method to retain procedures with no effect on the equilibria.
         """
         try:
             float(x)
-            return 0.0
         except TypeError:
             return np.zeros_like(x)
+        else:
+            return 0.0
 
 
 class VirtualController(CoilGroup):

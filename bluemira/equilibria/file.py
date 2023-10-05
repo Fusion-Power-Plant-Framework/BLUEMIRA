@@ -23,10 +23,10 @@ Input and output file interface. EQDSK and json. NOTE: jsons are better :)
 """
 
 import json
-import os
 import time
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 import fortranformat as ff
 import numpy as np
@@ -160,8 +160,8 @@ class EQDSKInterface:
         -------
         An instance of this class containing the EQDSK file's data.
         """
-        _, file_extension = os.path.splitext(file_path)
-        file_name = os.path.basename(file_path)
+        file_extension = Path(file_path).suffix
+        file_name = Path(file_path).name
         if file_extension.lower() in EQDSK_EXTENSIONS:
             return cls(file_name=file_name, **_read_eqdsk(file_path))
         if file_extension.lower() == ".json":
@@ -176,7 +176,10 @@ class EQDSKInterface:
         return d
 
     def write(
-        self, file_path: str, format: str = "json", json_kwargs: Optional[Dict] = None
+        self,
+        file_path: str,
+        file_format: str = "json",
+        json_kwargs: Optional[Dict] = None,
     ):
         """
         Write the EQDSK data to file in the given format.
@@ -185,21 +188,22 @@ class EQDSKInterface:
         ----------
         file_path:
             Path to where the file should be written.
-        format:
+        file_format:
             The format to save the file in. One of 'json', 'eqdsk', or
             'geqdsk'.
         json_kwargs:
             Key word arguments to pass to the ``json.dump`` call. Only
             used if ``format`` is 'json'.
         """
-        if format == "json":
+        if file_format == "json":
             json_kwargs = {} if json_kwargs is None else json_kwargs
             json_writer(self.to_dict(), file_path, **json_kwargs)
-        elif format in ["eqdsk", "geqdsk"]:
+        elif file_format in ["eqdsk", "geqdsk"]:
             bluemira_warn(
-                "You are in the 21st century. Are you sure you want to be making an EDQSK in this day and age?"
+                "You are in the 21st century. Are you sure you want to be making an"
+                " EDQSK in this day and age?"
             )
-            _write_eqdsk(file_path, self.to_dict())
+            _write_eqdsk(Path(file_path).as_posix(), self.to_dict())
 
     def update(self, eqdsk_data: Dict[str, Any]):
         """
@@ -226,8 +230,8 @@ class EQDSKInterface:
 
 
 def _read_json(file) -> Dict[str, Any]:
-    if isinstance(file, str):
-        with open(file, "r") as f_h:
+    if isinstance(file, (Path, str)):
+        with open(file) as f_h:
             return _read_json(f_h)
 
     data = json.load(file)
@@ -255,7 +259,7 @@ def _read_array(tokens, n, name="Unknown"):
         for i in np.arange(n):
             data[i] = float(next(tokens))
     except StopIteration:
-        raise ValueError(f"Failed reading array {name} of size {n}")
+        raise ValueError(f"Failed reading array {name} of size {n}") from None
     return data
 
 
@@ -263,8 +267,7 @@ def _read_2d_array(tokens, n_x, n_y, name="Unknown"):
     data = np.zeros([n_y, n_x])
     for i in np.arange(n_y):
         data[i, :] = _read_array(tokens, n_x, name + "[" + str(i) + "]")
-    data = np.transpose(data)
-    return data
+    return np.transpose(data)
 
 
 def _eqdsk_generator(file):
@@ -297,27 +300,24 @@ def _eqdsk_generator(file):
             line = line.replace("+", " ")
             line = line.replace("*", "e+")
         generator_list = line.split()
-        for obj in generator_list:
-            yield obj
+        yield from generator_list
 
 
 def _read_eqdsk(file) -> Dict:
-    if isinstance(file, str):
-        with open(file, "r") as f_handle:
+    if isinstance(file, (Path, str)):
+        with open(file) as f_handle:
             return _read_eqdsk(f_handle)
 
     description = file.readline()
     if not description:
-        raise IOError(f"Could not read the file '{file}'.")
+        raise OSError(f"Could not read the file '{file}'.")
     description = description.split()
 
-    ints = []
-    for value in description:
-        if is_num(value):
-            ints.append(value)
-    if len(ints) < 3:
-        raise IOError(
-            "Should be at least 3 numbers in the first line " f"of the EQDSK {file}."
+    ints = [value for value in description if is_num(value)]
+
+    if len(ints) < 3:  # noqa: PLR2004
+        raise OSError(
+            f"Should be at least 3 numbers in the first line of the EQDSK {file}."
         )
 
     data = {}
@@ -423,7 +423,7 @@ def _derive_psinorm(fpol):
     return np.linspace(0, 1, len(fpol))
 
 
-def _write_eqdsk(file: str, data: Dict):
+def _write_eqdsk(file: Union[Path, str], data: Dict):
     """
     Writes data out to a text file in G-EQDSK format.
 
@@ -434,9 +434,10 @@ def _write_eqdsk(file: str, data: Dict):
     data:
         Dictionary of EQDSK data.
     """
-    if isinstance(file, str):
-        if not any(file.endswith(ext) for ext in EQDSK_EXTENSIONS):
-            file = os.path.splitext(file)[0] + ".eqdsk"
+    if isinstance(file, (str, Path)):
+        file = Path(file)
+        if file.suffix not in EQDSK_EXTENSIONS:
+            file = Path(file).with_suffix("").with_suffix(".eqdsk")
         with open(file, "w") as f_handle:
             return _write_eqdsk(f_handle, data)
 
@@ -462,7 +463,7 @@ def _write_eqdsk(file: str, data: Dict):
             Empty strings will be recorded as 0.
         """
         line = [id_string]
-        line += [data[v] if v != "" else 0 for v in var_list]
+        line += [data[v] if v else 0 for v in var_list]
         file.write(fortran_format.write(line))
         file.write("\n")
 
@@ -480,7 +481,7 @@ def _write_eqdsk(file: str, data: Dict):
             variables to added to the current line.
             Empty strings will be recorded as 0.
         """
-        line = [data[v] if v != "" else 0 for v in var_list]
+        line = [data[v] if v else 0 for v in var_list]
         file.write(fortran_format.write(line))
         file.write("\n")
 
@@ -509,13 +510,10 @@ def _write_eqdsk(file: str, data: Dict):
     # that fits the 48 character limit of strings in EQDSK headers.
     timestamp = time.strftime("%d%m%Y")
     trimmed_name = data["name"][0 : 48 - len(timestamp) - 1]
-    file_id_string = "_".join([trimmed_name, timestamp])
+    file_id_string = f"{trimmed_name}_{timestamp}"
 
     # Define dummy data for qpsi if it has not been previously defined.
-    if data["qpsi"] is None:
-        qpsi = np.zeros(data["nx"])
-    else:
-        qpsi = data["qpsi"]
+    qpsi = np.zeros(data["nx"]) if data["qpsi"] is None else data["qpsi"]
 
     # Create array containing coilset information.
     coil = np.zeros(5 * data["ncoil"])
@@ -553,3 +551,4 @@ def _write_eqdsk(file: str, data: Dict):
     # regular eqdsk format.
     write_line(fCSTM, ["ncoil"])
     write_array(f2020, coil)
+    return None

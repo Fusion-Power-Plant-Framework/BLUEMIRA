@@ -19,13 +19,13 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 
 import pytest
 
 from bluemira.codes.plasmod.params import ParameterMapping, PlasmodSolverParams
 
-PARAM_FILE = os.path.join(os.path.dirname(__file__), "data", "params.json")
+PARAM_FILE = Path(Path(__file__).parent, "data", "params.json").as_posix()
 
 
 class TestProcessSolverParams:

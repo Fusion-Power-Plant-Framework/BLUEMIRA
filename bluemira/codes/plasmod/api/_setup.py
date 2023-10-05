@@ -80,7 +80,6 @@ class Setup(CodesSetup):
 
         No need to generate an input file as results will be mocked.
         """
-        pass
 
     def read(self):
         """
@@ -89,7 +88,6 @@ class Setup(CodesSetup):
         No need to generate an input file as results will be read from
         file.
         """
-        pass
 
     def update_inputs(
         self, new_inputs: Optional[Dict[str, Union[float, enum.Enum]]] = None
@@ -128,7 +126,7 @@ class Setup(CodesSetup):
         modified.
         """
         inputs = copy.deepcopy(_inputs)
-        fields = set(field.name for field in dataclasses.fields(PlasmodInputs))
+        fields = {field.name for field in dataclasses.fields(PlasmodInputs)}
         # Convert to list to copy the keys, as we are changing the size
         # of the dict during iteration.
         for input_name in list(inputs.keys()):
@@ -146,5 +144,6 @@ class Setup(CodesSetup):
                 self.inputs.write(io_stream)
         except OSError as os_error:
             raise CodesError(
-                f"Could not write plasmod input file: '{self.plasmod_input_file}': {os_error}"
+                f"Could not write plasmod input file: '{self.plasmod_input_file}':"
+                f" {os_error}"
             ) from os_error

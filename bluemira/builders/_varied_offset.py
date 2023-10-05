@@ -103,13 +103,13 @@ def _throw_if_inputs_invalid(wire, inboard_offset_degree, outboard_offset_degree
         raise GeometryError(
             "Cannot create a variable offset from a wire that is not closed."
         )
-    if not 0 < inboard_offset_degree < 180:
+    if not 0 < inboard_offset_degree < 180:  # noqa: PLR2004
         raise ValueError("Inboard offset angle must be in the range [0, 180].")
-    if not 0 < outboard_offset_degree < 180:
+    if not 0 < outboard_offset_degree < 180:  # noqa: PLR2004
         raise ValueError("Outboard offset angle must be in the range [0, 180].")
     if inboard_offset_degree > outboard_offset_degree:
         raise ValueError(
-            f"Inboard offset angle must be less than outboard angle. "
+            "Inboard offset angle must be less than outboard angle. "
             f"Found '{inboard_offset_degree}' and '{outboard_offset_degree}'."
         )
 

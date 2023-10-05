@@ -108,9 +108,8 @@ class Teardown(CodesTeardown):
         Get data for read or run modes
         """
         try:
-            with open(output_file, "r") as scalar_file:
-                with open(profiles_file, "r") as profiles_file:
-                    self.outputs = PlasmodOutputs.from_files(scalar_file, profiles_file)
+            with open(output_file) as scalar_file, open(profiles_file) as profiles_file:
+                self.outputs = PlasmodOutputs.from_files(scalar_file, profiles_file)
         except OSError as os_error:
             raise CodesError(
                 f"Could not read plasmod output file: {os_error}."
@@ -145,7 +144,7 @@ class Teardown(CodesTeardown):
         """
         if exit_code == 1:
             bluemira_debug("plasmod converged successfully.")
-        elif exit_code == -2:
+        elif exit_code == -2:  # noqa: PLR2004
             raise CodesError(
                 "plasmod error: Equilibrium solver crashed: too high pressure."
             )

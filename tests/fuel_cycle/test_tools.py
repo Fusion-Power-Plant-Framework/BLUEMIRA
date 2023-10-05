@@ -33,7 +33,8 @@ from bluemira.fuel_cycle.tools import _dec_I_mdot, _find_t15, _fountain_linear_s
 
 
 @pytest.mark.parametrize(
-    "n,integral,parameter", [[100, 600, 1.0], [6000, 1.5e7, 1.5], [6000, 1.5e7, 0.5]]
+    ("n", "integral", "parameter"),
+    [(100, 600, 1.0), (6000, 1.5e7, 1.5), (6000, 1.5e7, 0.5)],
 )
 def test_distributions(n, integral, parameter):
     for func in [
@@ -60,7 +61,7 @@ class TestSinkTools:
         th \\n
         :math:`I_{end} = Ie^{-{\\lambda}{\\Delta}t}+\\dot{m}\\sum_{t=0}^{T}e^{-\\lambda(T-t)}`\\n
         :math:`I_{end} = Ie^{-{\\lambda}{\\Delta}t}+\\dot{m}\\dfrac{e^{-{\\lambda}T}\\big(e^{{\\lambda}(T+1)}-1\\big)}{e^{\\lambda}-1}`
-        """  # noqa :W505
+        """  # noqa: W505, E501
         time_y = 0.50  # years
         n = 100000  # intersteps
 
@@ -164,6 +165,14 @@ class TestSinkTools:
             assert m24 < m_in24
             assert m25 < m_in25
 
+        def setter():
+            i2, m2 = self.f(m_flow, inventory, eta)
+            i22, m22 = self.f(0, inventory, eta)
+            i23, m23 = self.f(m_flow_into, inventory, eta)
+            i24, m24 = self.f(m_flow_over, inventory, eta)
+            i25, m25 = self.f(m_flow_kill, inventory, eta)
+            return (i2, m2), (i22, m22), (i23, m23), (i24, m24), (i25, m25)
+
         # For when you're in the tub
         m_flow = 1e-8  # kg/s --> +0.62 kg
         m_flow_into = 4e-8  # kg/s --> +2.83 kg
@@ -173,85 +182,43 @@ class TestSinkTools:
         # results in I_min
         inventory = 2.0
 
-        i2, m2 = self.f(m_flow, inventory, eta)
-        i22, m22 = self.f(0, inventory, eta)
-        i23, m23 = self.f(m_flow_into, inventory, eta)
-        i24, m24 = self.f(m_flow_over, inventory, eta)
-        i25, m25 = self.f(m_flow_kill, inventory, eta)
-
+        (i2, m2), (i22, m22), (i23, m23), (i24, m24), (i25, m25) = setter()
         checker()
         plotter()
 
         # for when you're in the valley
         m_flow = 5e-6  # kg/s --> +0.62 kg
         m_flow_into = 1e-5  # kg/s --> +2.83 kg
-        m_flow_over = 5e-5  # kg/s --> + loads but into uncanny with eta = 0.9995
-        m_flow_kill = 1e3  # kg/s --> + loads kg (used to push up to Imax)
-        eta = 0.9995  # --> typical eta value crossing into uncanny valley
         # results in I_min
         inventory = 3.5
 
-        i2, m2 = self.f(m_flow, inventory, eta)
-        i22, m22 = self.f(0, inventory, eta)
-        i23, m23 = self.f(m_flow_into, inventory, eta)
-        i24, m24 = self.f(m_flow_over, inventory, eta)
-        i25, m25 = self.f(m_flow_kill, inventory, eta)
-
+        (i2, m2), (i22, m22), (i23, m23), (i24, m24), (i25, m25) = setter()
         checker()
         plotter()
 
         # for when you want to cross down into the shadow
-        m_flow = 5e-6  # kg/s -->
-        m_flow_into = 1e-5  # kg/s -->
-        m_flow_over = 5e-5  # kg/s --> + loads but into uncanny with eta = 0.9995
-        m_flow_kill = 1e3  # kg/s --> + loads kg (used to push up to Imax)
-        eta = 0.9995  # --> typical eta value crossing into uncanny valley
         # results in I_min
         inventory = 3.05
 
-        i2, m2 = self.f(m_flow, inventory, eta)
-        i22, m22 = self.f(0, inventory, eta)
-        i23, m23 = self.f(m_flow_into, inventory, eta)
-        i24, m24 = self.f(m_flow_over, inventory, eta)
-        i25, m25 = self.f(m_flow_kill, inventory, eta)
-
+        (i2, m2), (i22, m22), (i23, m23), (i24, m24), (i25, m25) = setter()
         checker()
         plotter()
 
         # for when you want to cross down into the shadow
-        m_flow = 5e-6  # kg/s -->
-        m_flow_into = 1e-5  # kg/s -->
-        m_flow_over = 5e-5  # kg/s --> + loads but into uncanny with eta = 0.9995
-        m_flow_kill = 1e3  # kg/s --> + loads kg (used to push up to Imax)
-        eta = 0.9995  # --> typical eta value crossing into uncanny valley
         # results in I_min
         inventory = 4.7
 
-        i2, m2 = self.f(m_flow, inventory, eta)
-        i22, m22 = self.f(0, inventory, eta)
-        i23, m23 = self.f(m_flow_into, inventory, eta)
-        i24, m24 = self.f(m_flow_over, inventory, eta)
-        i25, m25 = self.f(m_flow_kill, inventory, eta)
-
+        (i2, m2), (i22, m22), (i23, m23), (i24, m24), (i25, m25) = setter()
         checker()
         plotter()
 
         # for when you want to test absurdity
         m_flow = 1e-9  # kg/s --> push down into I_min
-        m_flow_into = 1e-5  # kg/s -->
-        m_flow_over = 5e-5  # kg/s --> + loads but into uncanny with eta = 0.9995
-        m_flow_kill = 1e3  # kg/s -->
-        eta = 0.9995  # --> typical eta value crossing into uncanny valley
         # results in I_min
 
         inventory = 5.0
         self.t_out = 30
 
-        i2, m2 = self.f(m_flow, inventory, eta)
-        i22, m22 = self.f(0, inventory, eta)
-        i23, m23 = self.f(m_flow_into, inventory, eta)
-        i24, m24 = self.f(m_flow_over, inventory, eta)
-        i25, m25 = self.f(m_flow_kill, inventory, eta)
-
+        (i2, m2), (i22, m22), (i23, m23), (i24, m24), (i25, m25) = setter()
         checker()
         plotter()

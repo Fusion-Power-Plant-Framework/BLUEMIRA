@@ -22,24 +22,33 @@
 """
 A collection of miscellaneous tools.
 """
+from __future__ import annotations
 
 import operator
 import string
+import warnings
 from collections.abc import Iterable
+from functools import wraps
 from importlib import import_module as imp
 from importlib import machinery as imp_mach
 from importlib import util as imp_u
 from itertools import permutations
 from json import JSONEncoder, dumps
 from os import listdir
-from types import ModuleType
-from typing import Any, Dict, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, Union
 
 import nlopt
 import numpy as np
+from matplotlib import colors
 
 from bluemira.base.constants import E_I, E_IJ, E_IJK
 from bluemira.base.look_and_feel import bluemira_debug, bluemira_warn
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from types import ModuleType
+
+    from bluemira.display.palettes import ColorPalette
 
 # =====================================================
 # JSON utilities
@@ -51,7 +60,7 @@ class NumpyJSONEncoder(JSONEncoder):
     A JSON encoder that can handle numpy arrays.
     """
 
-    def default(self, obj):
+    def default(self, obj):  # noqa: PLR6301
         """
         Override the JSONEncoder default object handling behaviour for np.arrays.
         """
@@ -62,7 +71,7 @@ class NumpyJSONEncoder(JSONEncoder):
 
 def json_writer(
     data: Dict[str, Any],
-    file: Optional[str] = None,
+    file: Optional[Union[Path, str]] = None,
     return_output: bool = False,
     *,
     cls: JSONEncoder = NumpyJSONEncoder,
@@ -87,7 +96,7 @@ def json_writer(
     """
     if file is None and not return_output:
         bluemira_warn("No json action to take")
-        return
+        return None
 
     if "indent" not in kwargs:
         kwargs["indent"] = 4
@@ -101,6 +110,7 @@ def json_writer(
 
     if return_output:
         return the_json
+    return None
 
 
 # =====================================================
@@ -122,7 +132,7 @@ def asciistr(length: int) -> str:
     str of length specified
 
     """
-    if length > 52:
+    if length > 52:  # noqa: PLR2004
         raise ValueError("Unsupported string length")
 
     return string.ascii_letters[:length]
@@ -207,7 +217,7 @@ class EinsumWrapper:
         try:
             return np.sqrt(np.einsum(self.norm_strs[axis], ix, ix))
         except IndexError:
-            raise ValueError("matrices dimensions >2d Unsupported")
+            raise ValueError("matrices dimensions >2d Unsupported") from None
 
     def dot(
         self, ix: np.ndarray, iy: np.ndarray, out: Optional[np.ndarray] = None
@@ -235,18 +245,19 @@ class EinsumWrapper:
             output array for inplace dot product
         """
         # Ordered hopefully by most used
-        if ix.ndim == 2 and iy.ndim == 2:
+        dim_sw = 2
+        if ix.ndim == dim_sw and iy.ndim == dim_sw:
             out_str = self.dot_2x2
-        elif ix.ndim > 2 and iy.ndim > 2:
+        elif ix.ndim > dim_sw and iy.ndim > dim_sw:
             ix_str = asciistr(ix.ndim - 1)
             iy_str = asciistr(iy.ndim - 2)
             out_str = self.dot_nxn.format(ix_str, iy_str, ix_str)
-        elif ix.ndim < 2 and iy.ndim == 2:
+        elif ix.ndim < dim_sw and iy.ndim == dim_sw:
             out_str = self.dot_1x2
-        elif ix.ndim >= 2 and iy.ndim < 2:
+        elif ix.ndim >= dim_sw and iy.ndim < dim_sw:
             ix_str = asciistr(ix.ndim - 1)
             out_str = self.dot_nx1.format(ix_str, ix_str)
-        elif iy.ndim >= 2 or ix.ndim == 2:
+        elif iy.ndim >= dim_sw or ix.ndim == dim_sw:
             raise ValueError(
                 f"Undefined behaviour ix.shape:{ix.shape}, iy.shape:{iy.shape}"
             )
@@ -288,7 +299,7 @@ class EinsumWrapper:
         try:
             return np.einsum(self.cross_strs[dim], self.cross_lcts[dim], ix, iy, out=out)
         except IndexError:
-            raise ValueError("Incompatible dimension for cross product")
+            raise ValueError("Incompatible dimension for cross product") from None
 
 
 wrap = EinsumWrapper()
@@ -300,6 +311,38 @@ cross = wrap.cross
 # =====================================================
 # Misc utilities
 # =====================================================
+
+
+class ColourDescriptor:
+    """Colour Descriptor for use with dataclasses"""
+
+    def __init__(self):
+        self._default = colors.to_hex((0.5, 0.5, 0.5))
+
+    def __set_name__(self, _, name: str):
+        """Set the attribute name from a dataclass"""
+        self._name = "_" + name
+
+    def __get__(self, obj: Any, _) -> str:
+        """Get the hex colour"""
+        if obj is None:
+            return self._default
+
+        return colors.to_hex(getattr(obj, self._name, self._default))
+
+    def __set__(self, obj: Any, value: Union[str, Tuple[float, ...], ColorPalette]):
+        """
+        Set the colour
+
+        Notes
+        -----
+        The value can be anything accepted by matplotlib.colors.to_hex
+        """
+        if hasattr(value, "as_hex"):
+            value = value.as_hex()
+            if isinstance(value, list):
+                value = value[0]
+        setattr(obj, self._name, value)
 
 
 def is_num(thing: Any) -> bool:
@@ -321,9 +364,10 @@ def is_num(thing: Any) -> bool:
         return False
     try:
         float(thing)
-        return True
     except (ValueError, TypeError):
         return False
+    else:
+        return True
 
 
 def is_num_array(thing: Any) -> bool:
@@ -332,8 +376,7 @@ def is_num_array(thing: Any) -> bool:
     """
     if isinstance(thing, np.ndarray) and thing.dtype in [float, int, complex]:
         return ~np.isnan(thing)
-    else:
-        return is_num(thing)
+    return is_num(thing)
 
 
 def abs_rel_difference(v2: float, v1_ref: float) -> float:
@@ -366,7 +409,7 @@ def set_random_seed(seed_number: int):
     seed_number:
         The random seed number, preferably a very large integer
     """
-    np.random.seed(seed_number)
+    np.random.default_rng(seed_number)
     nlopt.srand(seed_number)
 
 
@@ -433,13 +476,17 @@ def compare_dicts(
 
     # Map the comparison functions to the keys based on the type of value in d1.
     comp_map = {
-        key: array_eq
-        if isinstance(val, (np.ndarray, list))
-        else dict_eq
-        if isinstance(val, dict)
-        else num_eq
-        if is_num(val)
-        else operator.eq
+        key: (
+            array_eq
+            if isinstance(val, (np.ndarray, list))
+            else (
+                dict_eq
+                if isinstance(val, dict)
+                else num_eq
+                if is_num(val)
+                else operator.eq
+            )
+        )
         for key, val in d1.items()
     }
 
@@ -533,8 +580,7 @@ def flatten_iterable(iters):
     """
     for _iter in iters:
         if isinstance(_iter, Iterable) and not isinstance(_iter, (str, bytes, dict)):
-            for _it in flatten_iterable(_iter):
-                yield _it
+            yield from flatten_iterable(_iter)
         else:
             yield _iter
 
@@ -680,18 +726,18 @@ def _loadfromspec(name: str) -> ModuleType:
             file for file in listdir(dirname) if file.startswith(full_dirname[1])
         ]
     except FileNotFoundError:
-        raise FileNotFoundError("Can't find module file '{}'".format(name))
+        raise FileNotFoundError(f"Can't find module file '{name}'") from None
 
     if len(mod_files) == 0:
-        raise FileNotFoundError("Can't find module file '{}'".format(name))
+        raise FileNotFoundError(f"Can't find module file '{name}'")
 
     requested = full_dirname[1] if full_dirname[1] in mod_files else mod_files[0]
 
     if len(mod_files) > 1:
         bluemira_warn(
             "{}{}".format(
-                "Multiple files start with '{}'\n".format(full_dirname[1]),
-                "Assuming module is '{}'".format(requested),
+                f"Multiple files start with '{full_dirname[1]}'\n",
+                f"Assuming module is '{requested}'",
             )
         )
 
@@ -699,7 +745,7 @@ def _loadfromspec(name: str) -> ModuleType:
 
     name, ext = requested.rsplit(".", 1) if "." in requested else (requested, "")
     if ext not in imp_mach.SOURCE_SUFFIXES:
-        if ext != "" and not ext.startswith("."):
+        if ext and not ext.startswith("."):
             ext = f".{ext}"
         n_suffix = True
         imp_mach.SOURCE_SUFFIXES.append(ext)
@@ -710,10 +756,10 @@ def _loadfromspec(name: str) -> ModuleType:
         spec = imp_u.spec_from_file_location(name, mod_file)
         module = imp_u.module_from_spec(spec)
         spec.loader.exec_module(module)
-    except ModuleNotFoundError as mnfe:
-        raise mnfe
-    except (AttributeError, ImportError, SyntaxError):
-        raise ImportError(f"File '{mod_files[0]}' is not a module")
+    except ModuleNotFoundError:
+        raise
+    except (AttributeError, ImportError, SyntaxError) as err:
+        raise ImportError(f"File '{mod_files[0]}' is not a module") from err
 
     if n_suffix:
         imp_mach.SOURCE_SUFFIXES.pop()
@@ -746,8 +792,10 @@ def get_class_from_module(name: str, default_module: str = "") -> Type:
         module, class_name = class_name.split("::")
     try:
         output = getattr(get_module(module), class_name)
-    except AttributeError:
-        raise ImportError(f"Unable to load class {class_name} - not in module {module}")
+    except AttributeError as ae:
+        raise ImportError(
+            f"Unable to load class {class_name} - not in module {module}"
+        ) from ae
 
     bluemira_debug(f"Loaded class {output.__name__}")
     return output
@@ -774,16 +822,16 @@ def list_array(list_: Any) -> np.ndarray:
     """
     if isinstance(list_, list):
         return np.array(list_)
-    elif isinstance(list_, np.ndarray):
+    if isinstance(list_, np.ndarray):
         try:  # This catches the odd np.array(8) instead of np.array([8])
             len(list_)
-            return list_
         except TypeError:
             return np.array([list_])
+        else:
+            return list_
     elif is_num(list_):
         return np.array([list_])
-    else:
-        raise TypeError("Could not convert input type to list_array to a np.array.")
+    raise TypeError("Could not convert input type to list_array to a np.array.")
 
 
 def array_or_num(array: Any) -> Union[np.ndarray, float]:
@@ -806,7 +854,50 @@ def array_or_num(array: Any) -> Union[np.ndarray, float]:
     """
     if is_num(array):
         return float(array)
-    elif isinstance(array, np.ndarray):
+    if isinstance(array, np.ndarray):
         return array
-    else:
-        raise TypeError
+    raise TypeError
+
+
+def deprecation_wrapper(
+    message: Union[Optional[Callable[[Any], Any]], Optional[str]]
+) -> Callable[[Any], Any]:
+    """Deprecate any callable.
+
+    Parameters
+    ----------
+    message:
+        The callable to deprecate or the message to show
+    """
+
+    def _decorate(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
+        """Deprecate any callable.
+
+        Parameters
+        ----------
+        func:
+            The callable to deprecate
+        """
+
+        @wraps(func)
+        def deprecator(*args, **kwargs) -> Any:
+            warnings.warn(
+                (
+                    message
+                    if isinstance(message, str)
+                    else (
+                        f"'{func.__name__}' is deprecated and will be removed in the"
+                        " next major release"
+                    )
+                ),
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            return func(*args, **kwargs)
+
+        return deprecator
+
+    if callable(message):
+        return _decorate(message)
+
+    return _decorate

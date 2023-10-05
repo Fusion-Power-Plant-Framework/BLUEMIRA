@@ -54,7 +54,7 @@ def main():
     """Main function"""
     args = parse_args()
 
-    with open(args.infile, "r") as _if:
+    with open(args.infile) as _if:
         lines = _if.readlines()
 
     with open(args.outfile, "w") as of:

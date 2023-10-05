@@ -50,8 +50,9 @@ def _parse_to_callable(profile_data: Union[None, np.ndarray]):
     if isinstance(profile_data, np.ndarray):
         x = np.linspace(0, 1, len(profile_data))
         return _interpolate_profile(x, profile_data)
-    elif profile_data is None:
+    if profile_data is None:
         return None
+    return None
 
 
 @dataclass
@@ -168,7 +169,7 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
         return self._grad_psi(point)
 
     @property
-    def psi_norm_2d(self) -> Callable[[np.ndarray], float]:
+    def psi_norm_2d(self) -> Callable[[np.ndarray], np.ndarray]:
         """Normalized flux function in 2-D"""
         return lambda x: np.sqrt(
             np.abs((self.psi(x) - self.psi_ax) / (self.psi_b - self.psi_ax))
@@ -218,14 +219,13 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
         def g(x):
             if self.psi_ax == 0:
                 return j_target
-            else:
-                r = x[0]
-                x_psi = self.psi_norm_2d(x)
+            r = x[0]
+            x_psi = self.psi_norm_2d(x)
 
-                a = r * pprime(x_psi)
-                b = 1 / MU_0 / r * ffprime(x_psi)
+            a = r * pprime(x_psi)
+            b = 1 / MU_0 / r * ffprime(x_psi)
 
-                return self.k * 2 * np.pi * (a + b)
+            return self.k * 2 * np.pi * (a + b)
 
         return g
 
@@ -277,12 +277,12 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
             self._pprime = p_prime
             self._pprime_data = p_prime(np.linspace(0, 1, 50))
         else:
-            raise ValueError("p_prime must be a function")
+            raise TypeError("p_prime must be a function")
         if callable(ff_prime):
             self._ffprime = ff_prime
             self._ffprime_data = ff_prime(np.linspace(0, 1, 50))
         else:
-            raise ValueError("ff_prime must be a function")
+            raise TypeError("ff_prime must be a function")
         if I_p is not None:
             self._curr_target = I_p
         if B_0 is not None:
@@ -313,11 +313,13 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
     def _check_all_inputs_ready_error(self):
         if self.mesh is None:
             raise EquilibriaError(
-                "You cannot solve this problem yet! Please set the mesh first, using set_mesh(mesh)."
+                "You cannot solve this problem yet! Please set the mesh first, using"
+                " set_mesh(mesh)."
             )
         if self._pprime is None or self._ffprime is None:
             raise EquilibriaError(
-                "You cannot solve this problem yet! Please set the profile functions first, using set_profiles(p_prime, ff_prime)."
+                "You cannot solve this problem yet! Please set the profile functions"
+                " first, using set_profiles(p_prime, ff_prime)."
             )
 
     def solve(
@@ -370,7 +372,7 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
             prev = np.array([self.psi_norm_2d(p) for p in points])
 
             if plot:
-                self._plot_current_iteration(f, ax, cax, i, points, prev, diff, debug)
+                self._plot_current_iteration(ax, cax, i, points, prev, diff, debug)
                 if debug or gif:
                     save_figure(
                         f,
@@ -421,7 +423,8 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
             self._calculate_curr_tot(),
         )
 
-    def _setup_plot(self, debug):
+    @staticmethod
+    def _setup_plot(debug: bool):
         n_col = 3 if debug else 2
         fig, ax = plt.subplots(1, n_col, figsize=(18, 10))
         plt.subplots_adjust(wspace=0.5)
@@ -435,7 +438,6 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
 
     def _plot_current_iteration(
         self,
-        f,
         ax,
         cax,
         i_iter: int,
@@ -482,8 +484,8 @@ class FemGradShafranovFixedBoundary(FemMagnetostatic2d):
 
         plt.pause(PLT_PAUSE)
 
+    @staticmethod
     def _plot_array(
-        self,
         ax,
         points: np.ndarray,
         array: np.ndarray,

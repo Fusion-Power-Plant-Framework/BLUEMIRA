@@ -40,7 +40,7 @@ class TestPathInterpolator:
         cls.circle = make_circle(center=(0, 0, 0), axis=(0, -1, 0), radius=10)
 
     @pytest.mark.parametrize(
-        "alpha, point", [(0.0, [0, 0]), (0.5, [2, 1]), (1.0, [4, 0])]
+        ("alpha", "point"), [(0.0, [0, 0]), (0.5, [2, 1]), (1.0, [4, 0])]
     )
     def test_open(self, alpha, point):
         interpolator = PathInterpolator(self.polygon)
@@ -51,7 +51,7 @@ class TestPathInterpolator:
         assert np.isclose(interpolator.to_L(*point), alpha)
 
     @pytest.mark.parametrize(
-        "alpha, point",
+        ("alpha", "point"),
         [
             (0.0, [10, 0]),
             (0.25, [0, 10]),

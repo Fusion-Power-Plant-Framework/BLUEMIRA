@@ -495,7 +495,8 @@ class ChargedParticleSolver:
             plt.show()
         return ax
 
-    def _make_params(self, config):
+    @staticmethod
+    def _make_params(config):
         """Convert the given params to ``ChargedParticleSolverParams``"""
         if isinstance(config, dict):
             try:
@@ -504,7 +505,9 @@ class ChargedParticleSolver:
                 unknown = [
                     k for k in config if k not in fields(ChargedParticleSolverParams)
                 ]
-                raise TypeError(f"Unknown config parameter(s) {str(unknown)[1:-1]}")
+                raise TypeError(
+                    f"Unknown config parameter(s) {str(unknown)[1:-1]}"
+                ) from None
         elif isinstance(config, ChargedParticleSolverParams):
             return config
         else:

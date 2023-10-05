@@ -23,11 +23,12 @@
 Fusion reactions
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Union
 
 import numpy as np
+import numpy.typing as npt
 
 from bluemira.base.constants import (
     AMU_TO_KG,
@@ -38,8 +39,8 @@ from bluemira.base.constants import (
     HE3_MOLAR_MASS,
     HE_MOLAR_MASS,
     J_TO_EV,
-    N_AVOGADRO,
     NEUTRON_MOLAR_MASS,
+    N_AVOGADRO,
     PROTON_MOLAR_MASS,
     T_MOLAR_MASS,
     raw_uc,
@@ -57,7 +58,7 @@ __all__ = [
 ]
 
 
-def E_DT_fusion() -> float:  # noqa :N802
+def E_DT_fusion() -> float:
     """
     Calculates the total energy released from the D-T fusion reaction
 
@@ -76,7 +77,7 @@ def E_DT_fusion() -> float:  # noqa :N802
     return delta_m * C_LIGHT**2 * AMU_TO_KG * J_TO_EV
 
 
-def E_DD_fusion() -> float:  # noqa :N802
+def E_DD_fusion() -> float:
     """
     Calculates the total energy released from the D-D fusion reaction
 
@@ -91,7 +92,7 @@ def E_DD_fusion() -> float:  # noqa :N802
         (1.01 ~\\text{MeV})+\\text{p} (3.02~\\text{MeV})~~[50 \\textrm{\\%}]
         ~~~~~~~~~~\\rightarrow~{^{3}_{2}He} (0.82~\\text{MeV})+\\text{n}^{0} (2.45~\\text{MeV})~~[50 \\text{\\%}]\n
         \\Delta E = \\Delta m c^2
-    """  # noqa :W505
+    """  # noqa: W505, E501
     # NOTE: Electron mass must be included with proton mass
     delta_m = np.array(
         [
@@ -125,7 +126,7 @@ def n_DT_reactions(p_fus: float) -> float:
     return raw_uc(p_fus, "MW", "W") / (e_dt * EV_TO_J)
 
 
-def n_DD_reactions(p_fus: float) -> float:  # noqa :N802
+def n_DD_reactions(p_fus: float) -> float:
     """
     Calculates the number of D-D fusion reactions per s for a given D-D fusion
     power
@@ -145,7 +146,7 @@ def n_DD_reactions(p_fus: float) -> float:  # noqa :N802
     return p_fus / (e_dd * EV_TO_J)
 
 
-def r_T_burn(p_fus: float) -> float:  # noqa :N802
+def r_T_burn(p_fus: float) -> float:  # noqa: N802
     """
     Calculates the tritium burn rate for a given fusion power
 
@@ -159,11 +160,11 @@ def r_T_burn(p_fus: float) -> float:  # noqa :N802
     Returns
     -------
     T burn rate in the plasma [g/s]
-    """  # noqa :W505
+    """  # noqa: W505, E501
     return n_DT_reactions(p_fus) * T_MOLAR_MASS / N_AVOGADRO
 
 
-def r_D_burn_DT(p_fus: float) -> float:  # noqa :N802
+def r_D_burn_DT(p_fus: float) -> float:
     """
     Calculates the deuterium burn rate for a given fusion power in D-T
 
@@ -197,8 +198,16 @@ class Reactions(Enum):
     D_He3 = auto()  # D + 3He --> 4He + p reaction
 
 
+class ReactivityMethod(Enum):
+    BOSCH_HALE = auto()
+    PLASMOD = auto()
+    JOHNER = auto()
+
+
 def reactivity(
-    temp_k: Union[float, np.ndarray], reaction="D-T", method="Bosch-Hale"
+    temp_k: Union[float, np.ndarray],
+    reaction: Union[str, Reactions] = Reactions.D_T,
+    method: Union[str, ReactivityMethod] = ReactivityMethod.BOSCH_HALE,
 ) -> Union[float, np.ndarray]:
     """
     Calculate the thermal reactivity of a fusion reaction in Maxwellian plasmas,
@@ -217,19 +226,17 @@ def reactivity(
     -------
     Reactivity of the reaction at the specified temperature(s) [m^3/s]
     """
-    temp_kev = raw_uc(temp_k, "K", "keV")
-    reaction = Reactions[reaction.replace("-", "_")]
-
+    if not isinstance(reaction, Reactions):
+        reaction = Reactions[reaction.replace("-", "_")]
+    if not isinstance(method, ReactivityMethod):
+        method = ReactivityMethod[method.replace("-", "_").upper()]
     mapping = {
-        "Bosch-Hale": _reactivity_bosch_hale,
-        "PLASMOD": _reactivity_plasmod,
-        "Johner": _reactivity_johner,
+        ReactivityMethod.BOSCH_HALE: _reactivity_bosch_hale,
+        ReactivityMethod.PLASMOD: _reactivity_plasmod,
+        ReactivityMethod.JOHNER: _reactivity_johner,
     }
-    if method not in mapping:
-        raise ValueError(f"Unknown method: {method}")
 
-    func = mapping[method]
-    return func(temp_kev, reaction)
+    return mapping[method](raw_uc(temp_k, "K", "keV"), reaction)
 
 
 @dataclass
@@ -243,20 +250,22 @@ class BoschHale_DT_4Hen:
     DOI 10.1088/0029-5515/32/4/I07
     """
 
-    t_min = 0.2  # [keV]
-    t_max = 100  # [keV]
-    bg = 34.3827  # [keV**0.5]
-    mrc2 = 1.124656e6  # [keV]
-    c = np.array(
-        [
-            1.17302e-9,
-            1.51361e-2,
-            7.51886e-2,
-            4.60643e-3,
-            1.35000e-2,
-            -1.06750e-4,
-            1.36600e-5,
-        ]
+    t_min: float = 0.2  # [keV]
+    t_max: float = 100  # [keV]
+    bg: float = 34.3827  # [keV**0.5]
+    mrc2: float = 1.124656e6  # [keV]
+    c: npt.NDArray = field(
+        default_factory=lambda: np.array(
+            [
+                1.17302e-9,
+                1.51361e-2,
+                7.51886e-2,
+                4.60643e-3,
+                1.35000e-2,
+                -1.06750e-4,
+                1.36600e-5,
+            ]
+        )
     )
 
 
@@ -271,20 +280,22 @@ class BoschHale_DD_3Hen:
     DOI 10.1088/0029-5515/32/4/I07
     """
 
-    t_min = 0.2  # [keV]
-    t_max = 100  # [keV]
-    bg = 31.3970  # [keV**0.5]
-    mrc2 = 0.937814e6  # [keV]
-    c = np.array(
-        [
-            5.43360e-12,
-            5.85778e-3,
-            7.68222e-3,
-            0.0,
-            -2.96400e-6,
-            0.0,
-            0.0,
-        ]
+    t_min: float = 0.2  # [keV]
+    t_max: float = 100  # [keV]
+    bg: float = 31.3970  # [keV**0.5]
+    mrc2: float = 0.937814e6  # [keV]
+    c: npt.NDArray = field(
+        default_factory=lambda: np.array(
+            [
+                5.43360e-12,
+                5.85778e-3,
+                7.68222e-3,
+                0.0,
+                -2.96400e-6,
+                0.0,
+                0.0,
+            ]
+        )
     )
 
 
@@ -299,20 +310,22 @@ class BoschHale_DD_Tp:
     DOI 10.1088/0029-5515/32/4/I07
     """
 
-    t_min = 0.2  # [keV]
-    t_max = 100  # [keV]
-    bg = 31.3970  # [keV**0.5]
-    mrc2 = 0.937814e6  # [keV]
-    c = np.array(
-        [
-            5.65718e-12,
-            3.41267e-3,
-            1.99167e-3,
-            0.0,
-            1.05060e-5,
-            0.0,
-            0.0,
-        ]
+    t_min: float = 0.2  # [keV]
+    t_max: float = 100  # [keV]
+    bg: float = 31.3970  # [keV**0.5]
+    mrc2: float = 0.937814e6  # [keV]
+    c: npt.NDArray = field(
+        default_factory=lambda: np.array(
+            [
+                5.65718e-12,
+                3.41267e-3,
+                1.99167e-3,
+                0.0,
+                1.05060e-5,
+                0.0,
+                0.0,
+            ]
+        )
     )
 
 
@@ -327,20 +340,22 @@ class BoschHale_DHe3_4Hep:
     DOI 10.1088/0029-5515/32/4/I07
     """
 
-    t_min = 0.5  # [keV]
-    t_max = 190  # [keV]
-    bg = 68.7508  # [keV**0.5]
-    mrc2 = 1.124572e6  # [keV]
-    c = np.array(
-        [
-            5.51036e-10,
-            6.41918e-3,
-            -2.02896e-3,
-            -1.91080e-5,
-            1.35776e-4,
-            0.0,
-            0.0,
-        ]
+    t_min: float = 0.5  # [keV]
+    t_max: float = 190  # [keV]
+    bg: float = 68.7508  # [keV**0.5]
+    mrc2: float = 1.124572e6  # [keV]
+    c: npt.NDArray = field(
+        default_factory=lambda: np.array(
+            [
+                5.51036e-10,
+                6.41918e-3,
+                -2.02896e-3,
+                -1.91080e-5,
+                1.35776e-4,
+                0.0,
+                0.0,
+            ]
+        )
     )
 
 
@@ -372,10 +387,10 @@ def _reactivity_bosch_hale(
             + _reactivity_bosch_hale(temp_kev, Reactions.D_D2)
         )
     mapping = {
-        Reactions.D_T: BoschHale_DT_4Hen,
-        Reactions.D_D1: BoschHale_DD_3Hen,
-        Reactions.D_D2: BoschHale_DD_Tp,
-        Reactions.D_He3: BoschHale_DHe3_4Hep,
+        Reactions.D_T: BoschHale_DT_4Hen(),
+        Reactions.D_D1: BoschHale_DD_3Hen(),
+        Reactions.D_D2: BoschHale_DD_Tp(),
+        Reactions.D_He3: BoschHale_DHe3_4Hep(),
     }
     data = mapping[reaction]
 
@@ -431,16 +446,16 @@ def _reactivity_plasmod(
         term_3 = 1.877 * np.exp(-0.16176 * temp_kev * np.sqrt(temp_kev))
         return 1e-19 * term_1 * (term_2 + term_3)
 
-    elif reaction == Reactions.D_D:
+    if reaction == Reactions.D_D:
         term_1 = (
             0.16247 + 0.001741 * temp_kev - 0.029 * np.exp(-0.3843 * np.sqrt(temp_kev))
         )
         term_2 = np.exp(-18.8085 / (temp_kev ** (1 / 3))) / (temp_kev ** (1 / 3)) ** 2
         return 1e-19 * term_1 * term_2
-    else:
-        raise ValueError(
-            f"This function only supports D-D and D-T, not {reaction.name.replace('_','-')}"
-        )
+
+    raise ValueError(
+        f"This function only supports D-D and D-T, not {reaction.name.replace('_','-')}"
+    )
 
 
 def _reactivity_johner(
@@ -470,16 +485,16 @@ def _reactivity_johner(
             f"This function only supports D-T, not {reaction.name.replace('_','-')}"
         )
 
-    if np.max(temp_kev) > 100:
+    if np.max(temp_kev) > 100:  # noqa: PLR2004
         bluemira_warn("The Johner parameterisation is not valid for T > 100 keV")
-    if np.min(temp_kev) < 5.3:
+    if np.min(temp_kev) < 5.3:  # noqa: PLR2004
         bluemira_warn("The Johner parameterisation is not valid for T < 5.3 keV")
 
     sigma_v = np.zeros_like(temp_kev)
-    idx_1 = np.where((5.3 <= temp_kev) & (temp_kev <= 10.3))[0]
-    idx_2 = np.where((10.3 <= temp_kev) & (temp_kev <= 18.5))[0]
-    idx_3 = np.where((18.5 <= temp_kev) & (temp_kev <= 39.9))[0]
-    idx_4 = np.where((39.9 <= temp_kev) & (temp_kev <= 100.0))[0]
+    idx_1 = np.nonzero((temp_kev >= 5.3) & (temp_kev <= 10.3))[0]  # noqa: PLR2004
+    idx_2 = np.nonzero((temp_kev >= 10.3) & (temp_kev <= 18.5))[0]  # noqa: PLR2004
+    idx_3 = np.nonzero((temp_kev >= 18.5) & (temp_kev <= 39.9))[0]  # noqa: PLR2004
+    idx_4 = np.nonzero((temp_kev >= 39.9) & (temp_kev <= 100.0))[0]  # noqa: PLR2004
     t1 = temp_kev[idx_1]
     t2 = temp_kev[idx_2]
     t3 = temp_kev[idx_3]

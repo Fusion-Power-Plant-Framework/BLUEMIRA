@@ -27,10 +27,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Iterator, Optional
 
-if TYPE_CHECKING:
-    from bluemira.equilibria.equilibrium import Equilibrium
-    from bluemira.equilibria.opt_problems import CoilsetOptimisationProblem
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -43,6 +39,11 @@ from bluemira.base.look_and_feel import (
 from bluemira.equilibria.constants import DPI_GIF, PLT_PAUSE, PSI_REL_TOL
 from bluemira.utilities.error import ExternalOptError
 from bluemira.utilities.plot_tools import make_gif, save_figure
+
+if TYPE_CHECKING:
+    from bluemira.equilibria.equilibrium import Equilibrium
+    from bluemira.equilibria.optimisation.problem import CoilsetOptimisationProblem
+    from bluemira.equilibria.optimisation.problem.base import CoilsetOptimiserResult
 
 __all__ = [
     "DudsonConvergence",
@@ -93,7 +94,6 @@ class ConvergenceCriterion(ABC):
         -------
         True if the convergence criterion is met, else False.
         """
-        pass
 
     def check_converged(self, value: float) -> bool:
         """
@@ -400,8 +400,7 @@ class JsourceConvergence(ConvergenceCriterion):
 
 
 class PicardIterator:
-    """
-    A Picard iterative solver.
+    """A Picard iterative solver.
 
     Child classes must provide a __call__ method which carries out the
     iteration process(es)
@@ -413,7 +412,7 @@ class PicardIterator:
     optimisation_problem:
         The optimisation problem to use when iterating
     convergence:
-        The convergence criterion to use
+        The convergence criterion to use (defaults to Dudson)
     fixed_coils:
         Whether or not the coil positions are fixed
     relaxation:
@@ -436,7 +435,7 @@ class PicardIterator:
         self,
         eq: Equilibrium,
         optimisation_problem: CoilsetOptimisationProblem,
-        convergence: ConvergenceCriterion = DudsonConvergence(),
+        convergence: Optional[ConvergenceCriterion] = None,
         fixed_coils: bool = False,
         relaxation: float = 0,
         maxiter: int = 30,
@@ -450,17 +449,18 @@ class PicardIterator:
         self.opt_prob = optimisation_problem
         if isinstance(convergence, ConvergenceCriterion):
             self.convergence = convergence
+        elif convergence is None:
+            self.convergence = DudsonConvergence()
         else:
             raise ValueError(
-                "Optimiser convergence specification must be a sub-class of ConvergenceCriterion."
+                "Optimiser convergence specification must be a sub-class of"
+                " ConvergenceCriterion."
             )
         self.fixed_coils = fixed_coils
 
         self.relaxation = relaxation
         self.maxiter = maxiter
-        self.plot_flag = plot
-        if gif and not plot:
-            self.plot_flag = True
+        self.plot_flag = plot or (gif and not plot)
         self.gif_flag = gif
         if figure_folder is None:
             figure_folder = try_get_bluemira_path(
@@ -475,10 +475,15 @@ class PicardIterator:
 
     def _optimise_coilset(self):
         try:
-            coilset = self.opt_prob.optimise(fixed_coils=self.fixed_coils)
+            result = self.opt_prob.optimise(fixed_coils=self.fixed_coils)
+            try:
+                coilset = result.coilset
+            except AttributeError:
+                coilset = result
             self.store.append(coilset)
         except ExternalOptError:
             coilset = self.store[-1]
+        self.result = result
         self.coilset = coilset
 
     @property
@@ -495,7 +500,7 @@ class PicardIterator:
         """
         return self._j_tor
 
-    def __call__(self):
+    def __call__(self) -> CoilsetOptimiserResult:
         """
         The iteration object call handle.
         """
@@ -503,16 +508,18 @@ class PicardIterator:
         while self.i < self.maxiter:
             try:
                 next(iterator)
-            except StopIteration:
+            except StopIteration:  # noqa: PERF203
                 print()
                 bluemira_print("EQUILIBRIA G-S converged value found.")
                 break
         else:
             print()
             bluemira_warn(
-                f"EQUILIBRIA G-S unable to find converged value after {self.i} iterations."
+                "EQUILIBRIA G-S unable to find converged value after"
+                f" {self.i} iterations."
             )
         self._teardown()
+        return self.result
 
     def __iter__(self) -> Iterator:
         """
@@ -534,26 +541,26 @@ class PicardIterator:
 
         if self.i > 0 and self.check_converged(print_status=False):
             raise StopIteration
-        else:
-            self._psi_old = self.psi.copy()
-            self._j_tor_old = self.j_tor.copy()
-            self._solve()
-            self._psi = self.eq.psi()
-            self._j_tor = self.eq._jtor
-            check = self.check_converged()
-            if self.plot_flag:
-                self.update_fig()
-            if check:
-                if self.gif_flag:
-                    make_gif(self.figure_folder, self.pname)
-                raise StopIteration
-            self._optimise_coilset()
-            self._psi = (
-                1 - self.relaxation
-            ) * self.eq.psi() + self.relaxation * self._psi_old
-            self.i += 1
 
-    def iterate_once(self):
+        self._psi_old = self.psi.copy()
+        self._j_tor_old = self.j_tor.copy()
+        self._solve()
+        self._psi = self.eq.psi()
+        self._j_tor = self.eq._jtor
+        check = self.check_converged()
+        if self.plot_flag:
+            self.update_fig()
+        if check:
+            if self.gif_flag:
+                make_gif(self.figure_folder, self.pname)
+            raise StopIteration
+        self._optimise_coilset()
+        self._psi = (
+            1 - self.relaxation
+        ) * self.eq.psi() + self.relaxation * self._psi_old
+        self.i += 1
+
+    def iterate_once(self) -> CoilsetOptimiserResult:
         """
         Perform a single iteration and handle convergence.
         """
@@ -562,6 +569,7 @@ class PicardIterator:
         except StopIteration:
             bluemira_print("EQUILIBRIA G-S converged value found, nothing to do.")
             self._teardown()
+        return self.result
 
     def check_converged(self, print_status: bool = True) -> bool:
         """
@@ -580,10 +588,10 @@ class PicardIterator:
             return self.convergence(
                 self._psi_old, self.psi, self.i, print_status=print_status
             )
-        else:
-            return self.convergence(
-                self._j_tor_old, self.j_tor, self.i, print_status=print_status
-            )
+
+        return self.convergence(
+            self._j_tor_old, self.j_tor, self.i, print_status=print_status
+        )
 
     def update_fig(self):
         """
@@ -623,8 +631,8 @@ class PicardIterator:
             self._j_tor = np.zeros((self.eq.grid.nx, self.eq.grid.nz))
 
     def _teardown(self):
-        """
-        Final clean-up to have consistency between psi and jtor
+        """Final clean-up for consistency between psi and jtor.
+
         In the case of converged equilibria, slight (artificial) improvement
         in consistency. In the case of unconverged equilibria, gives a more
         reasonable understanding of the final state.

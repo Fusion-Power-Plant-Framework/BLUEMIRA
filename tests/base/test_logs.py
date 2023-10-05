@@ -27,8 +27,8 @@ import pytest
 
 from bluemira.base.error import LogsError
 from bluemira.base.logs import (
-    LoggingContext,
     LogLevel,
+    LoggingContext,
     get_log_level,
     logger_setup,
     set_log_level,
@@ -42,9 +42,9 @@ class TestLoggingLevel:
         # extra handlers are added to the logger leading to double printing
         # if pytest is run with capturing switched off
         cls.orig_log = logging.getLogger("")
-        cls.original_handlers = [
-            handler for handler in cls.orig_log.handlers or cls.orig_log.parent.handlers
-        ]
+        cls.original_handlers = list(
+            cls.orig_log.handlers or cls.orig_log.parent.handlers
+        )
         cls.original_level = LogLevel(
             max([handler.level for handler in cls.original_handlers])
         )
@@ -59,7 +59,7 @@ class TestLoggingLevel:
     def setup_method(self):
         self.LOGGER = logger_setup()
 
-    @pytest.mark.parametrize("input_level", [(6), ("INF")])
+    @pytest.mark.parametrize("input_level", [6, "INF"])
     def test_raise_error(self, input_level):
         """Testing if errors for invalid log levels are caught."""
         with pytest.raises(LogsError) as exc_info:
@@ -68,18 +68,7 @@ class TestLoggingLevel:
 
     @pytest.mark.parametrize(
         "input_level",
-        [
-            (1),
-            ("DEBUG"),
-            (2),
-            ("INFO"),
-            (3),
-            ("WARNING"),
-            (4),
-            ("ERROR"),
-            (5),
-            ("CRITICAL"),
-        ],
+        [1, "DEBUG", 2, "INFO", 3, "WARNING", 4, "ERROR", 5, "CRITICAL"],
     )
     def test_not_error(self, input_level):
         """Testing if errors for invalid log levels are caught."""
@@ -89,7 +78,7 @@ class TestLoggingLevel:
             pytest.fail("Error raised")
 
     @pytest.mark.parametrize(
-        "input_level,expected",
+        ("input_level", "expected"),
         [
             ("DEBUG", 10),
             (1, 10),

@@ -17,5 +17,5 @@ Closes #{ID}
 I confirm that I have completed the following checks:
 
 - [ ] Tests run locally and pass `pytest tests --reactor`
-- [ ] Code quality checks run locally and pass `flake8` and `black .`
+- [ ] Code quality checks run locally and pass `pre-commit run --from-ref develop --to-ref HEAD`
 - [ ] Documentation built locally and checked `sphinx-build -W documentation/source documentation/build`

@@ -35,7 +35,8 @@ PROCESS_OBS_VAR = {
 def test_update_obsolete_vars():
     str1 = api.update_obsolete_vars("ni")
     str2 = api.update_obsolete_vars("garden")
-    assert str1 == "ni peng" and str2 == "shrubbery"
+    assert str1 == "ni peng"
+    assert str2 == "shrubbery"
 
 
 @patch.object(api, "imp_data")

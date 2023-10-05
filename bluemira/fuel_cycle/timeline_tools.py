@@ -84,12 +84,13 @@ def generate_lognorm_distribution(n: int, integral: float, sigma: float) -> np.n
     -------
     The distribution of size n and of the correct integral value
     """
+    rng = np.random.default_rng()
 
     def f_integral(x):
-        return np.sum(np.random.lognormal(x, sigma, n)) - integral
+        return np.sum(rng.lognormal(x, sigma, n)) - integral
 
     mu = brentq(f_integral, -1e3, 1e3, maxiter=200)
-    distribution = np.random.lognormal(mu, sigma, n)
+    distribution = rng.lognormal(mu, sigma, n)
     # Correct distribution integral
     error = np.sum(distribution) - integral
     distribution -= error / n
@@ -113,7 +114,8 @@ def generate_truncnorm_distribution(n: int, integral: float, sigma: float) -> np
     -------
     The distribution of size n and of the correct integral value
     """
-    distribution = np.random.normal(0, sigma, n)
+    rng = np.random.default_rng()
+    distribution = rng.normal(0, sigma, n)
     # Truncate distribution by 0-folding
     distribution = np.abs(distribution)
     # Correct distribution integral
@@ -141,7 +143,8 @@ def generate_exponential_distribution(
     -------
     The distribution of size n and of the correct integral value
     """
-    distribution = np.random.exponential(lambdda, n)
+    rng = np.random.default_rng()
+    distribution = rng.exponential(lambdda, n)
     # Correct distribution integral
     distribution /= np.sum(distribution)
     distribution *= integral
@@ -172,7 +175,6 @@ class LearningStrategy(abc.ABC):
         -------
         Operational availabilities at each operational phase
         """
-        pass
 
 
 class UniformLearningStrategy(LearningStrategy):
@@ -180,8 +182,9 @@ class UniformLearningStrategy(LearningStrategy):
     Uniform learning strategy
     """
 
+    @staticmethod
     def generate_phase_availabilities(
-        self, lifetime_op_availability: float, op_durations: Iterable[float]
+        lifetime_op_availability: float, op_durations: Iterable[float]
     ) -> Iterable[float]:
         """
         Generate operational availabilities for the specified phase durations.
@@ -234,16 +237,19 @@ class UserSpecifiedLearningStrategy(LearningStrategy):
         """
         if len(op_durations) != len(self.operational_availabilities):
             raise FuelCycleError(
-                "The number of phases is not equal to the number of user-specified operational availabilities."
+                "The number of phases is not equal to the number of user-specified"
+                " operational availabilities."
             )
 
         total_fpy = np.sum(op_durations)
         fraction = (total_fpy / lifetime_op_availability) / (
             op_durations / self.operational_availabilities
         )
-        if fraction != 1.0:
+        if fraction != 1.0:  # noqa: PLR2004
             bluemira_warn(
-                f"User-specified operational availabilities do not match the specified lifetime operational : {fraction:.2f} != 1.0. Normalising to adjust to meet the specified lifetime operational availability."
+                "User-specified operational availabilities do not match the specified"
+                f" lifetime operational : {fraction:.2f} != 1.0. Normalising to adjust"
+                " to meet the specified lifetime operational availability."
             )
 
         return fraction * self.operational_availabilities
@@ -300,7 +306,8 @@ class GompertzLearningStrategy(LearningStrategy):
         """
         if not self.min_op_a < lifetime_op_availability < self.max_op_a:
             raise FuelCycleError(
-                "Input lifetime operational availability must be within the specified bounds on the phase operational availability."
+                "Input lifetime operational availability must be within the specified"
+                " bounds on the phase operational availability."
             )
 
         op_durations = np.append(0, op_durations)
@@ -348,7 +355,6 @@ class OperationalAvailabilityStrategy(abc.ABC):
         -------
         The distribution of size n and of the correct integral value
         """
-        pass
 
 
 class LogNormalAvailabilityStrategy(OperationalAvailabilityStrategy):

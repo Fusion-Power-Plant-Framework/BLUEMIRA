@@ -47,8 +47,7 @@ def treat_xz_array(func):
         if x is None or z is None:
             if z is None and x is None:
                 return func(self, x, z)
-            else:
-                raise EquilibriaError("Only one of x and z specified.")
+            raise EquilibriaError("Only one of x and z specified.")
 
         x = np.array(x)
         z = np.array(z)
@@ -94,7 +93,7 @@ class PlasmaCoil:
     def _set_j_tor(self, j_tor: Optional[np.ndarray]):
         self._j_tor = j_tor
         if j_tor is not None:
-            self._ii, self._jj = np.where(j_tor > J_TOR_MIN)
+            self._ii, self._jj = np.nonzero(j_tor > J_TOR_MIN)
         else:
             self._ii, self._jj = None, None
 
@@ -123,7 +122,8 @@ class PlasmaCoil:
         """
         if self._j_tor is None:
             raise EquilibriaError(
-                "Cannot calculate value off grid; there is no known toroidal current distribution."
+                "Cannot calculate value off grid; there is no known toroidal current"
+                " distribution."
             )
 
         array = np.zeros_like(x, dtype=float)
@@ -161,8 +161,7 @@ class PlasmaCoil:
 
         if not self._check_in_grid(x, z):
             return self._convolve(greens_psi, x, z)
-        else:
-            return self._psi_func(x, z)
+        return self._psi_func(x, z)
 
     @treat_xz_array
     def Bx(
@@ -193,8 +192,7 @@ class PlasmaCoil:
 
         if not self._check_in_grid(x, z):
             return self._convolve(greens_Bx, x, z)
-        else:
-            return self._Bx_func(x, z)
+        return self._Bx_func(x, z)
 
     @treat_xz_array
     def Bz(
@@ -225,8 +223,7 @@ class PlasmaCoil:
 
         if not self._check_in_grid(x, z):
             return self._convolve(greens_Bz, x, z)
-        else:
-            return self._Bz_func(x, z)
+        return self._Bz_func(x, z)
 
     def Bp(
         self,
@@ -253,8 +250,7 @@ class PlasmaCoil:
         """
         if x is None and z is None:
             return self._plasma_Bp
-        else:
-            return np.hypot(self.Bx(x, z), self.Bz(x, z))
+        return np.hypot(self.Bx(x, z), self.Bz(x, z))
 
     def plot(self, ax=None):
         """
@@ -271,7 +267,7 @@ class PlasmaCoil:
         """
         Get a simple string representation of the PlasmaCoil.
         """
-        n_filaments = len(np.where(self._j_tor > 0)[0])
+        n_filaments = len(np.nonzero(self._j_tor > 0)[0])
         return f"{self.__class__.__name__}: {n_filaments} filaments"
 
 

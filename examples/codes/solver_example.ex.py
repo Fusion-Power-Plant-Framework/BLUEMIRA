@@ -46,9 +46,9 @@ An example to run PROCESS
 
 
 # %%
-import bluemira.codes.process as process
 from bluemira.base.file import get_bluemira_path
 from bluemira.base.logs import set_log_level
+from bluemira.codes import process
 
 # %% [markdown]
 # ## Configuring a solver

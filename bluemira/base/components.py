@@ -92,7 +92,7 @@ class Component(NodeMixin, Plottable, DisplayableCAD):
     def filter_components(
         self,
         names: Iterable[str],
-        filter_: Optional[Callable[[Component], bool]] = None,
+        component_filter: Optional[Callable[[Component], bool]] = None,
     ):
         """
         Removes all components from the tree, starting at this component,
@@ -103,7 +103,7 @@ class Component(NodeMixin, Plottable, DisplayableCAD):
         ----------
         names:
             The list of names of each component to search for.
-        filter_:
+        component_filter:
             A callable to filter Components from the Component tree,
             returning True keeps the node False removes it
 
@@ -129,7 +129,7 @@ class Component(NodeMixin, Plottable, DisplayableCAD):
                         c_sib.parent = None
 
                 for c_child in c.descendants:
-                    if filter_ is not None and not filter_(c_child):
+                    if component_filter is not None and not component_filter(c_child):
                         c_child.parent = None
 
     def tree(self) -> str:
@@ -273,12 +273,11 @@ class Component(NodeMixin, Plottable, DisplayableCAD):
             if len(properties) == 1:
                 return getattr(found_nodes, properties[0])
             return [getattr(found_nodes, prop) for prop in properties]
-        else:
-            # Collect values by property instead of by node
-            node_properties = [
-                [getattr(node, prop) for prop in properties] for node in found_nodes
-            ]
-            return tuple(map(list, zip(*node_properties)))
+        # Collect values by property instead of by node
+        node_properties = [
+            [getattr(node, prop) for prop in properties] for node in found_nodes
+        ]
+        return tuple(map(list, zip(*node_properties)))
 
     def _get_thing(
         self, filter_: Union[Callable, None], first: bool, full_tree: bool
@@ -308,7 +307,7 @@ class Component(NodeMixin, Plottable, DisplayableCAD):
         # TODO: Support merge_trees here too.
         if child in self.children or child.name in (ch.name for ch in self.children):
             raise ComponentError(f"Component {child} is already a child of {self}")
-        self.children = list(self.children) + [child]
+        self.children = [*list(self.children), child]
 
         return self
 
@@ -330,13 +329,13 @@ class Component(NodeMixin, Plottable, DisplayableCAD):
         This component.
         """
         if children is None:
-            return
+            return None
         if isinstance(children, Component):
             return self.add_child(children)
         if not isinstance(children, list):
-            return
+            return None
         if len(children) == 0:
-            return
+            return None
 
         duplicates = []
         for idx, child in reversed(list(enumerate(children))):

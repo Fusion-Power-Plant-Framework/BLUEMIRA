@@ -23,12 +23,23 @@
 Generic OptimisationProblem, OptimisationConstraint and OptimisationObjective interfaces.
 """
 import inspect
+import warnings
 from abc import ABC, abstractmethod
 from typing import List
 
 import numpy as np
 
 from bluemira.utilities.optimiser import Optimiser
+
+warnings.warn(
+    f"The module '{__name__}' is deprecated and will be removed in v2.0.0.\n"
+    "See "
+    "https://bluemira.readthedocs.io/en/latest/optimisation/optimisation.html "
+    "for documentation of the new optimisation module.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 
 __all__ = ["OptimisationProblem", "OptimisationObjective", "OptimisationConstraint"]
 
@@ -137,7 +148,7 @@ class OptimisationProblem(ABC):
     ----------
     parameterisation: any
         Object storing parameterisation data to be optimised.
-    optimiser: Optimiser (default: None)
+    optimiser: bluemira.utilities.optimiser.Optimiser (default: None)
         Optimiser object to use for constrained optimisation.
         Does not need to be provided if not used by
         optimise(), such as for purely unconstrained
@@ -200,7 +211,7 @@ class OptimisationProblem(ABC):
 
         Parameters
         ----------
-        opt: Optimiser
+        opt: bluemira.utilities.optimiser.Optimiser
             Optimiser on which to apply the constraints. Updated in place.
         opt_constraints: iterable
             Iterable of OptimisationConstraint objects containing optimisation
@@ -216,16 +227,14 @@ class OptimisationProblem(ABC):
         in parameterisation, at each optimise() call.
         To be overridden as needed.
         """
-        initial_state = parameterisation
-        return initial_state
+        return parameterisation
 
     def update_parametrisation(self, state: np.ndarray):
         """
         Update parameterisation object using the state vector.
         To be overridden as needed.
         """
-        parameterisation = state
-        return parameterisation
+        return state
 
     @abstractmethod
     def optimise(self):

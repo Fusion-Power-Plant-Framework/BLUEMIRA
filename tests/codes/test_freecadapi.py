@@ -19,18 +19,20 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 from unittest.mock import patch
 
 import freecad  # noqa: F401
-import numpy as np
 import Part
+import numpy as np
 import pytest
 from FreeCAD import Base, newDocument
 
 import bluemira.codes._freecadapi as cadapi
+from bluemira.base.constants import EPS
 from bluemira.codes.error import FreeCADError
 from bluemira.geometry.constants import D_TOLERANCE
+from tests._helpers import skipif_import_error
 
 
 class TestFreecadapi:
@@ -81,7 +83,10 @@ class TestFreecadapi:
         """
 
         circ = cadapi.make_circle(10)
-        with patch("bluemira.codes._freecadapi.arrange_edges", new=lambda a, b: b):
+        with patch(
+            "bluemira.codes._freecadapi.arrange_edges",
+            new=lambda a, b: b,  # noqa: ARG005
+        ):
             wire1 = self.offsetter(circ)
             wire2 = self.offsetter(wire1)
 
@@ -99,10 +104,10 @@ class TestFreecadapi:
             arr = cadapi.point_to_numpy(self.square_points)
 
     def test_single_vector_to_numpy(self):
-        input = np.array((1.0, 0.5, 2.0))
-        vector = Base.Vector(input)
+        inp = np.array((1.0, 0.5, 2.0))
+        vector = Base.Vector(inp)
         arr = cadapi.vector_to_numpy(vector)
-        comparison = arr == input
+        comparison = arr == inp
         assert comparison.all()
 
     def test_vector_to_numpy(self):
@@ -146,13 +151,13 @@ class TestFreecadapi:
     def test_make_bezier(self):
         bezier: Part.Wire = cadapi.make_bezier(self.square_points)
         curve = bezier.Edges[0].Curve
-        assert type(curve) == Part.BezierCurve
+        assert type(curve) is Part.BezierCurve
 
     def test_interpolate_bspline(self):
         pntslist = self.square_points
         bspline: Part.Wire = cadapi.interpolate_bspline(pntslist)
         curve = bspline.Edges[0].Curve
-        assert type(curve) == Part.BSplineCurve
+        assert type(curve) is Part.BSplineCurve
         # assert that the bspline pass through the points
         # get the points parameter
         params = [curve.parameter(Base.Vector(p)) for p in pntslist]
@@ -166,15 +171,23 @@ class TestFreecadapi:
 
     def test_length(self):
         open_wire: Part.Wire = cadapi.make_polygon(self.square_points)
-        assert cadapi.length(open_wire) == open_wire.Length == 3.0
+        assert (
+            cadapi.length(open_wire)
+            == open_wire.Length
+            == pytest.approx(3.0, rel=0, abs=EPS)
+        )
         closed_wire: Part.Wire = cadapi.make_polygon(self.closed_square_points)
-        assert cadapi.length(closed_wire) == closed_wire.Length == 4.0
+        assert (
+            cadapi.length(closed_wire)
+            == closed_wire.Length
+            == pytest.approx(4.0, rel=0, abs=EPS)
+        )
 
     def test_area(self):
         wire: Part.Wire = cadapi.make_polygon(self.closed_square_points)
-        assert cadapi.area(wire) == wire.Area == 0.0
+        assert cadapi.area(wire) == wire.Area == pytest.approx(0.0, rel=0, abs=EPS)
         face: Part.Face = Part.Face(wire)
-        assert cadapi.area(face) == face.Area == 1.0
+        assert cadapi.area(face) == face.Area == pytest.approx(1.0, rel=0, abs=EPS)
 
     def test_center_of_mass(self):
         wire: Part.Wire = cadapi.make_polygon(self.closed_square_points)
@@ -190,7 +203,11 @@ class TestFreecadapi:
         scaled_wire = cadapi.scale_shape(wire.copy(), factor)
         face: Part.Face = Part.Face(scaled_wire)
         assert cadapi.area(face) == 1.0 * factor**2
-        assert cadapi.length(face) == cadapi.length(scaled_wire) == 4.0 * factor
+        assert (
+            cadapi.length(face)
+            == cadapi.length(scaled_wire)
+            == pytest.approx(4.0 * factor, rel=0, abs=EPS)
+        )
         face_from_wire = Part.Face(wire)
         scaled_face = cadapi.scale_shape(face_from_wire.copy(), factor)
         assert cadapi.length(scaled_face) == cadapi.length(face)
@@ -253,7 +270,7 @@ class TestFreecadapi:
         def func():
             raise FreeCADError("Error")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             func()
 
     def test_save_cad(self, tmp_path):
@@ -261,8 +278,9 @@ class TestFreecadapi:
         filename = f"{tmp_path}/tst.stp"
 
         cadapi.save_cad([shape], filename)
-        assert os.path.exists(filename)
-        stp_content = open(filename).read()
+        assert Path(filename).exists
+        with open(filename) as fh:
+            stp_content = fh.read()
         assert "myshape" not in stp_content
         assert "Bluemira" in stp_content
         assert (
@@ -277,8 +295,9 @@ class TestFreecadapi:
             author="myfile",
             stp_file_scheme="AP214IS",
         )
-        assert os.path.exists(filename)
-        stp_content = open(filename).read()
+        assert Path(filename).exists()
+        with open(filename) as fh:
+            stp_content = fh.read()
         assert "myshape" in stp_content  # shape label in file
         assert "Bluemira" in stp_content  # bluemira still in file if author changed
         assert "myfile" in stp_content  # author change
@@ -291,7 +310,7 @@ class TestCADFiletype:
     @classmethod
     def setup_class(cls):
         doc = newDocument()
-        cls.shape = doc.addObject("Part::Feature")
+        cls.shape = doc.addObject("Part::FeaturePython")
         cls.shape.Shape = cadapi.extrude_shape(cadapi.make_circle(), (0, 0, 1))
         doc.recompute()
 
@@ -301,32 +320,17 @@ class TestCADFiletype:
         if not hasattr(FreeCADGui, "subgraphFromObject"):
             FreeCADGui.setupWithoutGUI()
 
-    @pytest.mark.parametrize("name, ftype", cadapi.CADFileType.__members__.items())
+    @pytest.mark.parametrize(("name", "ftype"), cadapi.CADFileType.__members__.items())
     def test_init(self, name, ftype):
         assert cadapi.CADFileType[name] == ftype
         assert cadapi.CADFileType(ftype.value) == ftype
-
-    @pytest.mark.parametrize(
-        "name",
-        ("PDF", "VRML", "VRML_2", "VRML_ZIP", "VRML_ZIP_2", "WEBGL_X3D", "X3D", "X3DZ"),
-    )
-    def test_exporter_raised_FreeCADError(self, name, tmp_path):
-        """
-        These extensions require more of FreeCAD than we set up
-        Just tracking them.
-        Some of them may work if other packages are installed.
-        """
-
-        with pytest.raises(FreeCADError):
-            filetype = cadapi.CADFileType[name]
-            filetype.exporter([self.shape], f"{tmp_path/'tst'}.{filetype.value}")
 
     # Commented out CADFileTypes dont work with basic shapes tested or needed more
     # FreeCAD imported, should be reviewed in future
     @pytest.mark.parametrize(
         "name",
-        (
-            "ACSII_STEREO_MESH",
+        [
+            "ASCII_STEREO_MESH",
             "ADDITIVE_MANUFACTURING",
             "AUTOCAD_DXF",
             "BINMESH",
@@ -340,7 +344,6 @@ class TestCADFiletype:
             "IGES_2",
             "INVENTOR_V2_1",
             "JSON",
-            "JSON_MESH",
             "OBJ",
             "OBJ_WAVE",
             "OFF",
@@ -349,40 +352,28 @@ class TestCADFiletype:
             "SIMPLE_MODEL",
             "STEP",
             "STEP_2",
+            "STEP_ZIP",  # Case sensitive extension
             "STL",
             "THREED_MANUFACTURING",
-            # ifcopenshell package required
-            pytest.param("IFC_BIM", marks=[pytest.mark.xfail]),
-            pytest.param("IFC_BIM_JSON", marks=[pytest.mark.xfail]),
+            pytest.param("IFC_BIM", marks=[skipif_import_error("ifcopenshell")]),
+            pytest.param(
+                "IFC_BIM_JSON",  # github.com/buildingSMART/ifcJSON
+                marks=[skipif_import_error("ifcopenshell", "ifcjson")],
+            ),
+            pytest.param("DAE", marks=[skipif_import_error("collada")]),
+            pytest.param("AUTOCAD", marks=[pytest.mark.xfail]),  # LibreDWG required
             # # Part.Feature has no compatible object type, find compatible object type
-            # pytest.param("ASC", marks=[pytest.mark.xfail]),
-            # pytest.param("BDF", marks=[pytest.mark.xfail]),
-            # pytest.param("DAT", marks=[pytest.mark.xfail]),
-            # pytest.param("FENICS_FEM", marks=[pytest.mark.xfail]),
-            # pytest.param("FENICS_FEM_XML", marks=[pytest.mark.xfail]),
-            # pytest.param("INP", marks=[pytest.mark.xfail]),
-            # pytest.param("MED", marks=[pytest.mark.xfail]),
-            # pytest.param("MESHJSON", marks=[pytest.mark.xfail]),
-            # pytest.param("MESHPY", marks=[pytest.mark.xfail]),
-            # pytest.param("MESHYAML", marks=[pytest.mark.xfail]),
-            # pytest.param("PCD", marks=[pytest.mark.xfail]),
-            # pytest.param("PLY", marks=[pytest.mark.xfail]),
-            # pytest.param("TETGEN_FEM", marks=[pytest.mark.xfail]),
-            # pytest.param("UNV", marks=[pytest.mark.xfail]),
-            # pytest.param("VTK", marks=[pytest.mark.xfail]),
-            # pytest.param("VTU", marks=[pytest.mark.xfail]),
-            # pytest.param("YAML", marks=[pytest.mark.xfail]),
-            # pytest.param("Z88_FEM_MESH", marks=[pytest.mark.xfail]),
-            # pytest.param("Z88_FEM_MESH_2", marks=[pytest.mark.xfail]),
-            # # No file created probably same problem as above block
-            # pytest.param("AUTOCAD", marks=[pytest.mark.xfail]),
-            # pytest.param("DAE", marks=[pytest.mark.xfail]),
-            # pytest.param("SVG_FLAT", marks=[pytest.mark.xfail]),
-            # pytest.param("STEP_ZIP", marks=[pytest.mark.xfail]),
-            # pytest.param("SVG", marks=[pytest.mark.xfail]),
+            # "ASC", "BDF", "DAT", "FENICS_FEM", "FENICS_FEM_XML", "INP", "MED",
+            # "MESHJSON", "MESHPY", "MESHYAML", "PCD", "PLY", "TETGEN_FEM", "UNV",
+            # "VTK", "VTU", "YAML", "Z88_FEM_MESH", "Z88_FEM_MESH_2",
             # # More FreeCAD than we import, fails differently on each import
-            # pytest.param("WEBGL", marks=[pytest.mark.xfail]),
-        ),
+            # "WEBGL",
+            # # No file output
+            # "SVG, "SVG_FLAT",
+            # # Requires TechDrawGui import which requires a GUI
+            # "PDF", "VRML", "VRML_2", "VRML_ZIP", "VRML_ZIP_2",
+            # "WEBGL_X3D", "X3D", "X3DZ"
+        ],
     )
     def test_exporter_function_exists_and_creates_a_file(self, name, tmp_path):
         filetype = cadapi.CADFileType[name]
@@ -391,4 +382,4 @@ class TestCADFiletype:
             assert filetype.exporter.__name__ == "export"
 
         cadapi.CADFileType[name].exporter([self.shape], filename)
-        assert os.path.exists(filename)
+        assert Path(filename).exists()

@@ -84,7 +84,8 @@ class TestSweep:
         x2 = 14
         dx = 0.5
         dy = 1
-        path = PrincetonD({"x2": {"value": x2}}).create_shape()
+        pd = PrincetonD({"x2": {"value": x2}})
+        path = pd.create_shape()
         profile = make_polygon(
             [[x2 - dx, -dy, 0], [x2 + dx, -dy, 0], [x2 + dx, dy, 0], [x2 - dx, dy, 0]],
             closed=True,

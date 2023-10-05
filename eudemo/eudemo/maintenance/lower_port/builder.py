@@ -20,161 +20,261 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 """
-EUDEMO Lower Port Duct Builder
+EUDEMO Lower Port Builder
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+
+if TYPE_CHECKING:
+    from bluemira.geometry.solid import BluemiraSolid
+    from bluemira.geometry.wire import BluemiraWire
 
 import numpy as np
 
 from bluemira.base.builder import Builder
 from bluemira.base.components import Component, PhysicalComponent
+from bluemira.base.error import BuilderError
 from bluemira.base.parameter_frame import Parameter, ParameterFrame
 from bluemira.builders.tools import apply_component_display_options
 from bluemira.display.palettes import BLUE_PALETTE
 from bluemira.geometry.face import BluemiraFace
 from bluemira.geometry.tools import boolean_cut, boolean_fuse, extrude_shape, offset_wire
-from bluemira.geometry.wire import BluemiraWire
+from bluemira.materials import Void
 
 
 @dataclass
-class LowerPortBuilderParams(ParameterFrame):
-    """Lower Port Duct Builder Parameters"""
+class TSLowerPortDuctBuilderParams(ParameterFrame):
+    """Thermal Shield Lower Port Duct Builder Parameters"""
 
     n_TF: Parameter[int]
+    lower_port_angle: Parameter[float]
+    tk_ts: Parameter[float]
 
-    lp_duct_angle: Parameter[float]
-    lp_duct_wall_tk: Parameter[float]
 
-
-class LowerPortBuilder(Builder):
+class TSLowerPortDuctBuilder(Builder):
     """
-    Lower Port Duct Builder
+    Thermal Shield Lower Port Duct Builder
     """
 
-    param_cls = LowerPortBuilderParams
-    DUCT = "Lower Port Duct"
+    param_cls = TSLowerPortDuctBuilderParams
 
     def __init__(
         self,
         params: Union[ParameterFrame, Dict],
         build_config: Dict,
-        duct_xz_koz: BluemiraFace,
         duct_angled_nowall_extrude_boundary: BluemiraWire,
         duct_straight_nowall_extrude_boundary: BluemiraWire,
+        x_straight_end: float,
     ):
         super().__init__(params, build_config)
-        self.duct_xz_koz = duct_xz_koz
         self.duct_angled_boundary = duct_angled_nowall_extrude_boundary
         self.duct_straight_boundary = duct_straight_nowall_extrude_boundary
-
-        self.n_TF = self.params.n_TF.value
-        self.duct_angle = self.params.lp_duct_angle.value
-        self.duct_wall_tk = self.params.lp_duct_wall_tk.value
+        self.x_straight_end = x_straight_end
 
     def build(self) -> Component:
         """
-        Build the Lower Port.
+        Build the thermal shield lower port.
         """
         return self.component_tree(
-            xz=self.build_xz(),
+            xz=None,
             xy=None,
             xyz=self.build_xyz(),
         )
 
-    def build_xz(self) -> List[Component]:
+    def build_xyz(self) -> List[PhysicalComponent]:
         """
-        Build the Lower Port in XZ.
+        Build the thermal shield lower port in x-y-z.
         """
-        duct_xz = PhysicalComponent(self.DUCT, self.duct_xz_koz)
-        apply_component_display_options(duct_xz, color=BLUE_PALETTE["BB"][0])
-
-        return [duct_xz]
-
-    def build_xyz(self) -> List[Component]:
-        """
-        Build the Lower Port in XYZ.
-        """
-        return [self._build_duct()]
-
-    def _build_duct(self) -> PhysicalComponent:
-        angled_duct_hollow_face = self._hollow_face_from_inner_boundary(
+        duct, void = build_lower_port_xyz(
             self.duct_angled_boundary,
-            face_thickness=self.duct_wall_tk,
-        )
-        straight_duct_backwall_face = BluemiraFace(
-            offset_wire(self.duct_straight_boundary, self.duct_wall_tk)
-        )
-        straight_duct_hollow_face = self._hollow_face_from_inner_boundary(
             self.duct_straight_boundary,
-            face_thickness=self.duct_wall_tk,
+            self.params.n_TF.value,
+            self.params.lower_port_angle.value,
+            self.params.tk_ts.value,
+            self.x_straight_end,
         )
 
-        if self.duct_angle < -45:
-            angled_duct_extrude_extent = abs(
-                (
-                    self.duct_angled_boundary.bounding_box.z_max
-                    - (
-                        self.duct_straight_boundary.bounding_box.z_max - 1
-                    )  # -1 to make sure it goes through
-                )
-                / np.sin(np.deg2rad(self.duct_angle))
-            )
-        else:
-            angled_duct_extrude_extent = abs(
-                (
-                    self.duct_angled_boundary.bounding_box.x_min
-                    - (
-                        self.duct_straight_boundary.bounding_box.x_min + 1
-                    )  # +1 to make sure it goes through
-                )
-                / np.cos(np.deg2rad(self.duct_angle))
-            )
-        straight_duct_extrude_extent = 20
+        pc = PhysicalComponent(self.name, duct)
+        void = PhysicalComponent(self.name + " voidspace", void, material=Void("vacuum"))
+        apply_component_display_options(pc, color=BLUE_PALETTE["TS"][0])
+        apply_component_display_options(void, color=(0, 0, 0))
 
-        duct_heading_x = np.cos(np.deg2rad(self.duct_angle)) * angled_duct_extrude_extent
-        duct_heading_z = np.sin(np.deg2rad(self.duct_angle)) * angled_duct_extrude_extent
-        angled_duct = extrude_shape(
-            angled_duct_hollow_face,
-            (duct_heading_x, 0, duct_heading_z),
+        return [pc, void]
+
+
+@dataclass
+class VVLowerPortDuctBuilderParams(ParameterFrame):
+    """Vacuum Vessel Lower Port Duct Builder Parameters"""
+
+    n_TF: Parameter[int]
+    lower_port_angle: Parameter[float]
+    tk_ts: Parameter[float]
+    tk_vv_single_wall: Parameter[float]
+    g_vv_ts: Parameter[float]
+
+
+class VVLowerPortDuctBuilder(Builder):
+    """
+    Vacuum Vessel Lower Port Duct Builder
+    """
+
+    param_cls = VVLowerPortDuctBuilderParams
+
+    def __init__(
+        self,
+        params: Union[ParameterFrame, Dict],
+        build_config: Dict,
+        duct_angled_nowall_extrude_boundary: BluemiraWire,
+        duct_straight_nowall_extrude_boundary: BluemiraWire,
+        x_straight_end: float,
+    ):
+        super().__init__(params, build_config)
+        offset_value = -(self.params.tk_ts.value + self.params.g_vv_ts.value)
+        self.duct_angled_boundary = offset_wire(
+            duct_angled_nowall_extrude_boundary, offset_value
+        )
+        self.duct_straight_boundary = offset_wire(
+            duct_straight_nowall_extrude_boundary, offset_value
+        )
+        self.duct_straight_boundary.translate((-offset_value, 0, 0))
+        self.x_straight_end = x_straight_end
+
+    def build(self) -> Component:
+        """
+        Build the vacuum vessel lower port.
+        """
+        return self.component_tree(
+            xz=None,
+            xy=None,
+            xyz=self.build_xyz(),
         )
 
-        straight_duct_backwall = extrude_shape(
-            straight_duct_backwall_face,
-            straight_duct_backwall_face.normal_at() * self.duct_wall_tk,
-        )
-        straight_duct_length = extrude_shape(
-            straight_duct_hollow_face,
-            straight_duct_hollow_face.normal_at() * -straight_duct_extrude_extent,
-        )
-        straight_duct = boolean_fuse([straight_duct_backwall, straight_duct_length])
-
-        angled_pieces = boolean_cut(angled_duct, [straight_duct])
-        angled_top = (
-            angled_pieces[0]
-            if len(angled_pieces) == 1
-            else boolean_cut(angled_duct, [angled_pieces[1]])[0]
+    def build_xyz(self) -> List[PhysicalComponent]:
+        """
+        Build the vacuum vessel lower port in x-y-z.
+        """
+        duct, void = build_lower_port_xyz(
+            self.duct_angled_boundary,
+            self.duct_straight_boundary,
+            self.params.n_TF.value,
+            self.params.lower_port_angle.value,
+            self.params.tk_vv_single_wall.value,
+            self.x_straight_end,
         )
 
-        straight_with_hole = boolean_cut(straight_duct, [angled_top])[0]
-
-        duct = boolean_fuse([angled_top, straight_with_hole])
-
-        # rotate duct to correct position
-        duct.rotate(degree=np.rad2deg(np.pi / self.n_TF))
-
-        pc = PhysicalComponent(self.DUCT, duct)
+        pc = PhysicalComponent(self.name, duct)
+        void = PhysicalComponent(self.name + " voidspace", void, material=Void("vacuum"))
         apply_component_display_options(pc, color=BLUE_PALETTE["VV"][0])
+        apply_component_display_options(void, color=(0, 0, 0))
 
-        return pc
+        return [pc, void]
 
-    @staticmethod
-    def _hollow_face_from_inner_boundary(
-        inner_boundary: BluemiraWire,
-        face_thickness: float,
-    ) -> BluemiraFace:
-        return boolean_cut(
-            BluemiraFace(offset_wire(inner_boundary, face_thickness)),
-            [BluemiraFace(inner_boundary)],
-        )[0]
+
+def _face_and_void_from_outer_boundary(
+    outer_boundary: BluemiraWire, thickness: float
+) -> Tuple[BluemiraFace]:
+    inner_boundary = offset_wire(outer_boundary, -thickness)
+    return BluemiraFace([outer_boundary, inner_boundary]), BluemiraFace(inner_boundary)
+
+
+def build_lower_port_xyz(
+    duct_angled_boundary: BluemiraWire,
+    duct_straight_boundary: BluemiraWire,
+    n_TF: int,
+    duct_angle: float,
+    wall_tk: float,
+    x_straight_end: float,
+) -> Tuple[BluemiraSolid]:
+    """
+    Build lower port solid geometry, including void (estimate)
+
+    Parameters
+    ----------
+    duct_angled_boundary:
+        Outer x-y boundary wire of the angled port cross-section
+    duct_straight_boundary:
+        Outer x-y boundary wire of the straight port cross-section
+    n_TF:
+        Number of TF coils
+    duct_angle:
+        Angle of the lower port duct [degrees]
+    wall_tk:
+        Wall thickness of the lower port
+    x_straight_end:
+        Radial coordinate of the end point of the straight duct
+
+    Returns
+    -------
+    duct:
+        Solid of the lower port duct
+    void:
+        Solid of the lower port void (estimate)
+    """
+    straight_duct_extrude_extent = (
+        x_straight_end - duct_straight_boundary.bounding_box.x_min
+    )
+    if straight_duct_extrude_extent <= 0:
+        BuilderError(
+            "End radial coordinates of the straight duct is lower than it's start"
+            " coordinate."
+        )
+
+    duct_angle = np.deg2rad(duct_angle)
+
+    angled_duct_face, angled_void_face = _face_and_void_from_outer_boundary(
+        duct_angled_boundary, wall_tk
+    )
+    straight_duct_face, straight_void_face = _face_and_void_from_outer_boundary(
+        duct_straight_boundary, wall_tk
+    )
+    straight_duct_backwall_face = BluemiraFace(duct_straight_boundary)
+
+    angled_bb = duct_angled_boundary.bounding_box
+    strait_bb = duct_straight_boundary.bounding_box
+    if duct_angle < -0.25 * np.pi:
+        # -2 to make sure it goes through
+        angled_duct_extrude_extent = abs(
+            (angled_bb.z_max - (strait_bb.z_max - 2.0)) / np.sin(duct_angle)
+        )
+    else:
+        # +2 to make sure it goes through
+        angled_duct_extrude_extent = abs(
+            (angled_bb.x_min - (strait_bb.x_min + 2.0)) / np.cos(duct_angle)
+        )
+
+    ext_vector = angled_duct_extrude_extent * np.array(
+        [np.cos(duct_angle), 0, np.sin(duct_angle)]
+    )
+    angled_duct = extrude_shape(angled_duct_face, ext_vector)
+    angled_void = extrude_shape(angled_void_face, ext_vector)
+
+    straight_duct_backwall = extrude_shape(
+        straight_duct_backwall_face,
+        straight_duct_backwall_face.normal_at() * wall_tk,
+    )
+
+    ext_vector = straight_duct_face.normal_at() * -straight_duct_extrude_extent
+    straight_duct_length = extrude_shape(straight_duct_face, ext_vector)
+    straight_duct_void = extrude_shape(straight_void_face, ext_vector)
+
+    straight_duct = boolean_fuse([straight_duct_backwall, straight_duct_length])
+
+    angled_pieces = boolean_cut(angled_duct, [straight_duct])
+    angled_top = sorted(
+        angled_pieces, key=lambda s: np.hypot(s.center_of_mass[0], s.center_of_mass[2])
+    )[0]
+    angled_void_pieces = boolean_cut(angled_void, [straight_duct_void])
+    angled_void_piece = sorted(angled_void_pieces, key=lambda s: -s.center_of_mass[2])[0]
+    void = boolean_fuse([angled_void_piece, straight_duct_void])
+
+    straight_with_hole = boolean_cut(straight_duct, [angled_top])[0]
+
+    duct = boolean_fuse([angled_top, straight_with_hole])
+    duct = boolean_cut(duct, [angled_void_piece])[0]
+
+    # rotate pieces to correct positions
+    duct.rotate(degree=180 / n_TF)
+    void.rotate(degree=180 / n_TF)
+    return duct, void

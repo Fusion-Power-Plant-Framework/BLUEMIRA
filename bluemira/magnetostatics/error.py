@@ -31,12 +31,8 @@ class MagnetostaticsError(BluemiraError):
     The base class for magnetostatics errors.
     """
 
-    pass
-
 
 class MagnetostaticsIntegrationError(MagnetostaticsError):
     """
     Error class for integration errors in magnetostatics.
     """
-
-    pass

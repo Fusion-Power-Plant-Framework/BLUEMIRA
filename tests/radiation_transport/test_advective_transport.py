@@ -19,8 +19,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -68,10 +68,10 @@ class TestChargedParticleRecursionSN:
     @classmethod
     def setup_class(cls):
         eq_name = "EU-DEMO_EOF.json"
-        filename = os.path.join(EQ_PATH, eq_name)
+        filename = Path(EQ_PATH, eq_name)
         eq = Equilibrium.from_eqdsk(filename)
         fw_name = "first_wall.json"
-        filename = os.path.join(TEST_PATH, fw_name)
+        filename = Path(TEST_PATH, fw_name)
         fw = Coordinates.from_json(filename)
 
         cls.params = {
@@ -153,10 +153,10 @@ class TestChargedParticleRecursionDN:
     @classmethod
     def setup_class(cls):
         eq_name = "DN-DEMO_eqref.json"
-        filename = os.path.join(EQ_PATH, eq_name)
+        filename = Path(EQ_PATH, eq_name)
         eq = Equilibrium.from_eqdsk(filename)
         fw_name = "DN_fw_shape.json"
-        filename = os.path.join(TEST_PATH, fw_name)
+        filename = Path(TEST_PATH, fw_name)
         fw = Coordinates.from_json(filename)
 
         cls.params = {

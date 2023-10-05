@@ -19,7 +19,6 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 import copy
-import os
 import re
 import tempfile
 from pathlib import Path
@@ -30,6 +29,7 @@ import numpy as np
 import pytest
 from scipy.interpolate import interp1d
 
+from bluemira.base.constants import EPS
 from bluemira.codes import plasmod
 from bluemira.codes.error import CodesError
 from bluemira.codes.plasmod.api import Run, Setup, Teardown
@@ -38,8 +38,8 @@ from tests._helpers import combine_text_mock_write_calls
 
 SOLVER_MODULE_REF = "bluemira.codes.plasmod.api"
 RUN_SUBPROCESS_REF = "bluemira.codes.interface.run_subprocess"
-DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-PARAMS_FILE = os.path.join(DATA_DIR, "params.json")
+DATA_DIR = Path(Path(__file__).parent, "data")
+PARAMS_FILE = Path(DATA_DIR, "params.json").as_posix()
 
 
 class TestPlasmodSetup:
@@ -58,9 +58,9 @@ class TestPlasmodSetup:
 
         setup = Setup(self.default_pf, problem_settings, self.input_file)
 
-        assert setup.inputs.v_loop == -1.5e-3
-        assert setup.inputs.q_heat == 1.5
-        assert setup.inputs.nx == 25
+        assert setup.inputs.v_loop == pytest.approx(-1.5e-3, rel=0, abs=EPS)
+        assert setup.inputs.q_heat == pytest.approx(1.5, rel=0, abs=EPS)
+        assert setup.inputs.nx == pytest.approx(25, rel=0, abs=EPS)
 
     def test_update_inputs_changes_input_values(self):
         new_inputs = {
@@ -73,9 +73,9 @@ class TestPlasmodSetup:
 
         setup.update_inputs(new_inputs)
 
-        assert setup.inputs.v_loop == -1.5e-3
-        assert setup.inputs.q_heat == 1.5
-        assert setup.inputs.nx == 25
+        assert setup.inputs.v_loop == pytest.approx(-1.5e-3, rel=0, abs=EPS)
+        assert setup.inputs.q_heat == pytest.approx(1.5, rel=0, abs=EPS)
+        assert setup.inputs.nx == pytest.approx(25, rel=0, abs=EPS)
 
     def test_update_inputs_shows_warning_if_input_unknown(self):
         new_inputs = {"not_a_param": -1.5e-3}
@@ -141,7 +141,7 @@ class TestPlasmodRun:
         self._run_subprocess_patch.stop()
 
     @pytest.mark.parametrize(
-        "arg, arg_num",
+        ("arg", "arg_num"),
         [
             ("plasmod_binary", 0),
             ("input.dat", 1),
@@ -187,12 +187,15 @@ class TestPlasmodTeardown:
         " i_flag           1\n"
     )
 
-    plasmod_prof_sample = "ntrit           0.00000000000E+0000      0.25000000000E-0001      0.50000000000E-0001\n"
+    plasmod_prof_sample = (
+        "ntrit           0.00000000000E+0000      0.25000000000E-0001     "
+        " 0.50000000000E-0001\n"
+    )
 
     def setup_method(self):
         self.default_pf = PlasmodSolverParams.from_json(PARAMS_FILE)
 
-    def mock_file_open(self, filename, mode="r"):
+    def mock_file_open(self, filename, mode="r"):  # noqa: ARG002
         if "prof" in str(filename):
             content = self.plasmod_prof_sample
         elif "file" in str(filename):
@@ -240,9 +243,8 @@ class TestPlasmodTeardown:
             "/path/to/output/",
         )
 
-        with mock.patch("builtins.open", side_effect=OSError):
-            with pytest.raises(CodesError):
-                getattr(teardown, run_mode_func)()
+        with mock.patch("builtins.open", side_effect=OSError), pytest.raises(CodesError):
+            getattr(teardown, run_mode_func)()
 
     @pytest.mark.parametrize("run_mode_func", ["run", "read"])
     def test_run_mode_function_opens_both_output_files(self, run_mode_func):
@@ -263,8 +265,8 @@ class TestPlasmodTeardown:
 
         assert open_mock.call_count == 2
         call_args = [call.args for call in open_mock.call_args_list]
-        assert (Path("/path/to/output/out.csv"), "r") in call_args
-        assert (Path("/path/to/output/prof.csv"), "r") in call_args
+        assert (Path("/path/to/output/out.csv"),) in call_args
+        assert (Path("/path/to/output/prof.csv"),) in call_args
 
     @pytest.mark.parametrize("i_flag", [2, 0, -1, -2, 100, -100])
     def test_CodesError_if_plasmod_status_flag_ne_1(self, i_flag):
@@ -283,9 +285,8 @@ class TestPlasmodTeardown:
             "/path/to/output/",
         )
 
-        with mock.patch("builtins.open", new=open_mock):
-            with pytest.raises(CodesError):
-                teardown.run()
+        with mock.patch("builtins.open", new=open_mock), pytest.raises(CodesError):
+            teardown.run()
 
     @mock.patch("bluemira.codes.interface.bluemira_warn")
     def test_warning_issued_if_output_param_is_missing(self, bm_warn_mock):
@@ -329,7 +330,7 @@ class TestPlasmodSolver:
         cls._run_subprocess_patch.stop()
 
     @pytest.mark.parametrize(
-        "key, default",
+        ("key", "default"),
         [
             ("binary", plasmod.BINARY),
             ("problem_settings", {}),
@@ -411,7 +412,7 @@ class TestPlasmodSolver:
 
         profiles = solver.get_profiles(profile_keys)
 
-        assert all(profile in profiles.keys() for profile in profile_keys)
+        assert all(profile in profiles for profile in profile_keys)
         assert all(isinstance(profile, np.ndarray) for profile in profiles.values())
 
     def test_plasmod_outputs_contains_unmapped_param(self):
@@ -467,8 +468,8 @@ class TestPlasmodSolver:
 
     @staticmethod
     def read_data_file(file_name):
-        data_dir = os.path.join(os.path.dirname(__file__), "data")
-        with open(os.path.join(data_dir, file_name), "r") as f:
+        data_dir = Path(Path(__file__).parent, "data")
+        with open(Path(data_dir, file_name)) as f:
             return f.read()
 
     @staticmethod
@@ -498,9 +499,10 @@ class TestPlasmodSolver:
         Find a parameter value from a plasmod input file via a regex.
         This should work with floats and ints.
         """
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             input_file = f.read()
         param_regex = param + r" +([0-9]+(\.[0-9]+E[\+-][0-9]+)?)"
         re_match = re.search(param_regex, input_file, re.MULTILINE)
         if re_match:
             return float(re_match.group(1))
+        return None

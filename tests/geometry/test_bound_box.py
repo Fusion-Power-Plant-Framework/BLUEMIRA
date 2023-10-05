@@ -29,6 +29,8 @@ from bluemira.geometry.tools import boolean_cut, make_polygon, revolve_shape
 
 
 class TestBoundingBox:
+    rng = np.random.default_rng()
+
     def test_null(self):
         x, y, z = np.zeros(100), np.zeros(100), np.zeros(100)
         xb, yb, zb = BoundingBox.from_xyz(x, y, z).get_box_arrays()
@@ -37,8 +39,8 @@ class TestBoundingBox:
         assert np.all(zb == 0)
 
     def test_random(self):
-        x, y, z = np.random.rand(100), np.random.rand(100), np.random.rand(100)
-        args = np.random.randint(0, 100, 8)
+        x, y, z = self.rng.random(100), self.rng.random(100), self.rng.random(100)
+        args = self.rng.integers(0, 100, 8)
         x[args] = np.array([-2, -2, -2, -2, 2, 2, 2, 2])
         y[args] = np.array([-2, -2, 2, 2, 2, -2, -2, 2])
         z[args] = np.array([-2, 2, -2, 2, -2, 2, -2, 2])
@@ -97,5 +99,5 @@ class TestHardBoundingBox:
 
     @pytest.mark.parametrize("tol", [0.0, -1e-9])
     def test_bad_tolerace(self, tol):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             self.wire.get_optimal_bounding_box(tolerance=tol)

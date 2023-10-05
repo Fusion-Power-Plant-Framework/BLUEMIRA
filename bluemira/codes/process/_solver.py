@@ -20,8 +20,8 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import copy
-import os
 from enum import auto
+from pathlib import Path
 from typing import Dict, List, Mapping, Tuple, Union
 
 import numpy as np
@@ -29,8 +29,7 @@ import numpy as np
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.base.parameter_frame import ParameterFrame
 from bluemira.codes.error import CodesError
-from bluemira.codes.interface import CodesSolver
-from bluemira.codes.interface import RunMode as BaseRunMode
+from bluemira.codes.interface import BaseRunMode, CodesSolver
 from bluemira.codes.process._run import Run
 from bluemira.codes.process._setup import Setup
 from bluemira.codes.process._teardown import Teardown
@@ -136,14 +135,14 @@ class Solver(CodesSolver):
 
         _build_config = copy.deepcopy(build_config)
         self.binary = _build_config.pop("binary", PROCESS_BINARY)
-        self.run_directory = _build_config.pop("run_dir", os.getcwd())
-        self.read_directory = _build_config.pop("read_dir", os.getcwd())
+        self.run_directory = _build_config.pop("run_dir", Path.cwd().as_posix())
+        self.read_directory = _build_config.pop("read_dir", Path.cwd().as_posix())
         self.template_in_dat = _build_config.pop(
             "template_in_dat", self.params.template_defaults
         )
         self.problem_settings = _build_config.pop("problem_settings", {})
         self.in_dat_path = _build_config.pop(
-            "in_dat_path", os.path.join(self.run_directory, "IN.DAT")
+            "in_dat_path", Path(self.run_directory, "IN.DAT").as_posix()
         )
         if len(_build_config) > 0:
             quoted_delim = "', '"

@@ -38,9 +38,10 @@ class TestLambdaTransformationMatrices:
     """
 
     global_cs = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    rng = np.random.default_rng()
 
     @staticmethod
-    def assert_maths_good(dcm, msg=""):
+    def assert_maths_good(dcm, msg=""):  # noqa: ARG004
         # First, test some mathematical properties such as orthagonality
         inv = np.linalg.inv(dcm)
         assert np.allclose(dcm.T, inv)
@@ -74,7 +75,7 @@ class TestLambdaTransformationMatrices:
         plt.show()
         plt.close(fig)
 
-    def assert_works_good(self, dcm, local, msg=""):
+    def assert_works_good(self, dcm, local, msg=""):  # noqa: ARG002
         global_check = dcm @ local
         local_check = dcm.T @ self.global_cs
         # Check matrix is what you want (performs as intended)
@@ -83,7 +84,7 @@ class TestLambdaTransformationMatrices:
 
     def test_math_property(self):
         for _ in range(100):
-            l_matrix = lambda_matrix(*np.random.rand(3))
+            l_matrix = lambda_matrix(*self.rng.random(3))
             assert np.allclose(l_matrix.T, np.linalg.inv(l_matrix))
 
     # =========================================================================
@@ -100,7 +101,7 @@ class TestLambdaTransformationMatrices:
 
     def test_random(self):
         for _ in range(10):
-            v = np.random.rand(3)
+            v = self.rng.random(3)
             dcm, local = _direction_cosine_matrix_debugging(*v, debug=True)
             self.assert_maths_good(dcm, msg=f"coords: {v}")
 
@@ -111,7 +112,7 @@ class TestLambdaTransformationMatrices:
 
     def test_big_random(self):
         for _ in range(100):
-            v = 10000 * np.random.rand(3)
+            v = 10000 * self.rng.random(3)
             dcm, local = _direction_cosine_matrix_debugging(*v, debug=True)
             self.assert_maths_good(dcm, msg=f"coords: {v}")
             self.assert_works_good(dcm, local, msg=f"coords: {v}")
@@ -144,13 +145,13 @@ class TestLambdaTransformationMatrices:
 
     def test_random2(self):
         for _ in range(100):
-            v = np.random.rand(3)
+            v = self.rng.random(3)
             dcm = _direction_cosine_matrix(*v)
             self.assert_maths_good(dcm, msg=f"coords: {v}")
 
     def test_big_random2(self):
         for _ in range(100):
-            v = 10000 * np.random.rand(3)
+            v = 10000 * self.rng.random(3)
             dcm = _direction_cosine_matrix(*v)
             self.assert_maths_good(dcm, msg=f"coords: {v}")
 

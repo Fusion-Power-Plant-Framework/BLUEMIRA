@@ -22,9 +22,10 @@
 Wall Silhouette Parameterisations
 """
 import copy
-from typing import Dict
+from typing import ClassVar, Dict, Optional
 
 from bluemira.geometry.parameterisations import PolySpline, PrincetonD
+from bluemira.utilities.opt_variables import OptVarVarDictValueT, VarDictT
 
 
 class WallPolySpline(PolySpline):
@@ -33,7 +34,7 @@ class WallPolySpline(PolySpline):
     based on the PolySpline parameterisation.
     """
 
-    _defaults = {
+    _defaults: ClassVar = {
         "x1": {"value": 5.8},
         "x2": {"value": 12.1},
         "z2": {"value": 0},
@@ -46,32 +47,31 @@ class WallPolySpline(PolySpline):
         "bottom": {"value": 0.2},
     }
 
-    def __init__(self, var_dict: Dict = None):
-        if var_dict is None:
-            var_dict = {}
+    def __init__(self, var_dict: Optional[VarDictT] = None):
         defaults = copy.deepcopy(self._defaults)
-        defaults.update(var_dict)
+        if var_dict:
+            defaults.update(var_dict)
         super().__init__(defaults)
 
-        ib_radius = self.variables["x1"].value
-        ob_radius = self.variables["x2"].value
-        z2 = self.variables["z2"].value
-        height = self.variables["height"].value
-        top = self.variables["top"].value
-        upper = self.variables["upper"].value
-        dz = self.variables["dz"].value
-        tilt = self.variables["tilt"].value
-        lower = self.variables["lower"].value
-        bottom = self.variables["bottom"].value
+        ib_radius = self.variables.x1.value
+        ob_radius = self.variables.x2.value
+        z2 = self.variables.z2.value
+        height = self.variables.height.value
+        top = self.variables.top.value
+        upper = self.variables.upper.value
+        dz = self.variables.dz.value
+        tilt = self.variables.tilt.value
+        lower = self.variables.lower.value
+        bottom = self.variables.bottom.value
 
-        if not self.variables["x1"].fixed:
+        if not self.variables.x1.fixed:
             self.adjust_variable(
                 "x1",
                 ib_radius,
                 lower_bound=ib_radius - 2,
                 upper_bound=ib_radius * 1.1,
             )
-        if not self.variables["x2"].fixed:
+        if not self.variables.x2.fixed:
             self.adjust_variable(
                 "x2",
                 value=ob_radius,
@@ -101,30 +101,29 @@ class WallPrincetonD(PrincetonD):
     based on the PrincetonD parameterisation.
     """
 
-    _defaults = {
+    _defaults: ClassVar[Dict[str, OptVarVarDictValueT]] = {
         "x1": {"value": 5.8},
         "x2": {"value": 12.1},
         "dz": {"value": -0.5},
     }
 
-    def __init__(self, var_dict: Dict = None):
-        if var_dict is None:
-            var_dict = {}
+    def __init__(self, var_dict: Optional[VarDictT] = None):
         defaults = copy.deepcopy(self._defaults)
-        defaults.update(var_dict)
+        if var_dict:
+            defaults.update(var_dict)
         super().__init__(defaults)
 
-        ib_radius = self.variables["x1"].value
-        ob_radius = self.variables["x2"].value
-        if not self.variables["x1"].fixed:
+        ib_radius = self.variables.x1.value
+        ob_radius = self.variables.x2.value
+        if not self.variables.x1.fixed:
             self.adjust_variable(
                 "x1", ib_radius, lower_bound=ib_radius - 2, upper_bound=ib_radius * 1.02
             )
 
-        if not self.variables["x2"].fixed:
+        if not self.variables.x2.fixed:
             self.adjust_variable(
                 "x2", ob_radius, lower_bound=ob_radius * 0.98, upper_bound=ob_radius + 2
             )
         self.adjust_variable(
-            "dz", self.variables["dz"].value, lower_bound=-3, upper_bound=3
+            "dz", self.variables.dz.value, lower_bound=-3, upper_bound=3
         )

@@ -67,7 +67,7 @@ def clip_nb(
     """
     if val < val_min:
         return val_min
-    elif val > val_max:
+    if val > val_max:
         return val_max
     return val
 
@@ -147,8 +147,8 @@ def greens_psi(
     zc: Union[float, np.ndarray],
     x: Union[float, np.ndarray],
     z: Union[float, np.ndarray],
-    d_xc: float = 0,
-    d_zc: float = 0,
+    d_xc: float = 0,  # noqa: ARG001
+    d_zc: float = 0,  # noqa: ARG001
 ) -> Union[float, np.ndarray]:
     """
     Calculate poloidal flux at (x, z) due to a unit current at (xc, zc)
@@ -205,8 +205,8 @@ def greens_dpsi_dx(
     zc: Union[float, np.ndarray],
     x: Union[float, np.ndarray],
     z: Union[float, np.ndarray],
-    d_xc: float = 0,
-    d_zc: float = 0,
+    d_xc: float = 0,  # noqa: ARG001
+    d_zc: float = 0,  # noqa: ARG001
 ) -> Union[float, np.ndarray]:
     """
     Calculate the radial derivative of the poloidal flux at (x, z)
@@ -263,8 +263,8 @@ def greens_dpsi_dz(
     zc: Union[float, np.ndarray],
     x: Union[float, np.ndarray],
     z: Union[float, np.ndarray],
-    d_xc: float = 0,
-    d_zc: float = 0,
+    d_xc: float = 0,  # noqa: ARG001
+    d_zc: float = 0,  # noqa: ARG001
 ) -> Union[float, np.ndarray]:
     """
     Calculate the vertical derivative of the poloidal flux at (x, z)

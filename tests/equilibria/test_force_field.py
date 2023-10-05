@@ -47,7 +47,7 @@ class TestForceField:
             CustomProfile(np.linspace(0, 1, 10), np.linspace(1, 0, 10), 9, 6, I_p=0.0),
         )
 
-    def test_Fz(self):  # noqa :N802
+    def test_Fz(self):
         """
         Check the vertical forces between a Helmholtz pair.
         Verbose: https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=6472319

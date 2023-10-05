@@ -24,8 +24,8 @@ File I/O functions and some path operations
 """
 
 import os
-import pathlib
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 BM_ROOT = "!BM_ROOT!"
@@ -33,11 +33,10 @@ SUB_DIRS = ["equilibria", "neutronics", "systems_code", "CAD", "plots", "geometr
 
 
 def _get_relpath(folder: str, subfolder: str) -> str:
-    path = os.sep.join([folder, subfolder])
-    if os.path.isdir(path):
-        return path
-    else:
-        raise ValueError(f"{path} Not a valid folder.")
+    path = Path(folder, subfolder)
+    if path.is_dir():
+        return path.as_posix()
+    raise ValueError(f"{path} Not a valid folder.")
 
 
 def get_bluemira_root() -> str:
@@ -51,9 +50,8 @@ def get_bluemira_root() -> str:
     """
     import bluemira
 
-    path = list(bluemira.__path__)[0]
-    root = os.path.split(path)[0]
-    return root
+    path = next(iter(bluemira.__path__))
+    return os.path.split(path)[0]
 
 
 def try_get_bluemira_private_data_root() -> Union[str, None]:
@@ -133,11 +131,10 @@ def try_get_bluemira_path(
     """
     try:
         return get_bluemira_path(path, subfolder)
-    except ValueError as error:
+    except ValueError:
         if allow_missing:
             return None
-        else:
-            raise error
+        raise
 
 
 def make_bluemira_path(path: str = "", subfolder: str = "bluemira") -> str:
@@ -154,7 +151,7 @@ def make_bluemira_path(path: str = "", subfolder: str = "bluemira") -> str:
     try:
         return _get_relpath(bpath, path)
     except ValueError:
-        os.makedirs(os.sep.join([bpath, path]))
+        Path(bpath, path).mkdir(parents=True)
         return _get_relpath(bpath, path)
 
 
@@ -177,7 +174,7 @@ def force_file_extension(file_path: str, valid_extensions: Union[str, List[str]]
     if isinstance(valid_extensions, str):
         valid_extensions = [valid_extensions]
 
-    if not os.path.splitext(file_path)[1].casefold() in valid_extensions:
+    if Path(file_path).suffix.casefold() not in valid_extensions:
         file_path += valid_extensions[0]
 
     return file_path
@@ -198,10 +195,7 @@ def get_files_by_ext(folder: str, extension: str) -> List[str]:
     -------
     The list of full path filenames found in the folder
     """
-    files = []
-    for file in os.listdir(folder):
-        if file.endswith(extension):
-            files.append(file)
+    files = [file for file in os.listdir(folder) if file.endswith(extension)]
     if len(files) == 0:
         from bluemira.base.look_and_feel import bluemira_warn
 
@@ -209,7 +203,7 @@ def get_files_by_ext(folder: str, extension: str) -> List[str]:
     return files
 
 
-def file_name_maker(filename: str, lowercase: bool = False) -> str:
+def file_name_maker(filename: Union[str, Path], lowercase: bool = False) -> str:
     """
     Ensure the file name is acceptable.
 
@@ -224,18 +218,17 @@ def file_name_maker(filename: str, lowercase: bool = False) -> str:
     -------
     Full filename or path, corrected
     """
-    filename = filename.replace(" ", "_")
+    filename = Path(filename.replace(" ", "_"))
     if lowercase:
-        split = filename.split(os.sep)
-        filename = os.sep.join(split[:-1])
-        filename = os.sep.join([filename, split[-1].lower()])
-    return filename
+        split = filename.parts
+        filename = Path(split[:-1], split[-1].lower())
+    return filename.as_posix()
 
 
 @contextmanager
 def working_dir(directory: str):
     """Change working directory"""
-    current_dir = os.getcwd()
+    current_dir = Path.cwd().as_posix()
     try:
         os.chdir(directory)
         yield
@@ -320,15 +313,15 @@ class FileManager:
         -------
         The dictionary of subfolder names to full paths (useful shorthand)
         """
-        root = os.path.join(subfolder, "reactors", self.reactor_name)
-        pathlib.Path(root).mkdir(parents=True, exist_ok=True)
+        root = Path(subfolder, "reactors", self.reactor_name).as_posix()
+        Path(root).mkdir(parents=True, exist_ok=True)
 
         mapping = {"root": root}
         for sub in SUB_DIRS:
-            folder = os.sep.join([root, sub])
-            pathlib.Path(folder).mkdir(exist_ok=True)
+            folder = Path(root, sub)
+            Path(folder).mkdir(exist_ok=True)
 
-            mapping[sub] = folder
+            mapping[sub] = folder.as_posix()
 
         return mapping
 
@@ -345,7 +338,7 @@ class FileManager:
 
         Also builds the relevant directory structure.
         """
-        pathlib.Path(self._reference_data_root).mkdir(parents=True, exist_ok=True)
+        Path(self._reference_data_root).mkdir(parents=True, exist_ok=True)
         self.reference_data_dirs = self.make_reactor_folder(self._reference_data_root)
 
     def create_generated_data_paths(self):
@@ -354,7 +347,7 @@ class FileManager:
 
         Also builds the relevant directory structure.
         """
-        pathlib.Path(self._generated_data_root).mkdir(parents=True, exist_ok=True)
+        Path(self._generated_data_root).mkdir(parents=True, exist_ok=True)
         self.generated_data_dirs = self.make_reactor_folder(self._generated_data_root)
 
     def build_dirs(self, create_reference_data_paths: bool = False):
@@ -367,7 +360,9 @@ class FileManager:
             self.set_reference_data_paths()
         self.create_generated_data_paths()
 
-    def get_path(self, sub_dir_name: str, path: str, make_dir: bool = False) -> str:
+    def get_path(
+        self, sub_dir_name: str, path: Union[Path, str], make_dir: bool = False
+    ) -> str:
         """
         Get a path within the generated data sub-sdirectories.
 
@@ -387,9 +382,7 @@ class FileManager:
         -------
         The path within the data sub-directories.
         """
-        path = os.sep.join(
-            [self.generated_data_dirs[sub_dir_name], path.replace("/", os.sep)]
-        )
-        if make_dir and not os.path.isdir(path):
-            os.makedirs(path)
-        return path
+        path = Path(self.generated_data_dirs[sub_dir_name], path)
+        if make_dir and not path.is_dir():
+            path.mkdir(parents=True)
+        return path.as_posix()

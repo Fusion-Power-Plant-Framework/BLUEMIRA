@@ -62,8 +62,7 @@ class BluemiraShell(BluemiraGeo):
 
         if check_reverse:
             return self._check_reverse(shell)
-        else:
-            return shell
+        return shell
 
     def _create_shape(self):
         """Part.Shell: shape of the object as a primitive shell"""
@@ -73,9 +72,7 @@ class BluemiraShell(BluemiraGeo):
     def _create(cls, obj: cadapi.apiShell, label=""):
         if isinstance(obj, cadapi.apiShell):
             faces = obj.Faces
-            bmfaces = []
-            for face in faces:
-                bmfaces.append(BluemiraFace._create(face))
+            bmfaces = [BluemiraFace._create(face) for face in faces]
 
             bmshell = BluemiraShell(None, label=label)
             bmshell._set_shape(obj)
@@ -119,7 +116,7 @@ class BluemiraShell(BluemiraGeo):
         """
         The shells of the shell. By definition a tuple of itself.
         """
-        return tuple([self])
+        return (self,)
 
     @property
     def solids(self) -> tuple:

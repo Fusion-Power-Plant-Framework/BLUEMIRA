@@ -42,7 +42,7 @@ class TestCircularArcCurrentSource:
             cls.dx,
             cls.dz,
             cls.xc,
-            2 * np.pi,
+            360,
             cls.current,
         )
 

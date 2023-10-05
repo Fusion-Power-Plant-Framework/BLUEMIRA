@@ -20,7 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import json
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -39,9 +39,10 @@ DATA = get_bluemira_path("equilibria/test_data", subfolder="tests")
 
 
 def test_find_local_minima():
+    rng = np.random.default_rng()
     for _ in range(10):
         array = np.ones((100, 100))
-        i, j = np.random.randint(0, 99, 2)
+        i, j = rng.integers(0, 99, 2)
         array[i, j] = 0
         ii, jj = find_local_minima(array)
         assert len(ii) == 1
@@ -74,8 +75,7 @@ def test_inv_2x2_jacobian():
 
 class TestFindLCFSSeparatrix:
     def test_other_grid(self):
-        fn = os.sep.join([DATA, "eqref_OOB.json"])
-        sof = Equilibrium.from_eqdsk(fn)
+        sof = Equilibrium.from_eqdsk(Path(DATA, "eqref_OOB.json"))
         psi = sof.psi()
         o_points, x_points = sof.get_OX_points(psi)
         grid_tol = np.hypot(sof.grid.dx, sof.grid.dz)
@@ -97,8 +97,7 @@ class TestFindLCFSSeparatrix:
             assert np.amin(distances) <= grid_tol
 
     def test_double_null(self):
-        fn = os.sep.join([DATA, "DN-DEMO_eqref.json"])
-        sof = Equilibrium.from_eqdsk(fn)
+        sof = Equilibrium.from_eqdsk(Path(DATA, "DN-DEMO_eqref.json"))
         psi = sof.psi()
         o_points, x_points = sof.get_OX_points(psi)
         grid_tol = np.hypot(sof.grid.dx, sof.grid.dz)
@@ -127,9 +126,8 @@ class TestFindLCFSSeparatrix:
 
 class TestInPlasma:
     def test_recursion(self):
-        fn = os.sep.join([DATA, "in_plasma_test.json"])
-        with open(fn, "rb") as f:
-            data = json.load(f)  # noqa :S301
+        with open(Path(DATA, "in_plasma_test.json"), "rb") as f:
+            data = json.load(f)
         x, z = np.array(data["X"]), np.array(data["Z"])
         lcfs = np.array(data["LCFS"])
         result = np.array(data["result"])
@@ -142,10 +140,8 @@ class TestInPlasma:
 class TestGetLegs:
     @classmethod
     def setup_class(cls):
-        filename = os.sep.join([DATA, "eqref_OOB.json"])
-        cls.sn_eq = Equilibrium.from_eqdsk(filename)
-        filename = os.sep.join([DATA, "DN-DEMO_eqref.json"])
-        cls.dn_eq = Equilibrium.from_eqdsk(filename)
+        cls.sn_eq = Equilibrium.from_eqdsk(Path(DATA, "eqref_OOB.json"))
+        cls.dn_eq = Equilibrium.from_eqdsk(Path(DATA, "DN-DEMO_eqref.json"))
 
     @pytest.mark.parametrize("n_layers", [2, 3, 5])
     def test_single_null(self, n_layers):
@@ -189,10 +185,7 @@ class TestGetLegs:
         assert "upper_outer" in legs
         for name, leg_group in legs.items():
             assert len(leg_group) == n_layers
-            if "lower" in name:
-                x_p = x_points[0]
-            else:
-                x_p = x_points[1]
+            x_p = x_points[0] if "lower" in name else x_points[1]
             for leg in leg_group:
                 self.assert_valid_leg(leg, x_p)
 

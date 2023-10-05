@@ -22,6 +22,8 @@
 Test PlasmaFaceDesigner
 """
 
+from typing import ClassVar
+
 import pytest
 
 from bluemira.geometry.tools import make_polygon
@@ -29,7 +31,7 @@ from eudemo.ivc import PlasmaFaceDesigner
 
 
 class TestPlasmaFaceDesigner:
-    _params = {
+    _params: ClassVar = {
         "div_type": {"value": "SN", "unit": ""},
         "c_rm": {"value": 0.02, "unit": "m"},
     }

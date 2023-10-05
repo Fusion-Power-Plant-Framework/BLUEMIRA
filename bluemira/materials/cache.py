@@ -25,7 +25,7 @@ Classes and methods to load, store, and retrieve materials.
 
 import copy
 import json
-from typing import Any, Dict
+from typing import Any, ClassVar, Dict
 
 from bluemira.materials.material import (
     BePebbleBed,
@@ -51,9 +51,9 @@ class MaterialCache:
     Extend the `available_classes` attribute to load custom classes.
     """
 
-    _material_dict = {}
+    _material_dict: ClassVar = {}
 
-    default_classes = [
+    default_classes = (
         Void,
         MassFractionMaterial,
         NbTiSuperconductor,
@@ -63,7 +63,7 @@ class MaterialCache:
         BePebbleBed,
         Plasma,
         HomogenisedMixture,
-    ]
+    )
 
     def __init__(self):
         self.available_classes = {
@@ -83,9 +83,9 @@ class MaterialCache:
         -------
         The dictionary containing the loaded materials.
         """
-        with open(path, "r") as fh:
+        with open(path) as fh:
             mats_dict = json.load(fh)
-        return {name: self.load_from_dict(name, mats_dict) for name in mats_dict.keys()}
+        return {name: self.load_from_dict(name, mats_dict) for name in mats_dict}
 
     def load_from_dict(
         self, mat_name: str, mats_dict: Dict[str, Any], overwrite: bool = True
@@ -107,9 +107,9 @@ class MaterialCache:
             )
 
         if issubclass(self.available_classes[material_class], HomogenisedMixture):
-            self.mixture_from_dict(mat_name, mats_dict)
+            self.mixture_from_dict(mat_name, mats_dict, overwrite=overwrite)
         else:
-            self.material_from_dict(mat_name, mats_dict)
+            self.material_from_dict(mat_name, mats_dict, overwrite=overwrite)
 
     def mixture_from_dict(
         self, mat_name: str, mats_dict: Dict[str, Any], overwrite: bool = True
@@ -165,8 +165,7 @@ class MaterialCache:
         """
         if clone:
             return copy.deepcopy(self._material_dict[name])
-        else:
-            return self._material_dict[name]
+        return self._material_dict[name]
 
     def _update_cache(
         self, mat_name: str, mat: SerialisedMaterial, overwrite: bool = True

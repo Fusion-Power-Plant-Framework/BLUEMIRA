@@ -114,7 +114,9 @@ class Designer(abc.ABC, Generic[_DesignerReturnT]):
         try:
             return getattr(self, mode)
         except AttributeError:
-            raise ValueError(f"{type(self).__name__} has no run mode '{mode}'.")
+            raise ValueError(
+                f"{type(self).__name__} has no run mode '{mode}'."
+            ) from None
 
 
 def run_designer(

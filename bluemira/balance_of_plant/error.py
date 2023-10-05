@@ -30,5 +30,3 @@ class BalanceOfPlantError(BluemiraError):
     """
     Base error for the balance_of_plant module.
     """
-
-    pass

@@ -482,19 +482,21 @@ class EUDEMOFuelCycleModel:
             "$m_{T_{start}}$",
             xy=[0, self.m_T_req],
             xytext=[1, self.m_T_req + 4],
-            arrowprops=dict(headwidth=0.5, width=0.5, facecolor="k", shrink=0.1),
+            arrowprops={"headwidth": 0.5, "width": 0.5, "facecolor": "k", "shrink": 0.1},
         )
 
         if np.isfinite(self.t_d):
-            if self.t_d < 0.8 * self.DEMO_t[-1]:
-                s = 1
-            else:
-                s = -1.5
+            s = 1 if self.t_d < 0.8 * self.DEMO_t[-1] else -1.5
             ax.annotate(
                 "$t_{d}$",
                 xy=[self.t_d, 0],
                 xytext=[self.t_d + s, 4],
-                arrowprops=dict(headwidth=0.5, width=0.5, facecolor="k", shrink=0.1),
+                arrowprops={
+                    "headwidth": 0.5,
+                    "width": 0.5,
+                    "facecolor": "k",
+                    "shrink": 0.1,
+                },
             )
             if self.arg_t_d is not None:
                 self._plot_t_d(ax=ax)
@@ -502,15 +504,17 @@ class EUDEMOFuelCycleModel:
             ax.annotate("$t_{d}=\\infty$", xy=[self.t[-1] - 3, 2])
 
         if np.isfinite(self.t_infl):
-            if self.t_d < 0.8 * self.DEMO_t[-1]:
-                s = 1
-            else:
-                s = 1.5
+            s = 1 if self.t_d < 0.8 * self.DEMO_t[-1] else 1.5
             ax.annotate(
                 "$t_{infl}$",
                 xy=[self.t_infl, 0],
                 xytext=[self.t_infl + s, 2],
-                arrowprops=dict(headwidth=0.5, width=0.5, facecolor="k", shrink=0.1),
+                arrowprops={
+                    "headwidth": 0.5,
+                    "width": 0.5,
+                    "facecolor": "k",
+                    "shrink": 0.1,
+                },
             )
             if self.arg_t_infl is not None:
                 self._plot_t_infl(self.arg_t_infl, ax=ax)
@@ -548,7 +552,7 @@ class EUDEMOFuelCycleModel:
         """
         Plot correction for compressed time inventories
         """
-        idx = np.where(t - np.roll(t, 1) > thresh)[0] - 2
+        idx = np.nonzero(t - np.roll(t, 1) > thresh)[0] - 2
         inventory = inventory.copy()
         for i in idx:
             inventory[i + 1] = inventory[i]
@@ -564,7 +568,7 @@ class EUDEMOFuelCycleModel:
         Doubling time of the tritium fuel cycle [y]
 
         \t:math:`t_{d} = t[\\text{max}(\\text{argmin}\\lvert m_{T_{store}}-I_{TFV_{min}}-m_{T_{start}}\\rvert))]`
-        """  # noqa :W505
+        """  # noqa: W505, E501
         t_req = self.m_T[0] + self.params.I_tfv_min
         m_temp = self.m_T[::-1]
         try:

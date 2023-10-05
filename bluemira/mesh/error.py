@@ -37,12 +37,8 @@ class MeshOptionsError(MeshError):
     Error class for use with meshing options.
     """
 
-    pass
-
 
 class MeshConversionError(MeshError):
     """
     Error class for use with mesh conversions.
     """
-
-    pass

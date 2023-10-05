@@ -23,8 +23,8 @@ Test first wall silhouette designer.
 """
 
 import copy
-import os
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -43,14 +43,14 @@ OPTIMISER_MODULE_REF = "bluemira.builders.tf_coils"
 
 
 class TestTFCoilDesigner:
-    CONFIG = {
+    CONFIG: ClassVar = {
         "param_class": "TripleArc",
         "variables_map": {},
         "run_mode": "mock",
         "name": "First Wall",
         "problem_class": f"{OPTIMISER_MODULE_REF}::RippleConstrainedLengthGOP",
     }
-    PARAMS = {
+    PARAMS: ClassVar = {
         "R_0": {"value": 10.5, "unit": "m"},
         "r_tf_current_ib": {"value": 1, "unit": "m"},
         "r_tf_in": {"value": 3.2, "unit": "m"},
@@ -71,7 +71,7 @@ class TestTFCoilDesigner:
 
     @classmethod
     def setup_class(cls):
-        cls.eq = Equilibrium.from_eqdsk(os.path.join(EQDATA, "eqref_OOB.json"))
+        cls.eq = Equilibrium.from_eqdsk(Path(EQDATA, "eqref_OOB.json"))
         _, cls.x_points = find_OX_points(cls.eq.x, cls.eq.z, cls.eq.psi())
         cls.lcfs = make_polygon(cls.eq.get_LCFS().xyz, closed=True)
         cls.vvts_koz = make_circle(10, center=(15, 0, 0), axis=(0.0, 1.0, 0.0))
@@ -81,7 +81,7 @@ class TestTFCoilDesigner:
         config.update(
             {
                 "run_mode": "read",
-                "file_path": os.path.join(DATA, "tf_coils_TripleArc_18.json"),
+                "file_path": Path(DATA, "tf_coils_TripleArc_18.json").as_posix(),
             }
         )
 
@@ -107,7 +107,7 @@ class TestTFCoilDesigner:
             keep_out_zone=self.vvts_koz,
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             designer.execute()
 
     def test_run_no_problem_class(self):
@@ -122,7 +122,7 @@ class TestTFCoilDesigner:
             keep_out_zone=self.vvts_koz,
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             designer.execute()
 
     def test_run_check_parameters(self):
@@ -200,7 +200,7 @@ def centreline_setup():
 
 
 class TestTFCoilBuilder:
-    params = {
+    params: ClassVar = {
         "R_0": {"value": 9, "unit": "m"},
         "z_0": {"value": 0.0, "unit": "m"},
         "B_0": {"value": 6, "unit": "T"},
@@ -214,7 +214,7 @@ class TestTFCoilBuilder:
         "tk_tf_side": {"value": 0.1, "unit": "m"},
     }
 
-    @pytest.mark.parametrize("centreline, wp_xs", zip(*centreline_setup()))
+    @pytest.mark.parametrize(("centreline", "wp_xs"), zip(*centreline_setup()))
     def test_components_and_segments(self, centreline, wp_xs):
         builder = TFCoilBuilder(self.params, {}, centreline, wp_xs)
         tf_coil = builder.build()

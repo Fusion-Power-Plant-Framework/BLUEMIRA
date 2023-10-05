@@ -20,13 +20,13 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 import functools
 import json
-import os
 from copy import deepcopy
+from pathlib import Path
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
-READ_DIR = os.path.join(DATA_DIR, "read")
-RUN_DIR = os.path.join(DATA_DIR, "run")
-PARAM_FILE = os.path.join(DATA_DIR, "params.json")
+DATA_DIR = Path(Path(__file__).parent, "test_data").as_posix()
+READ_DIR = Path(DATA_DIR, "read").as_posix()
+RUN_DIR = Path(DATA_DIR, "run").as_posix()
+PARAM_FILE = Path(DATA_DIR, "params.json").as_posix()
 FAKE_PROCESS_DICT = {  # Fake for the output of PROCESS's `get_dicts()`
     "DICT_DESCRIPTIONS": {"some_property": "its description"}
 }
@@ -44,7 +44,7 @@ FAKE_PROCESS_DICT = {  # Fake for the output of PROCESS's `get_dicts()`
 @functools.lru_cache
 def mfile_data():
     """Load and cache MFile data stored in the JSON file."""
-    with open(os.path.join(DATA_DIR, "mfile_data.json"), "r") as f:
+    with open(Path(DATA_DIR, "mfile_data.json")) as f:
         return json.load(f)
 
 

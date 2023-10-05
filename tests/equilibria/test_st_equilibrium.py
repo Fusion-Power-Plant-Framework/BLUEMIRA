@@ -25,6 +25,7 @@ bluemira ST equilibrium recursion test
 
 import copy
 import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -54,12 +55,11 @@ class TestSTEquilibrium:
         # Load reference and input data
         root = get_bluemira_root()
         private = os.path.split(root)[0]
-        private = os.sep.join([private, "bluemira-private-data/equilibria/STEP_SPR_08"])
+        private = Path(private, "bluemira-private-data/equilibria/STEP_SPR_08")
         eq_name = "STEP_SPR08_BLUEPRINT.json"
-        filename = os.sep.join([private, eq_name])
-        cls.eq_blueprint = Equilibrium.from_eqdsk(filename)
+        cls.eq_blueprint = Equilibrium.from_eqdsk(Path(private, eq_name))
         jeq_name = "jetto.eqdsk_out"
-        filename = os.sep.join([private, jeq_name])
+        filename = Path(private, jeq_name)
         cls.profiles = CustomProfile.from_eqdsk(filename)
         cls.jeq_dict = EQDSKInterface.from_file(filename)
 

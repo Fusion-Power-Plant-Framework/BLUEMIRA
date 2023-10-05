@@ -25,10 +25,12 @@ from bluemira.geometry.plane import BluemiraPlane
 
 
 class TestPlacement:
+    rng = np.random.default_rng()
+
     def test_instantiation(self):
-        base = np.random.random((1, 3))[0]
+        base = self.rng.random((1, 3))[0]
         # create a random axis. A constant value has been added to avoid [0,0,0]
-        axis = np.random.random((1, 3))[0] + 0.01
+        axis = self.rng.random((1, 3))[0] + 0.01
         plane = BluemiraPlane(base, axis)
         np.testing.assert_equal(plane.base, base)
         np.testing.assert_almost_equal(plane.axis * np.linalg.norm(axis), axis)
@@ -52,15 +54,15 @@ class TestPlacement:
         np.testing.assert_equal(xz_plane.base, xz_plane_2.base)
 
     def test_move_plane(self):
-        v = np.array([np.random.random(), np.random.random(), np.random.random()])
+        v = np.array([self.rng.random(), self.rng.random(), self.rng.random()])
         plane = BluemiraPlane([0, 0, 0], [0, 0, 1])
         plane.move(v)
         np.testing.assert_equal(plane.base, v)
 
     def test_create_face(self):
-        base = np.random.random((1, 3))[0]
+        base = self.rng.random((1, 3))[0]
         # create a random axis. A constant value has been added to avoid [0,0,0]
-        axis = np.random.random((1, 3))[0] + 0.01
+        axis = self.rng.random((1, 3))[0] + 0.01
         plane = BluemiraPlane(base, axis)
         lx = 20
         ly = 10
@@ -71,9 +73,9 @@ class TestPlacement:
         )
 
     def test_convert_to_placement(self):
-        factor = np.random.uniform(1, 100)
-        base = np.random.random((1, 3))[0] * factor
-        axis = np.random.random((1, 3))[0] * factor
+        factor = self.rng.uniform(1, 100)
+        base = self.rng.random((1, 3))[0] * factor
+        axis = self.rng.random((1, 3))[0] * factor
 
         plane = BluemiraPlane(base=base, axis=axis)
         placement = plane.to_placement()

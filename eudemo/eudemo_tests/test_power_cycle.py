@@ -38,7 +38,7 @@ class TestEUDEMOPowerCycle:
         Parameter("f_core_rad_fw", 0.3, "", source="test"),
         Parameter("f_sol_rad", 0.2, "", source="test"),
         Parameter("f_sol_rad_fw", 0.9, "", source="test"),
-        Parameter("f_sol_rad_ch", 0.2, "", source="test"),
+        Parameter("f_sol_ch_fw", 0.2, "", source="test"),
         Parameter("f_fw_aux", 0.05, "", source="test"),
         Parameter("blanket_type", "HCPB", "", source="test"),
         Parameter("bb_p_inlet", 8e6, "Pa", source="test"),

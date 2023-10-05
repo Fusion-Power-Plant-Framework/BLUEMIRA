@@ -27,12 +27,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from bluemira.codes.interface import CodesSolver
 from bluemira.codes.utilities import get_code_interface
 
 if TYPE_CHECKING:
     from bluemira.base.builder import BuildConfig
     from bluemira.base.parameter_frame import Parameter as ParameterFrame
+    from bluemira.codes.interface import CodesSolver
 
 
 def systems_code_solver(

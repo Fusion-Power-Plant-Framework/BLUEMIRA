@@ -24,10 +24,19 @@ api for plotting using matplotlib
 """
 from __future__ import annotations
 
-import copy
-import pprint
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional, Union
+from dataclasses import dataclass
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d as a3
@@ -37,9 +46,9 @@ from matplotlib.patches import PathPatch
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.display.error import DisplayError
 from bluemira.display.palettes import BLUE_PALETTE
-from bluemira.geometry import bound_box, face
+from bluemira.display.tools import Options
+from bluemira.geometry import bound_box, face, wire
 from bluemira.geometry import placement as _placement
-from bluemira.geometry import wire
 from bluemira.geometry.coordinates import (
     Coordinates,
     _parse_to_xyz_array,
@@ -50,224 +59,179 @@ from bluemira.geometry.coordinates import (
 if TYPE_CHECKING:
     from bluemira.geometry.base import BluemiraGeo
 
-DEFAULT_PLOT_OPTIONS = {
-    # flags to enable points, wires, and faces plot
-    "show_points": False,
-    "show_wires": True,
-    "show_faces": True,
-    # matplotlib set of options to plot points, wires, and faces. If an empty dictionary
-    # is specified, the default color plot of matplotlib is used.
-    "point_options": {"s": 10, "facecolors": "red", "edgecolors": "black", "zorder": 30},
-    "wire_options": {"color": "black", "linewidth": 0.5, "zorder": 20},
-    "face_options": {"color": "blue", "zorder": 10},
-    # reference plotting placement
-    "view": "xz",
-    # discretization properties for plotting wires (and faces)
-    "ndiscr": 100,
-    "byedges": True,
-}
-
 UNIT_LABEL = "[m]"
 X_LABEL = f"x {UNIT_LABEL}"
 Y_LABEL = f"y {UNIT_LABEL}"
 Z_LABEL = f"z {UNIT_LABEL}"
 
 
-def get_default_options():
+class ViewDescriptor:
+    """Descriptor for placements in dataclass"""
+
+    def __init__(self):
+        self._default = tuple(
+            getattr(_placement.XZY, attr) for attr in ("base", "axis", "angle", "label")
+        )
+
+    def __set_name__(self, _, name: str):
+        """Set the attribute name from a dataclass"""
+        self._name = "_" + name
+
+    def __get__(self, obj: Any, _) -> Tuple[np.ndarray, np.ndarray, float, str]:
+        """Get the view tuple"""
+        if obj is None:
+            return self._default
+
+        return getattr(obj, self._name, self._default)
+
+    def __set__(self, obj: Any, value: Union[str, tuple, _placement.BluemiraPlacement]):
+        """Set the view"""
+        if isinstance(value, str):
+            if value.startswith("xy"):
+                value = _placement.XYZ
+            elif value.startswith("xz"):
+                value = _placement.XZY
+            elif value.startswith("yz"):
+                value = _placement.YZX
+            else:
+                raise DisplayError(f"{value} is not a valid view")
+
+        if isinstance(value, tuple):
+            value = _placement.BluemiraPlacement(*value)
+
+        setattr(
+            obj,
+            self._name,
+            tuple(getattr(value, attr) for attr in ("base", "axis", "angle", "label")),
+        )
+
+
+class DictOptionsDescriptor:
+    """Keep defaults for options unless explicitly overwritten
+
+    Notes
+    -----
+    The default will be reinforced if value set to new dictionary.
+    Otherwise as a dictionary is mutable will act in the normal way.
+
+    .. code-block:: python
+
+      po = PlotOptions()
+      po.wire_options["linewidth"] = 0.1  # overrides default
+      po.wire_options["zorder"] = 2  # adds new zorder option
+      # setting a new dictionary resets the defaults with zorder overridden
+      po.wire_options = {'zorder': 1}
+      del po.wire_options["linewidth"]  # linewidth unset
+
+    No checks are done on the contents of the dictionary.
+
     """
-    Returns the instance as a dictionary.
-    """
-    output_dict = {}
-    for k, v in DEFAULT_PLOT_OPTIONS.items():
-        # FreeCAD Placement that is contained in BluemiraPlacement cannot be
-        # deepcopied by copy.deepcopy. For this reason, its deepcopy method must be
-        # used in this case.
-        if isinstance(v, _placement.BluemiraPlacement):
-            output_dict[k] = v.deepcopy()
-        else:
-            output_dict[k] = copy.deepcopy(v)
-    return output_dict
+
+    def __init__(self, default_factory: Optional[Callable[[], Dict[str, Any]]] = None):
+        self.default = {} if default_factory is None else default_factory()
+
+    def __set_name__(self, _, name: str):
+        """Set the attribute name from a dataclass"""
+        self._name = "_" + name
+
+    def __get__(
+        self, obj: Any, _
+    ) -> Union[Callable[[], Dict[str, Any]], Dict[str, Any]]:
+        """Get the options dictionary"""
+        if obj is None:
+            return lambda: self.default
+
+        return getattr(obj, self._name, self.default)
+
+    def __set__(
+        self, obj: Any, value: Union[Callable[[], Dict[str, Any]], Dict[str, Any]]
+    ):
+        """Set the options dictionary"""
+        if callable(value):
+            value = value()
+        default = getattr(obj, self._name, self.default)
+        setattr(obj, self._name, {**default, **value})
 
 
-class DisplayOptions:
-    """
-    The options that are available for displaying objects.
-    """
-
-    _options = None
-
-    def as_dict(self):
-        """
-        Returns the instance as a dictionary.
-        """
-        return copy.deepcopy(self._options)
-
-    def modify(self, **kwargs):
-        """
-        Function to override plotting options.
-        """
-        if kwargs:
-            for k in kwargs:
-                if k in self._options:
-                    self._options[k] = kwargs[k]
-
-    def __repr__(self):
-        """
-        Representation string of the DisplayOptions.
-        """
-        return f"{self.__class__.__name__}({pprint.pformat(self._options)}" + "\n)"
-
-
-# Note: This class cannot be an instance of dataclasses 'cause it fails when inserting
-# a field that is a Base.Placement (or something that contains a Base.Placement). The
-# given error is "TypeError: can't pickle Base.Placement objects"
-class PlotOptions(DisplayOptions):
+@dataclass
+class DefaultPlotOptions:
     """
     The options that are available for plotting objects in 2D.
 
     Parameters
     ----------
-    show_points: bool
-        If True, points are plotted. By default True.
-    show_wires: bool
+    show_points:
+        If True, points are plotted. By default False.
+    show_wires:
         If True, wires are plotted. By default True.
-    show_faces: bool
+    show_faces:
         If True, faces are plotted. By default True.
-    point_options: Dict
+    point_options:
         Dictionary with matplotlib options for points. By default  {"s": 10,
         "facecolors": "blue", "edgecolors": "black"}
-    wire_options: Dict
+    wire_options:
         Dictionary with matplotlib options for wires. By default {"color": "black",
         "linewidth": "0.5"}
-    face_options: Dict
+    face_options:
         Dictionary with matplotlib options for faces. By default {"color": "red"}
-    view: [str, Placement]
+    view:
         The reference view for plotting. As string, possible
         options are "xy", "xz", "yz". By default 'xz'.
-    ndiscr: int
+    ndiscr:
         The number of points to use when discretising a wire or face.
-    byedges: bool
+    byedges:
         If True then wires or faces will be discretised respecting their edges.
     """
 
+    # flags to enable points, wires, and faces plot
+    show_points: bool = False
+    show_wires: bool = True
+    show_faces: bool = True
+    # matplotlib set of options to plot points, wires, and faces. If an empty dictionary
+    # is specified, the default color plot of matplotlib is used.
+    point_options: DictOptionsDescriptor = DictOptionsDescriptor(
+        lambda: {
+            "s": 10,
+            "facecolors": "red",
+            "edgecolors": "black",
+            "zorder": 30,
+        }
+    )
+    wire_options: DictOptionsDescriptor = DictOptionsDescriptor(
+        lambda: {"color": "black", "linewidth": 0.5, "zorder": 20}
+    )
+    face_options: DictOptionsDescriptor = DictOptionsDescriptor(
+        lambda: {"color": "blue", "zorder": 10}
+    )
+    # discretization properties for plotting wires (and faces)
+    ndiscr: int = 100
+    byedges: bool = True
+    # View of object
+    view: ViewDescriptor = ViewDescriptor()
+
+    @property
+    def view_placement(self) -> _placement.BluemiraPlacement:
+        """Get view as BluemiraPlacement"""
+        return _placement.BluemiraPlacement(*self.view)
+
+
+class PlotOptions(Options):
+    """
+    The options that are available for plotting objects
+    """
+
+    __slots__ = ()
+
     def __init__(self, **kwargs):
-        self._options = get_default_options()
-        self.modify(**kwargs)
+        self._options = DefaultPlotOptions()
+        super().__init__(**kwargs)
 
-    def as_dict(self):
-        """
-        Returns the instance as a dictionary.
-        """
-        output_dict = {}
-        for k, v in self._options.items():
-            # FreeCAD Placement that is contained in BluemiraPlacement cannot be
-            # deepcopied by copy.deepcopy. For this reason, its deepcopy method must
-            # to be used in this case.
-            if isinstance(v, _placement.BluemiraPlacement):
-                output_dict[k] = v.deepcopy()
-            else:
-                output_dict[k] = copy.deepcopy(v)
-        return output_dict
 
-    @property
-    def show_points(self):
-        """
-        If true, points are plotted.
-        """
-        return self._options["show_points"]
-
-    @show_points.setter
-    def show_points(self, val):
-        self._options["show_points"] = val
-
-    @property
-    def show_wires(self):
-        """
-        If True, wires are plotted.
-        """
-        return self._options["show_wires"]
-
-    @show_wires.setter
-    def show_wires(self, val):
-        self._options["show_wires"] = val
-
-    @property
-    def show_faces(self):
-        """
-        If True, faces are plotted.
-        """
-        return self._options["show_faces"]
-
-    @show_faces.setter
-    def show_faces(self, val):
-        self._options["show_faces"] = val
-
-    @property
-    def point_options(self):
-        """
-        Dictionary with matplotlib options for points.
-        """
-        return self._options["point_options"]
-
-    @point_options.setter
-    def point_options(self, val):
-        self._options["point_options"] = val
-
-    @property
-    def wire_options(self):
-        """
-        Dictionary with matplotlib options for wires.
-        """
-        return self._options["wire_options"]
-
-    @wire_options.setter
-    def wire_options(self, val):
-        self._options["wire_options"] = val
-
-    @property
-    def face_options(self):
-        """
-        Dictionary with matplotlib options for faces.
-        """
-        return self._options["face_options"]
-
-    @face_options.setter
-    def face_options(self, val):
-        self._options["face_options"] = val
-
-    @property
-    def view(self):
-        """
-        The reference view for plotting. As string, possible options are "xyz",
-        "xz", "yz". By default 'xz'.
-        """
-        return self._options["view"]
-
-    @view.setter
-    def view(self, val):
-        self._options["view"] = val
-
-    @property
-    def ndiscr(self):
-        """
-        The number of points to use when discretising a wire or face.
-        """
-        return self._options["ndiscr"]
-
-    @ndiscr.setter
-    def ndiscr(self, val):
-        self._options["ndiscr"] = val
-
-    @property
-    def byedges(self):
-        """
-        If True then wires or faces will be discretised respecting their edges.
-        """
-        return self._options["byedges"]
-
-    @byedges.setter
-    def byedges(self, val):
-        self._options["byedges"] = val
+def get_default_options() -> PlotOptions:
+    """
+    Returns the default plot options.
+    """
+    return PlotOptions()
 
 
 # Note: when plotting points, it can happen that markers are not centred properly as
@@ -277,7 +241,7 @@ class BasePlotter(ABC):
     Base utility plotting class
     """
 
-    _CLASS_PLOT_OPTIONS = {}
+    _CLASS_PLOT_OPTIONS: ClassVar = {}
 
     def __init__(self, options: Optional[PlotOptions] = None, **kwargs):
         # discretization points representing the shape in global coordinate system
@@ -289,30 +253,22 @@ class BasePlotter(ABC):
             PlotOptions(**self._CLASS_PLOT_OPTIONS) if options is None else options
         )
         self.options.modify(**kwargs)
-        self.set_view(self.options._options["view"])
+        self.set_view(self.options._options.view)
 
     def set_view(self, view):
         """Set the plotting view"""
-        if view == "xy":
-            self.options._options["view"] = _placement.XYZ
-        elif view == "xz":
-            self.options._options["view"] = _placement.XZY
-        elif view == "yz":
-            self.options._options["view"] = _placement.YZX
-        elif isinstance(view, _placement.BluemiraPlacement):
-            self.options._options["view"] = view
+        if isinstance(view, (str, _placement.BluemiraPlacement)):
+            self.options._options.view = view
         else:
             DisplayError(f"{view} is not a valid view")
 
     @abstractmethod
     def _check_obj(self, obj):
         """Internal function that check if obj is an instance of the correct class"""
-        pass
 
     @abstractmethod
     def _check_options(self):
         """Internal function that check if it is needed to plot something"""
-        pass
 
     def initialize_plot_2d(self, ax=None):
         """Initialize the plot environment"""
@@ -322,7 +278,8 @@ class BasePlotter(ABC):
         else:
             self.ax = ax
 
-    def show(self):
+    @staticmethod
+    def show():
         """Function to show a plot"""
         plt.show(block=True)
 
@@ -332,7 +289,6 @@ class BasePlotter(ABC):
         Internal function that makes the plot. It fills self._data and
         self._data_to_plot
         """
-        pass
 
     @abstractmethod
     def _make_plot_2d(self):
@@ -340,13 +296,12 @@ class BasePlotter(ABC):
         Internal function that makes the plot. It should use self._data and
         self._data_to_plot, so _populate_data should be called before.
         """
-        pass
 
     def _set_aspect_2d(self):
         self.ax.set_aspect("equal")
 
     def _set_label_2d(self):
-        axis = np.abs(self.options.view.axis)
+        axis = np.abs(self.options.view_placement.axis)
         if np.allclose(axis, (1, 0, 0)):
             self.ax.set_xlabel(X_LABEL)
             self.ax.set_ylabel(Z_LABEL)
@@ -406,7 +361,6 @@ class BasePlotter(ABC):
         """Internal function that makes the plot. It should use self._data and
         self._data_to_plot, so _populate_data should be called before.
         """
-        pass
 
     def plot_3d(self, obj, ax=None, show: bool = True):
         """3D plotting method"""
@@ -437,9 +391,10 @@ class PointsPlotter(BasePlotter):
     Base utility plotting class for points
     """
 
-    _CLASS_PLOT_OPTIONS = {"show_points": True}
+    _CLASS_PLOT_OPTIONS: ClassVar = {"show_points": True}
 
-    def _check_obj(self, obj):
+    @staticmethod
+    def _check_obj(obj):  # noqa: ARG004
         # TODO: create a function that checks if the obj is a cloud of 3D or 2D points
         return True
 
@@ -453,7 +408,7 @@ class PointsPlotter(BasePlotter):
         points = _parse_to_xyz_array(points).T
         self._data = points
         # apply rotation matrix given by options['view']
-        rot = self.options.view.to_matrix().T
+        rot = self.options.view_placement.to_matrix().T
         temp_data = np.c_[self._data, np.ones(len(self._data))]
         self._data_to_plot = temp_data.dot(rot).T
         self._data_to_plot = self._data_to_plot[0:2]
@@ -463,7 +418,7 @@ class PointsPlotter(BasePlotter):
             self.ax.scatter(*self._data_to_plot, **self.options.point_options)
         self._set_aspect_2d()
 
-    def _make_plot_3d(self, *args, **kwargs):
+    def _make_plot_3d(self, *args, **kwargs):  # noqa: ARG002
         if self.options.show_points:
             self.ax.scatter(*self._data.T, **self.options.point_options)
         self._set_aspect_3d()
@@ -474,11 +429,12 @@ class WirePlotter(BasePlotter):
     Base utility plotting class for bluemira wires
     """
 
-    _CLASS_PLOT_OPTIONS = {"show_points": False}
+    _CLASS_PLOT_OPTIONS: ClassVar = {"show_points": False}
 
-    def _check_obj(self, obj):
+    @staticmethod
+    def _check_obj(obj):
         if not isinstance(obj, wire.BluemiraWire):
-            raise ValueError(f"{obj} must be a BluemiraWire")
+            raise TypeError(f"{obj} must be a BluemiraWire")
         return True
 
     def _check_options(self):
@@ -494,8 +450,8 @@ class WirePlotter(BasePlotter):
         # # change of view integrated in PointsPlotter2D. Not necessary here.
         # new_wire.change_placement(self.options._options['view'])
         pointsw = new_wire.discretize(
-            ndiscr=self.options._options["ndiscr"],
-            byedges=self.options._options["byedges"],
+            ndiscr=self.options._options.ndiscr,
+            byedges=self.options._options.byedges,
         ).T
         self._pplotter._populate_data(pointsw)
         self._data = pointsw
@@ -523,11 +479,12 @@ class WirePlotter(BasePlotter):
 class FacePlotter(BasePlotter):
     """Base utility plotting class for bluemira faces"""
 
-    _CLASS_PLOT_OPTIONS = {"show_points": False, "show_wires": False}
+    _CLASS_PLOT_OPTIONS: ClassVar = {"show_points": False, "show_wires": False}
 
-    def _check_obj(self, obj):
+    @staticmethod
+    def _check_obj(obj):
         if not isinstance(obj, face.BluemiraFace):
-            raise ValueError(f"{obj} must be a BluemiraFace")
+            raise TypeError(f"{obj} must be a BluemiraFace")
         return True
 
     def _check_options(self):
@@ -557,8 +514,8 @@ class FacePlotter(BasePlotter):
 
         self._data_to_plot = [[], []]
         for w in self._wplotters:
-            self._data_to_plot[0] += w._data_to_plot[0].tolist() + [None]
-            self._data_to_plot[1] += w._data_to_plot[1].tolist() + [None]
+            self._data_to_plot[0] += [*w._data_to_plot[0].tolist(), None]
+            self._data_to_plot[1] += [*w._data_to_plot[1].tolist(), None]
 
     def _make_plot_2d(self):
         if self.options.show_faces:
@@ -583,13 +540,14 @@ class FacePlotter(BasePlotter):
 class ComponentPlotter(BasePlotter):
     """Base utility plotting class for bluemira faces"""
 
-    _CLASS_PLOT_OPTIONS = {"show_points": False, "show_wires": False}
+    _CLASS_PLOT_OPTIONS: ClassVar = {"show_points": False, "show_wires": False}
 
-    def _check_obj(self, obj):
+    @staticmethod
+    def _check_obj(obj):
         import bluemira.base.components
 
         if not isinstance(obj, bluemira.base.components.Component):
-            raise ValueError(f"{obj} must be a BluemiraComponent")
+            raise TypeError(f"{obj} must be a BluemiraComponent")
         return True
 
     def _check_options(self):
@@ -835,7 +793,7 @@ def _get_plan_dims(array):
         temp = []
         for i, k in enumerate(axes):  # both all equal to something
             c = array[i]
-            if c[0] != 0.0:
+            if c[0] != 0.0:  # noqa: PLR2004
                 temp.append(k)
         if len(temp) == 1:
             dims.append(temp[0])
@@ -885,10 +843,10 @@ def plot_coordinates(coords, ax=None, points=False, **kwargs):
         fill = kwargs.get("fill", False)
         ec = kwargs.get("edgecolor", "r")
 
-    if ndim == 2 and ax is None:
+    if ndim == 2 and ax is None:  # noqa: PLR2004
         ax = kwargs.get("ax", plt.gca())
 
-    if ndim == 3 or (ndim == 2 and hasattr(ax, "zaxis")):
+    if ndim == 3 or (ndim == 2 and hasattr(ax, "zaxis")):  # noqa: PLR2004
         kwargs = {
             "edgecolor": ec,
             "facecolor": fc,
@@ -900,7 +858,7 @@ def plot_coordinates(coords, ax=None, points=False, **kwargs):
         _plot_3d(coords, ax=ax, **kwargs)
 
     a, b = _get_plan_dims(coords.xyz)
-    x, y = [getattr(coords, c) for c in [a, b]]
+    x, y = (getattr(coords, c) for c in [a, b])
     marker = "o" if points else None
     ax.set_xlabel(a + " [m]")
     ax.set_ylabel(b + " [m]")

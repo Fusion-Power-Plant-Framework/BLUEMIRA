@@ -82,14 +82,16 @@ class Grid:
         if x_min > x_max:
             print("")  # stdout flusher
             bluemira_warn(
-                f"x_min should be < x_max {x_min:.2f} > {x_max:.2f}. Switching x_min and x_max."
+                f"x_min should be < x_max {x_min:.2f} > {x_max:.2f}. Switching x_min and"
+                " x_max."
             )
             x_min, x_max = x_max, x_min
 
         if z_min > z_max:
             print("")  # stdout flusher
             bluemira_warn(
-                f"z_min should be < z_max {z_min:.2f} > {z_max:.2f}. Switching z_min and z_max."
+                f"z_min should be < z_max {z_min:.2f} > {z_max:.2f}. Switching z_min and"
+                " z_max."
             )
             z_min, z_max = z_max, z_min
 
@@ -231,7 +233,7 @@ class Grid:
         """
         Plot the Grid object onto an ax.
         """
-        from bluemira.equilibria.plotting import GridPlotter  # noqa (circular import)
+        from bluemira.equilibria.plotting import GridPlotter
 
         return GridPlotter(self, ax=ax, **kwargs)
 

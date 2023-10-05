@@ -26,6 +26,7 @@ import pytest
 from scipy.special import ellipe
 
 import bluemira.codes._freecadapi as cadapi
+from bluemira.base.constants import EPS
 from bluemira.geometry.face import BluemiraFace
 from bluemira.geometry.tools import (
     boolean_cut,
@@ -67,17 +68,17 @@ class TestGeometry:
 
     def test_create_wire(self):
         wire = make_polygon(self.square_points, label="test", closed=False)
-        assert wire.length == 3.0
-        assert wire.area == 0.0
-        assert wire.volume == 0.0
+        assert wire.length == pytest.approx(3.0, rel=0, abs=EPS)
+        assert wire.area == pytest.approx(0.0, rel=0, abs=EPS)
+        assert wire.volume == pytest.approx(0.0, rel=0, abs=EPS)
         assert wire.label == "test"
         assert not wire.is_closed()
 
     def test_close_wire(self):
         wire = make_polygon(self.square_points, label="test", closed=True)
-        assert wire.length == 4.0
-        assert wire.area == 0.0
-        assert wire.volume == 0.0
+        assert wire.length == pytest.approx(4.0, rel=0, abs=EPS)
+        assert wire.area == pytest.approx(0.0, rel=0, abs=EPS)
+        assert wire.volume == pytest.approx(0.0, rel=0, abs=EPS)
         assert wire.label == "test"
         assert wire.is_closed()
 
@@ -89,20 +90,20 @@ class TestGeometry:
         wire2 = make_polygon(half_sq_2, label="wire2", closed=False)
         wire3 = wire1 + wire2
         wire3.label = "wire3"
-        assert wire1.length == 2.0
-        assert wire2.length == 1.0
-        assert wire3.length == 3.0
+        assert wire1.length == pytest.approx(2.0, rel=0, abs=EPS)
+        assert wire2.length == pytest.approx(1.0, rel=0, abs=EPS)
+        assert wire3.length == pytest.approx(3.0, rel=0, abs=EPS)
         wire1 += wire2
-        assert wire1.length == 3.0
+        assert wire1.length == pytest.approx(3.0, rel=0, abs=EPS)
 
     def test_make_circle(self):
         radius = 2.0
         center = [1, 0, 3]
         axis = [0, 1, 0]
         bm_circle = make_circle(radius=radius, center=center, axis=axis)
-        assert bm_circle.length == 2 * math.pi * radius
+        assert bm_circle.length == pytest.approx(2 * math.pi * radius, rel=0, abs=EPS)
 
-    def test_make_circle_arc_3P(self):  # noqa N802
+    def test_make_circle_arc_3P(self):
         p1 = [0, 0, 0]
         p2 = [1, 1, 0]
         p3 = [2, 0, 0]
@@ -163,7 +164,7 @@ class TestGeometry:
         assert wire_copy.label == "wire_copy"
         assert wire_deepcopy.label == "wire_deepcopy"
 
-    params_for_fuse_wires = [
+    params_for_fuse_wires = (
         pytest.param(
             [
                 make_polygon([[0, 1, 1], [0, 0, 1], [0, 0, 0]], label="wire1"),
@@ -201,14 +202,14 @@ class TestGeometry:
             id="intersection",
             marks=pytest.mark.xfail(reason="wires internal intersection"),
         ),
-    ]
+    )
 
-    @pytest.mark.parametrize("test_input, expected", params_for_fuse_wires)
+    @pytest.mark.parametrize(("test_input", "expected"), params_for_fuse_wires)
     def test_fuse_wires(self, test_input, expected):
         wire_fuse = boolean_fuse(test_input)
         assert (wire_fuse.length, wire_fuse.is_closed()) == expected
 
-    params_for_fuse_faces = [
+    params_for_fuse_faces = (
         pytest.param(
             param_face(
                 [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
@@ -242,9 +243,9 @@ class TestGeometry:
             (6, 1.75),
             id="semi intersection",
         ),
-    ]
+    )
 
-    @pytest.mark.parametrize("test_input, expected", params_for_fuse_faces)
+    @pytest.mark.parametrize(("test_input", "expected"), params_for_fuse_faces)
     def test_fuse_faces(self, test_input, expected):
         face_fuse = boolean_fuse(test_input)
         assert (
@@ -252,7 +253,7 @@ class TestGeometry:
             face_fuse.area,
         ) == expected
 
-    params_for_cut_wires = [
+    params_for_cut_wires = (
         pytest.param(
             [
                 make_polygon([[0, 1, 1], [0, 0, 1], [0, 0, 0]], label="wire1"),
@@ -287,15 +288,15 @@ class TestGeometry:
             [(2, False), (1, False)],
             id="intersection",
         ),
-    ]
+    )
 
-    @pytest.mark.parametrize("test_input, expected", params_for_cut_wires)
+    @pytest.mark.parametrize(("test_input", "expected"), params_for_cut_wires)
     def test_cut_wires(self, test_input, expected):
         wire_cut = boolean_cut(test_input[0], test_input[1:])
         output = [(w.length, w.is_closed()) for w in wire_cut]
         assert output == expected
 
-    params_for_cut_faces = [
+    params_for_cut_faces = (
         pytest.param(
             param_face(
                 [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
@@ -329,9 +330,9 @@ class TestGeometry:
             [(4, 0.75)],
             id="semi intersection",
         ),
-    ]
+    )
 
-    @pytest.mark.parametrize("test_input, expected", params_for_cut_faces)
+    @pytest.mark.parametrize(("test_input", "expected"), params_for_cut_faces)
     def test_cut_faces(self, test_input, expected):
         face_cut = boolean_cut(test_input[0], test_input[1:])
         output = [(f.length, f.area) for f in face_cut]

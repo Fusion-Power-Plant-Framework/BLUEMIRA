@@ -27,10 +27,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Tuple
 
 if TYPE_CHECKING:
-    from bluemira.structural.material import StructuralMaterial
-    from bluemira.structural.crosssection import CrossSection
-    from bluemira.geometry.coordinates import Coordinates
     from matplotlib.pyplot import Axes
+
+    from bluemira.geometry.coordinates import Coordinates
+    from bluemira.structural.crosssection import CrossSection
+    from bluemira.structural.material import StructuralMaterial
 
 from copy import deepcopy
 
@@ -144,8 +145,7 @@ class Geometry:
                 f"Closest node: {closest} at {proximity:.2f} m away"
             )
 
-        else:
-            return self.nodes[arg].id_number
+        return self.nodes[arg].id_number
 
     def move_node(self, node_id: int, dx: float = 0.0, dy: float = 0.0, dz: float = 0.0):
         """
@@ -558,5 +558,4 @@ class DeformedGeometry(Geometry):
         """
         if stress is None:
             return DeformedGeometryPlotter(self, ax=ax, **kwargs)
-        else:
-            return StressDeformedGeometryPlotter(self, ax=ax, stress=stress, **kwargs)
+        return StressDeformedGeometryPlotter(self, ax=ax, stress=stress, **kwargs)

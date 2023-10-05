@@ -33,7 +33,7 @@ from bluemira.structural.material import SS316
 from bluemira.structural.model import FiniteElementModel, check_matrix_condition
 
 
-def test_illconditioned(caplog):
+def test_illconditioned():
     # http://www.ti3.tu-harburg.de/paper/rump/NiRuOi11.pdf
     k1 = np.array([[1, -6, 7, -9], [1, -5, 0, 0], [0, 1, -5, 0], [0, 0, 1, -5]])
     k2 = np.array(
@@ -55,7 +55,7 @@ def test_illconditioned(caplog):
 
 
 class TestFEModel:
-    @pytest.mark.parametrize("sup, dof", zip([False, True], [5, 6]))
+    @pytest.mark.parametrize(("sup", "dof"), zip([False, True], [5, 6]))
     def test_errors(self, sup, dof):
         """
         Checks rigid-body motion detection (insufficient constraints)
@@ -125,9 +125,7 @@ class TestFEModel:
         load_case.add_node_load(1, m4, "Mz")
         load_case.add_node_load(2, m6, "Mz")
         # Check individual element stiffness matrices
-        k = []
-        for element in model.geometry.elements:
-            k.append(element.k_matrix_glob)
+        k = [element.k_matrix_glob for element in model.geometry.elements]
 
         def treat_matrix(k_matrix):
             # Get rid of all useless rows and columns (for this problem)
@@ -154,7 +152,7 @@ class TestFEModel:
         deflections = result.deflections
 
         # Check that there are three displacements
-        non_zero = np.where(deflections != 0)[0]
+        non_zero = np.nonzero(deflections)[0]
         assert len(non_zero) == 3
 
         # Check that the displacements occur in the correct places

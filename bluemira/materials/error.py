@@ -30,5 +30,3 @@ class MaterialsError(BluemiraError):
     """
     Error type for the materials module.
     """
-
-    pass

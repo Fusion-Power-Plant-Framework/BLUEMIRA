@@ -32,6 +32,8 @@ from typing import TYPE_CHECKING, Iterable, List, Optional, Tuple, Type, Union
 if TYPE_CHECKING:
     from matplotlib.pyplot import Axes
 
+    from bluemira.equilibria.file import EQDSKInterface
+
 import numpy as np
 
 from bluemira.base.look_and_feel import bluemira_warn
@@ -44,7 +46,6 @@ from bluemira.equilibria.coils._tools import (
 )
 from bluemira.equilibria.constants import I_MIN
 from bluemira.equilibria.error import EquilibriaError
-from bluemira.equilibria.file import EQDSKInterface
 from bluemira.equilibria.plotting import CoilGroupPlotter
 from bluemira.utilities.tools import flatten_iterable, yintercept
 
@@ -65,7 +66,8 @@ def symmetrise_coilset(coilset: CoilSet) -> CoilSet:
     """
     if not check_coilset_symmetric(coilset):
         bluemira_warn(
-            "Symmetrising a CoilSet which is not purely symmetric about z=0. This can result in undesirable behaviour."
+            "Symmetrising a CoilSet which is not purely symmetric about z=0. This can"
+            " result in undesirable behaviour."
         )
     coilset = deepcopy(coilset)
 
@@ -76,7 +78,7 @@ def symmetrise_coilset(coilset: CoilSet) -> CoilSet:
     for coil, count in zip(coilset._coils, counts):
         if count == 1:
             new_coils.append(coil)
-        elif count == 2:
+        elif count == 2:  # noqa: PLR2004
             if isinstance(coil, SymmetricCircuit):
                 new_coils.append(coil)
             elif isinstance(coil, Coil):
@@ -269,6 +271,7 @@ class CoilGroup(CoilGroupFieldsMixin):
 
         if not _top_level:
             return removed_names + to_remove
+        return None
 
     @classmethod
     def from_group_vecs(cls, eqdsk: EQDSKInterface):
@@ -301,29 +304,28 @@ class CoilGroup(CoilGroupFieldsMixin):
                         control=False,
                     )
                 )
-            else:
-                if dx != dz:  # Rough and ready
-                    cscoils.append(
-                        Coil(
-                            eqdsk.xc[i],
-                            eqdsk.zc[i],
-                            current=eqdsk.Ic[i],
-                            dx=dx,
-                            dz=dz,
-                            ctype="CS",
-                        )
-                    )
-                else:
-                    coil = Coil(
+            elif dx != dz:  # Rough and ready
+                cscoils.append(
+                    Coil(
                         eqdsk.xc[i],
                         eqdsk.zc[i],
                         current=eqdsk.Ic[i],
                         dx=dx,
                         dz=dz,
-                        ctype="PF",
+                        ctype="CS",
                     )
-                    coil.fix_size()  # Oh ja
-                    pfcoils.append(coil)
+                )
+            else:
+                coil = Coil(
+                    eqdsk.xc[i],
+                    eqdsk.zc[i],
+                    current=eqdsk.Ic[i],
+                    dx=dx,
+                    dz=dz,
+                    ctype="PF",
+                )
+                coil.fix_size()  # Oh ja
+                pfcoils.append(coil)
 
         coils = pfcoils
         coils.extend(cscoils)
@@ -368,7 +370,7 @@ class CoilGroup(CoilGroupFieldsMixin):
 
         for i, d in enumerate(self._pad_size):
             if _quad_list[i].ndim > 1:
-                pad = tuple((0, 0) for _ in range(_quad_list[i].ndim - 1)) + ((0, d),)
+                pad = (*tuple((0, 0) for _ in range(_quad_list[i].ndim - 1)), (0, d))
             else:
                 pad = (0, d)
             _quad_list[i] = np.pad(_quad_list[i], pad)
@@ -588,8 +590,7 @@ class CoilGroup(CoilGroupFieldsMixin):
         xb = self.__getter("x_boundary")
         if self.n_coils() > 1:
             return xb.reshape(-1, 4)
-        else:
-            return xb
+        return xb
 
     @property
     def z_boundary(self) -> np.ndarray:
@@ -597,8 +598,7 @@ class CoilGroup(CoilGroupFieldsMixin):
         zb = self.__getter("z_boundary")
         if self.n_coils() > 1:
             return zb.reshape(-1, 4)
-        else:
-            return zb
+        return zb
 
     @property
     def _flag_sizefix(self) -> np.ndarray:
@@ -770,7 +770,7 @@ class SymmetricCircuit(Circuit):
 
         if len(coils) == 1:
             coils = (coils[0], deepcopy(coils[0]))
-        if len(coils) != 2:
+        if len(coils) != 2:  # noqa: PLR2004
             raise EquilibriaError(
                 f"Wrong number of coils to create a {type(self).__name__}"
             )
@@ -905,9 +905,7 @@ class CoilSet(CoilSetFieldsMixin, CoilGroup):
         """Set control coils"""
         names = self.name
         if isinstance(control_names, List):
-            self._control_ind = np.arange(
-                len([names.index(c) for c in control_names])
-            ).tolist()
+            self._control_ind = [names.index(c) for c in control_names]
         elif control_names or control_names is None:
             self._control_ind = np.arange(len(names)).tolist()
         else:
@@ -921,7 +919,7 @@ class CoilSet(CoilSetFieldsMixin, CoilGroup):
             names = c.name
             if isinstance(names, List):
                 # is subset of list
-                if isinstance(c, Circuit) and any([n in self.control for n in names]):
+                if isinstance(c, Circuit) and any(n in self.control for n in names):
                     coils.append(c)
                 else:
                     coils.extend(c.get_control_coils()._coils)
@@ -929,7 +927,7 @@ class CoilSet(CoilSetFieldsMixin, CoilGroup):
                 coils.append(c)
         return CoilSet(*coils)
 
-    def get_coiltype(self, ctype):
+    def get_coiltype(self, ctype):  # noqa: PLR6301
         """Get coils by coils type"""
         return CoilSet(*super()._get_coiltype(ctype))
 

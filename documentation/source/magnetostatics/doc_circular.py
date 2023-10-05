@@ -11,7 +11,7 @@ source = CircularArcCurrentSource(
     breadth=0.25,
     depth=1,
     radius=2,
-    dtheta=3 * np.pi / 2,
+    dtheta=270,
     current=1e6,
 )
 

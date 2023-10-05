@@ -109,8 +109,8 @@ class CyclicSymmetry:
 
     def _build_t_matrix(self, n):
         t_m = np.zeros((n, n))
-        for i in range(int(n / 6)):
-            i *= 6
+        for _i in range(int(n / 6)):
+            i = _i * 6
             t_m[i : i + 3, i : i + 3] = self.t_block
             t_m[i + 3 : i + 6, i + 3 : i + 6] = self.t_block
         self.t_matrix = t_m

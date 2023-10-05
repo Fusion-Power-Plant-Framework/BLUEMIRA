@@ -20,6 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import asdict, dataclass
+from typing import ClassVar
 
 import pytest
 
@@ -32,7 +33,7 @@ class TestParameterMapping:
         self.pm = ParameterMapping("Name", send=True, recv=False)
 
     @pytest.mark.parametrize(
-        "attr, value",
+        ("attr", "value"),
         zip(
             ["name", "mynewattr", "_frozen", "unit"],
             ["NewName", "Hello", ["custom", "list"], "MW"],
@@ -44,7 +45,7 @@ class TestParameterMapping:
 
     def test_value_change(self):
         for var in ["send", "recv"]:
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError):  # noqa: PT011
                 setattr(self.pm, var, "A string")
 
         assert self.pm.send
@@ -84,7 +85,7 @@ class MyPF(MappedParameterFrame):
     E: Parameter[str]
     F: Parameter[bool]
 
-    _mappings = mappings
+    _mappings: ClassVar = mappings
     _defaults = MyDC()
 
     @property

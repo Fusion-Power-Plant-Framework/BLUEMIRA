@@ -25,9 +25,7 @@ Wrapper for FreeCAD Part.Face objects
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
-import numpy as np
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import bluemira.codes._freecadapi as cadapi
 
@@ -36,8 +34,11 @@ from bluemira.geometry.base import BluemiraGeo
 from bluemira.geometry.coordinates import Coordinates
 
 # import from error
-from bluemira.geometry.error import DisjointedFace, NotClosedWire
+from bluemira.geometry.error import DisjointedFaceError, NotClosedWireError
 from bluemira.geometry.wire import BluemiraWire
+
+if TYPE_CHECKING:
+    import numpy as np
 
 __all__ = ["BluemiraFace"]
 
@@ -100,8 +101,7 @@ class BluemiraFace(BluemiraGeo):
             if check:
                 if all(o.is_closed() for o in objs):
                     return objs
-                else:
-                    raise NotClosedWire("Only closed BluemiraWire are accepted.")
+                raise NotClosedWireError("Only closed BluemiraWire are accepted.")
         raise TypeError(
             f"Only {self._boundary_classes} objects can be used for {self.__class__}"
         )
@@ -117,12 +117,11 @@ class BluemiraFace(BluemiraGeo):
             if len(face.Faces) == 1:
                 face = face.Faces[0]
             else:
-                raise DisjointedFace("Any or more than one face has been created.")
+                raise DisjointedFaceError("Any or more than one face has been created.")
 
         if check_reverse:
             return self._check_reverse(face)
-        else:
-            return face
+        return face
 
     def _create_shape(self) -> cadapi.apiFace:
         """Part.Face: shape of the object as a primitive face"""
@@ -150,7 +149,7 @@ class BluemiraFace(BluemiraGeo):
         raise TypeError(f"Only Part.Face objects can be used to create a {cls} instance")
 
     def discretize(
-        self, ndiscr: int = 100, byedges: bool = False, dl: float = None
+        self, ndiscr: int = 100, byedges: bool = False, dl: Optional[float] = None
     ) -> np.ndarray:
         """
         Make an array of the geometry.
@@ -210,7 +209,7 @@ class BluemiraFace(BluemiraGeo):
         """
         The faces of the face. By definition a tuple of itself.
         """
-        return tuple([self])
+        return (self,)
 
     @property
     def shells(self) -> tuple:

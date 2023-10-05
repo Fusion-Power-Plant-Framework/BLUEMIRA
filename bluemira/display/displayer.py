@@ -25,17 +25,18 @@ api for plotting using CAD backend
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import asdict
 from enum import Enum
 from functools import lru_cache
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Union
 
 from bluemira.base.look_and_feel import bluemira_debug, bluemira_warn
 from bluemira.display.error import DisplayError
 from bluemira.display.palettes import BLUE_PALETTE
-from bluemira.display.plotter import DisplayOptions
-from bluemira.geometry.base import BluemiraGeo
+from bluemira.display.tools import Options
 from bluemira.utilities.tools import get_module
+
+if TYPE_CHECKING:
+    from bluemira.geometry.base import BluemiraGeo
 
 
 class ViewerBackend(Enum):
@@ -67,7 +68,7 @@ def get_default_options(backend=ViewerBackend.FREECAD):
     return backend.get_module().DefaultDisplayOptions()
 
 
-class DisplayCADOptions(DisplayOptions):
+class DisplayCADOptions(Options):
     """
     The options that are available for displaying objects in 3D
 
@@ -77,50 +78,11 @@ class DisplayCADOptions(DisplayOptions):
         the backend viewer being used
     """
 
-    __slots__ = ("_options",)
+    __slots__ = ()
 
     def __init__(self, backend=ViewerBackend.FREECAD, **kwargs):
         self._options = get_default_options(backend)
-        self.modify(**kwargs)
-
-    def __setattr__(self, attr, val):
-        """
-        Set attributes in options dictionary
-        """
-        if (
-            hasattr(self, "_options")
-            and self._options is not None
-            and (attr in self._options.__annotations__ or hasattr(self._options, attr))
-        ):
-            setattr(self._options, attr, val)
-        else:
-            super().__setattr__(attr, val)
-
-    def __getattribute__(self, attr):
-        """
-        Get attributes or from "_options" dict
-        """
-        try:
-            return super().__getattribute__(attr)
-        except AttributeError as ae:
-            if attr != "_options":
-                try:
-                    return getattr(self._options, attr)
-                except AttributeError:
-                    raise ae
-            else:
-                raise ae
-
-    def modify(self, **kwargs):
-        """Modify options"""
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-    def as_dict(self):
-        """
-        Returns the instance as a dictionary.
-        """
-        return asdict(super().as_dict())
+        super().__init__(**kwargs)
 
 
 # =======================================================================================
@@ -158,7 +120,7 @@ def _validate_display_inputs(parts, options, labels):
 
 def show_cad(
     parts: Optional[
-        Union[BluemiraGeo, List[BluemiraGeo]]  # noqa: F821
+        Union[BluemiraGeo, List[BluemiraGeo]]
     ] = None,  # avoiding circular deps
     options: Optional[Union[DisplayCADOptions, List[DisplayCADOptions]]] = None,
     labels: Optional[Union[str, List[str]]] = None,
@@ -199,9 +161,12 @@ def show_cad(
         else:
             new_options.append(DisplayCADOptions(**kwargs, backend=backend))
 
-    part_options = [o.as_dict() for o in new_options]
-
-    backend.get_module().show_cad(parts, part_options, labels, **kwargs)
+    backend.get_module().show_cad(
+        [part.shape for part in parts],
+        [o.as_dict() for o in new_options],
+        labels,
+        **kwargs,
+    )
 
 
 class BaseDisplayer(ABC):
@@ -209,7 +174,7 @@ class BaseDisplayer(ABC):
     Displayer abstract class
     """
 
-    _CLASS_DISPLAY_OPTIONS = {}
+    _CLASS_DISPLAY_OPTIONS: ClassVar = {}
 
     def __init__(self, options: Optional[DisplayCADOptions] = None, **kwargs):
         self.options = (
@@ -224,7 +189,6 @@ class BaseDisplayer(ABC):
         """
         Display a CAD object
         """
-        pass
 
 
 def _get_displayer_class(part):
@@ -291,8 +255,8 @@ class ComponentDisplayer(BaseDisplayer):
     CAD displayer for Components
     """
 
+    @staticmethod
     def show_cad(
-        self,
         comps,
         **kwargs,
     ):

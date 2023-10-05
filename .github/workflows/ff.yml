@@ -20,7 +20,7 @@ jobs:
         id: comment-branch
       - name: Checkout code into workspace directory
         if: ${{ steps.comment-branch.outputs.head_ref == 'develop_dependencies' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Fast Forward PR

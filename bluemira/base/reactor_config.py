@@ -1,3 +1,23 @@
+# bluemira is an integrated inter-disciplinary design tool for future fusion
+# reactors. It incorporates several modules, some of which rely on other
+# codes, to carry out a range of typical conceptual fusion reactor design
+# activities.
+#
+# Copyright (C) 2021-2023 M. Coleman, J. Cook, F. Franza, I.A. Maione, S. McIntosh,
+#                         J. Morris, D. Short
+#
+# bluemira is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# bluemira is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 """Class to hold parameters and config values."""
 
 import json
@@ -7,7 +27,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Tuple, Type, TypeVar, Union
 
 from bluemira.base.error import ReactorConfigError
-from bluemira.base.look_and_feel import bluemira_warn
+from bluemira.base.look_and_feel import bluemira_debug, bluemira_warn
 from bluemira.base.parameter_frame import ParameterFrame, make_parameter_frame
 
 
@@ -89,16 +109,16 @@ class ReactorConfig:
         self,
         config_path: Union[str, Path, dict],
         global_params_type: Type[_PfT],
-        warn_on_duplicate_keys: bool = True,
-        warn_on_empty_local_params: bool = True,
-        warn_on_empty_config: bool = True,
+        warn_on_duplicate_keys: bool = False,
+        warn_on_empty_local_params: bool = False,
+        warn_on_empty_config: bool = False,
     ):
         self.warn_on_duplicate_keys = warn_on_duplicate_keys
         self.warn_on_empty_local_params = warn_on_empty_local_params
         self.warn_on_empty_config = warn_on_empty_config
 
         config_data = self._read_or_return(config_path)
-        if not isinstance(config_path, dict):
+        if isinstance(config_path, (Path, str)):
             self._expand_paths_in_dict(config_data, Path(config_path).parent)
 
         self.config_data = config_data
@@ -113,6 +133,13 @@ class ReactorConfig:
     def __str__(self) -> str:
         """Returns config_data as a nicely pretty formatted string"""
         return self._pprint_dict(self.config_data)
+
+    @staticmethod
+    def _warn_or_debug_log(msg: str, warn: bool) -> None:
+        if warn:
+            bluemira_warn(msg)
+        else:
+            bluemira_debug(msg)
 
     def params_for(self, component_name: str, *args: str) -> ConfigParams:
         """
@@ -146,12 +173,14 @@ class ReactorConfig:
         :func:`~bluemira.base.parameter_frame._frame.make_parameter_frame`
         helper function to convert it into a typed ParameterFrame.
         """
-        args = (component_name,) + args
+        args = (component_name, *args)
         self._check_args_are_strings(args)
 
         local_params = self._extract(args, is_config=False)
-        if not local_params and self.warn_on_empty_local_params:
-            bluemira_warn(f"Empty local params for args: {args}")
+        if not local_params:
+            self._warn_or_debug_log(
+                f"Empty local params for args: {args}", self.warn_on_empty_local_params
+            )
 
         return ConfigParams(
             global_params=self.global_params,
@@ -184,12 +213,14 @@ class ReactorConfig:
         -------
         The extracted config.
         """
-        args = (component_name,) + args
+        args = (component_name, *args)
         self._check_args_are_strings(args)
 
         _return = self._extract(args, is_config=True)
-        if not _return and self.warn_on_empty_config:
-            bluemira_warn(f"Empty config for args: {args}")
+        if not _return:
+            self._warn_or_debug_log(
+                f"Empty config for args: {args}", self.warn_on_empty_config
+            )
 
         return _return
 
@@ -197,18 +228,20 @@ class ReactorConfig:
     def _read_or_return(config_path: Union[str, Path, dict]) -> Dict:
         if isinstance(config_path, (str, Path)):
             return ReactorConfig._read_json_file(config_path)
-        elif isinstance(config_path, dict):
+        if isinstance(config_path, dict):
             return config_path
         raise ReactorConfigError(
-            f"config_path must be either a dict, a Path object, or a string, found {type(config_path)}."
+            "config_path must be either a dict, a Path object, or a string, found"
+            f" {type(config_path)}."
         )
 
     @staticmethod
     def _read_json_file(path: Union[Path, str]) -> dict:
-        with open(path, "r") as f:
+        with open(path) as f:
             return json.load(f)
 
-    def _pprint_dict(self, d: dict) -> str:
+    @staticmethod
+    def _pprint_dict(d: dict) -> str:
         return pprint.pformat(d, sort_dicts=False, indent=1)
 
     def _warn_on_duplicate_keys(
@@ -217,13 +250,14 @@ class ReactorConfig:
         arg: str,
         existing_value,
     ):
-        if self.warn_on_duplicate_keys:
-            bluemira_warn(
-                "duplicate config key: "
-                f"'{shared_key}' in {arg} wil be overwritten with {existing_value}"
-            )
+        self._warn_or_debug_log(
+            "duplicate config key: "
+            f"'{shared_key}' in {arg} wil be overwritten with {existing_value}",
+            self.warn_on_duplicate_keys,
+        )
 
-    def _check_args_are_strings(self, args: Iterable[str]):
+    @staticmethod
+    def _check_args_are_strings(args: Iterable[str]):
         for a in args:
             if not isinstance(a, str):
                 raise ReactorConfigError("args must be strings")
@@ -267,10 +301,7 @@ class ReactorConfig:
 
         # if the path does not start with a /, it is considered a relative path,
         # relative to the file the path is in (i.e. rel_path)
-        if not f_path.startswith("/"):
-            f_path = rel_path / f_path
-        else:
-            f_path = Path(f_path)
+        f_path = rel_path / f_path if not f_path.startswith("/") else Path(f_path)
 
         # check if file exists
         if not f_path.is_file():

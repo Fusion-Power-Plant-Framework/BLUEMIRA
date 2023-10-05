@@ -19,14 +19,14 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 
 import dolfin
 import matplotlib.pyplot as plt
 import numpy as np
 
-import bluemira.geometry.tools as tools
 from bluemira.base.components import Component, PhysicalComponent
+from bluemira.geometry import tools
 from bluemira.geometry.face import BluemiraFace
 from bluemira.magnetostatics.finite_element_2d import (
     Bz_coil_axis,
@@ -36,7 +36,7 @@ from bluemira.magnetostatics.finite_element_2d import (
 from bluemira.mesh import meshing
 from bluemira.mesh.tools import import_mesh, msh_to_xdmf
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), "test_generated_data")
+DATA_DIR = Path(Path(__file__).parent, "test_generated_data")
 
 
 class TestGetNormal:
@@ -87,7 +87,7 @@ class TestGetNormal:
         c_coil = PhysicalComponent(name="coil", shape=coil, parent=c_universe)
 
         meshfiles = [
-            os.path.join(DATA_DIR, p) for p in ["Mesh.geo_unrolled", "Mesh.msh"]
+            Path(DATA_DIR, p).as_posix() for p in ["Mesh.geo_unrolled", "Mesh.msh"]
         ]
         m = meshing.Mesh(meshfile=meshfiles)
         m(c_universe, dim=2)

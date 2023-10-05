@@ -20,7 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import filecmp
-import os
+from pathlib import Path
 
 import pytest
 
@@ -45,10 +45,10 @@ class TestMSHtoXDMF:
             "Mesh_domain.h5",
             "Mesh_domain.xdmf",
         ]:
-            generated = os.sep.join([DATA_PATH, "Generated" + filename])
-            reference = os.sep.join([DATA_PATH, "Reference" + filename])
+            generated = Path(DATA_PATH, "Generated" + filename)
+            reference = Path(DATA_PATH, "Reference" + filename)
             filecmp.cmp(generated, reference)
-            os.remove(generated)
+            generated.unlink()
 
     @pytest.mark.parametrize(
         "dimensions",

@@ -42,14 +42,19 @@ from dataclasses import asdict, dataclass, fields
 from enum import auto
 from pathlib import Path
 from pprint import pprint
-from typing import Dict, List, Union
+from typing import ClassVar, Dict, List, Union
 
 from ext_code_script import get_filename
 
 from bluemira.base.file import get_bluemira_path
 from bluemira.base.parameter_frame import Parameter, ParameterFrame
-from bluemira.codes.interface import CodesSetup, CodesSolver, CodesTask, CodesTeardown
-from bluemira.codes.interface import RunMode as BaseRunMode
+from bluemira.codes.interface import (
+    BaseRunMode,
+    CodesSetup,
+    CodesSolver,
+    CodesTask,
+    CodesTeardown,
+)
 from bluemira.codes.params import MappedParameterFrame
 from bluemira.codes.utilities import ParameterMapping
 
@@ -143,7 +148,7 @@ class ECParameterFrame(MappedParameterFrame):
 
     _defaults = (ECOpts(), ECInputs())
 
-    _mappings = {
+    _mappings: ClassVar = {
         "header": ParameterMapping("add_header", send=True, recv=False),
         "line_number": ParameterMapping("number", send=True, recv=False),
         "param1": ParameterMapping("param1", send=False, recv=True, unit="MW"),
@@ -258,7 +263,7 @@ class Teardown(CodesTeardown):
 
     def _read_file(self):
         out_params = {}
-        with open(self.outfile, "r") as output_file:
+        with open(self.outfile) as output_file:
             for line in output_file:
                 if line.startswith("#"):
                     pass
@@ -430,5 +435,5 @@ print(solver.execute("run"))
 # %%
 for param in solver.params:
     print(f"{param.name}\n{'-' * len(param.name)}")
-    pprint(param.history())
+    pprint(param.history())  # noqa: T203
     print()

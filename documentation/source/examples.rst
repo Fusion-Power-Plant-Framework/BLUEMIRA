@@ -12,7 +12,6 @@ Introductory Examples
     examples/base/components_tutorial
     examples/geometry/geometry_tutorial
     examples/geometry/plotting_tutorial
-    examples/utilities/optimisation_example
 
 Equilibria Examples
 ^^^^^^^^^^^^^^^^^^^
@@ -23,6 +22,8 @@ Equilibria Examples
     examples/equilibria/single_null
     examples/equilibria/eudemo_2017
     examples/equilibria/fixed_boundary
+    examples/equilibria/Spherical_Approximation_how_it_works
+    examples/equilibria/spherical_harmonic_approximation_basic_function_check
 
 Geometry Examples
 ^^^^^^^^^^^^^^^^^
@@ -50,6 +51,18 @@ Magnets Examples
 
     examples/magnets/central_solenoid_example
 
+Optimisation Examples
+^^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    examples/optimisation/geometry_optimisation
+    examples/optimisation/geometry_optimisation_with_parameterisation
+    examples/optimisation/nonlinearly_constrained_problem
+    examples/optimisation/rosenbrock_problem
+    examples/optimisation/eggholder_problem
+
 External Code Examples
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -74,5 +87,4 @@ Other Examples
     examples/mesh/mesh_tutorial
     examples/plasma_physics/fusion_reactions
     examples/radiation_transport/heat_flux_calculation
-    examples/radiation_transport/heat_flux_calculation_DN
     examples/structural/tour_eiffel_example

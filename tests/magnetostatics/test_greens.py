@@ -40,7 +40,7 @@ from bluemira.magnetostatics.greens import (
 
 
 @nb.jit(nopython=True)
-def greens_Bx_old(xc, zc, x, z, d_xc=0, d_zc=0):  # noqa :N802
+def greens_Bx_old(xc, zc, x, z, d_xc=0, d_zc=0):  # noqa: ARG001
     """
     Calculate radial magnetic field at (x, z) due to unit current at (xc, zc)
     using a Greens function.
@@ -80,7 +80,7 @@ def greens_Bx_old(xc, zc, x, z, d_xc=0, d_zc=0):  # noqa :N802
 
 
 @nb.jit(nopython=True)
-def greens_Bz_old(xc, zc, x, z, d_xc=0, d_zc=0):
+def greens_Bz_old(xc, zc, x, z, d_xc=0, d_zc=0):  # noqa: ARG001
     """
     Calculate vertical magnetic field at (x, z) due to unit current at (xc, zc)
     using a Greens function.
@@ -124,26 +124,26 @@ def greens_Bz_old(xc, zc, x, z, d_xc=0, d_zc=0):
 
 
 class TestGreenFieldsRegression:
-    np.random.seed(846023420)
-    fixtures = []
+    rng = np.random.default_rng(846023420)
+    fixtures = []  # noqa: RUF012
     for _ in range(5):  # Tested with 2000, with one failure in Bz:
         # Mismatched elements: 1 / 10000 (0.01%)
         # Max absolute difference: 4.01456646e-13
         # Max relative difference: 4.87433464e-07
-        fixtures.append(
+        fixtures.append(  # noqa: PERF401
             [
-                10 * np.clip(np.random.rand(), 0.01, None),
-                10 - 5 * np.random.rand(),
-                10 * np.clip(np.random.rand(100, 100), 0.01, None),
-                10 - 5 * np.random.rand(100, 100),
+                10 * np.clip(rng.random(), 0.01, None),
+                10 - 5 * rng.random(),
+                10 * np.clip(rng.random((100, 100)), 0.01, None),
+                10 - 5 * rng.random((100, 100)),
             ]
         )
 
-    @pytest.mark.parametrize("xc, zc, x, z", fixtures)
+    @pytest.mark.parametrize(("xc", "zc", "x", "z"), fixtures)
     def test_greens_Bx(self, xc, zc, x, z):
         self.runner(greens_Bx, greens_Bx_old, xc, zc, x, z)
 
-    @pytest.mark.parametrize("xc, zc, x, z", fixtures)
+    @pytest.mark.parametrize(("xc", "zc", "x", "z"), fixtures)
     def test_greens_Bz(self, xc, zc, x, z):
         self.runner(greens_Bz, greens_Bz_old, xc, zc, x, z)
 

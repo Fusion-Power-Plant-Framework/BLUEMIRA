@@ -23,7 +23,9 @@
 Useful parameterisations for plasma flux surface shapes.
 """
 
-from typing import List, Tuple
+from dataclasses import dataclass
+from enum import Enum, auto
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -31,7 +33,7 @@ from bluemira.geometry.coordinates import Coordinates, interpolate_points
 from bluemira.geometry.parameterisations import GeometryParameterisation
 from bluemira.geometry.tools import interpolate_bspline
 from bluemira.geometry.wire import BluemiraWire
-from bluemira.utilities.opt_variables import BoundedVariable, OptVariables
+from bluemira.utilities.opt_variables import OptVariable, OptVariablesFrame, VarDictT, ov
 
 __all__ = [
     "flux_surface_cunningham",
@@ -53,21 +55,21 @@ def _generate_theta(n: int) -> np.ndarray:
     Generate a poloidal angle vector that encompasses all extrema
     """
     quart_values = np.array([0, 0.5 * np.pi, np.pi, 1.5 * np.pi, 2 * np.pi])
-    if n <= 4:
+    if n <= 4:  # noqa: PLR2004
         return quart_values[:n]
 
     n_leftover = n % 4
     n_chunk = n // 4
 
     thetas = []
-    for i in range(0, 4):
+    for i in range(4):
         if n_leftover != 0:
             n_quart = n_chunk + 1
             n_leftover -= 1
         else:
             n_quart = n_chunk
         if n_quart > 1:
-            if i != 3:
+            if i != 3:  # noqa: PLR2004
                 theta = np.linspace(
                     quart_values[i], quart_values[i + 1], n_quart + 1, endpoint=True
                 )[:-1]
@@ -78,7 +80,7 @@ def _generate_theta(n: int) -> np.ndarray:
         else:
             theta = np.array([quart_values[i]])
         thetas.append(theta)
-    if n > 7:
+    if n > 7:  # noqa: PLR2004
         thetas.append(np.array([2 * np.pi]))
     return np.concatenate(thetas)
 
@@ -159,42 +161,42 @@ def flux_surface_zakharov(
     return Coordinates({"x": x, "z": z})
 
 
-class ZakharovLCFS(GeometryParameterisation):
+@dataclass
+class ZakharovLCFSOptVariables(OptVariablesFrame):
+    r_0: OptVariable = ov(
+        "r_0", 9, lower_bound=0, upper_bound=np.inf, description="Major radius"
+    )
+    z_0: OptVariable = ov(
+        "z_0",
+        0,
+        lower_bound=-np.inf,
+        upper_bound=np.inf,
+        description="Vertical coordinate at geometry centroid",
+    )
+    a: OptVariable = ov(
+        "a", 3, lower_bound=0, upper_bound=np.inf, description="Minor radius"
+    )
+    kappa: OptVariable = ov(
+        "kappa", 1.5, lower_bound=1.0, upper_bound=np.inf, description="Elongation"
+    )
+    delta: OptVariable = ov(
+        "delta",
+        0.4,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Triangularity",
+    )
+
+
+class ZakharovLCFS(GeometryParameterisation[ZakharovLCFSOptVariables]):
     """
     Zakharov last closed flux surface geometry parameterisation.
     """
 
     __slots__ = ()
 
-    def __init__(self, var_dict=None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "r_0", 9, lower_bound=0, upper_bound=np.inf, descr="Major radius"
-                ),
-                BoundedVariable(
-                    "z_0",
-                    0,
-                    lower_bound=-np.inf,
-                    upper_bound=np.inf,
-                    descr="Vertical coordinate at geometry centroid",
-                ),
-                BoundedVariable(
-                    "a", 3, lower_bound=0, upper_bound=np.inf, descr="Minor radius"
-                ),
-                BoundedVariable(
-                    "kappa", 1.5, lower_bound=1.0, upper_bound=np.inf, descr="Elongation"
-                ),
-                BoundedVariable(
-                    "delta",
-                    0.4,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Triangularity",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = ZakharovLCFSOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
 
@@ -213,7 +215,14 @@ class ZakharovLCFS(GeometryParameterisation):
         -------
         CAD Wire of the geometry
         """
-        coordinates = flux_surface_zakharov(*self.variables.values, n=n_points)
+        coordinates = flux_surface_zakharov(
+            self.variables.r_0.value,
+            self.variables.z_0.value,
+            self.variables.a.value,
+            self.variables.kappa.value,
+            self.variables.delta.value,
+            n=n_points,
+        )
         return interpolate_bspline(coordinates.xyz, closed=True, label=label)
 
 
@@ -261,49 +270,49 @@ def flux_surface_cunningham(
     return Coordinates({"x": x, "z": z})
 
 
-class CunninghamLCFS(GeometryParameterisation):
+@dataclass
+class CunninghamLCFSOptVariables(OptVariablesFrame):
+    r_0: OptVariable = ov(
+        "r_0", 9, lower_bound=0, upper_bound=np.inf, description="Major radius"
+    )
+    z_0: OptVariable = ov(
+        "z_0",
+        0,
+        lower_bound=-np.inf,
+        upper_bound=np.inf,
+        description="Vertical coordinate at geometry centroid",
+    )
+    a: OptVariable = ov(
+        "a", 3, lower_bound=0, upper_bound=np.inf, description="Minor radius"
+    )
+    kappa: OptVariable = ov(
+        "kappa", 1.5, lower_bound=1.0, upper_bound=np.inf, description="Elongation"
+    )
+    delta: OptVariable = ov(
+        "delta",
+        0.4,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Triangularity",
+    )
+    delta2: OptVariable = ov(
+        "delta2",
+        0.0,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Curliness",
+    )
+
+
+class CunninghamLCFS(GeometryParameterisation[CunninghamLCFSOptVariables]):
     """
     Cunningham last closed flux surface geometry parameterisation.
     """
 
     __slots__ = ()
 
-    def __init__(self, var_dict=None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "r_0", 9, lower_bound=0, upper_bound=np.inf, descr="Major radius"
-                ),
-                BoundedVariable(
-                    "z_0",
-                    0,
-                    lower_bound=-np.inf,
-                    upper_bound=np.inf,
-                    descr="Vertical coordinate at geometry centroid",
-                ),
-                BoundedVariable(
-                    "a", 3, lower_bound=0, upper_bound=np.inf, descr="Minor radius"
-                ),
-                BoundedVariable(
-                    "kappa", 1.5, lower_bound=1.0, upper_bound=np.inf, descr="Elongation"
-                ),
-                BoundedVariable(
-                    "delta",
-                    0.4,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Triangularity",
-                ),
-                BoundedVariable(
-                    "delta2",
-                    0.0,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Curliness?",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = CunninghamLCFSOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
 
@@ -322,7 +331,15 @@ class CunninghamLCFS(GeometryParameterisation):
         -------
         CAD Wire of the geometry
         """
-        coordinates = flux_surface_cunningham(*self.variables.values, n=n_points)
+        coordinates = flux_surface_cunningham(
+            self.variables.r_0.value,
+            self.variables.z_0.value,
+            self.variables.a.value,
+            self.variables.kappa.value,
+            self.variables.delta.value,
+            self.variables.delta2.value,
+            n=n_points,
+        )
         return interpolate_bspline(coordinates.xyz, closed=True, label=label)
 
 
@@ -370,49 +387,49 @@ def flux_surface_manickam(
     return Coordinates({"x": x, "z": z})
 
 
-class ManickamLCFS(GeometryParameterisation):
+@dataclass
+class ManickamLCFSOptVariables(OptVariablesFrame):
+    r_0: OptVariable = ov(
+        "r_0", 9, lower_bound=0, upper_bound=np.inf, description="Major radius"
+    )
+    z_0: OptVariable = ov(
+        "z_0",
+        0,
+        lower_bound=-np.inf,
+        upper_bound=np.inf,
+        description="Vertical coordinate at geometry centroid",
+    )
+    a: OptVariable = ov(
+        "a", 3, lower_bound=0, upper_bound=np.inf, description="Minor radius"
+    )
+    kappa: OptVariable = ov(
+        "kappa", 1.5, lower_bound=1.0, upper_bound=np.inf, description="Elongation"
+    )
+    delta: OptVariable = ov(
+        "delta",
+        0.4,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Triangularity",
+    )
+    indent: OptVariable = ov(
+        "indent",
+        0.0,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Indentation",
+    )
+
+
+class ManickamLCFS(GeometryParameterisation[ManickamLCFSOptVariables]):
     """
     Manickam last closed flux surface geometry parameterisation.
     """
 
     __slots__ = ()
 
-    def __init__(self, var_dict=None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "r_0", 9, lower_bound=0, upper_bound=np.inf, descr="Major radius"
-                ),
-                BoundedVariable(
-                    "z_0",
-                    0,
-                    lower_bound=-np.inf,
-                    upper_bound=np.inf,
-                    descr="Vertical coordinate at geometry centroid",
-                ),
-                BoundedVariable(
-                    "a", 3, lower_bound=0, upper_bound=np.inf, descr="Minor radius"
-                ),
-                BoundedVariable(
-                    "kappa", 1.5, lower_bound=1.0, upper_bound=np.inf, descr="Elongation"
-                ),
-                BoundedVariable(
-                    "delta",
-                    0.4,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Triangularity",
-                ),
-                BoundedVariable(
-                    "indent",
-                    0.0,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Indentation",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = ManickamLCFSOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
 
@@ -431,7 +448,15 @@ class ManickamLCFS(GeometryParameterisation):
         -------
         CAD Wire of the geometry
         """
-        coordinates = flux_surface_manickam(*self.variables.values, n=n_points)
+        coordinates = flux_surface_manickam(
+            self.variables.r_0.value,
+            self.variables.z_0.value,
+            self.variables.a.value,
+            self.variables.kappa.value,
+            self.variables.delta.value,
+            self.variables.indent.value,
+            n=n_points,
+        )
         return interpolate_bspline(coordinates.xyz, closed=True, label=label)
 
 
@@ -479,7 +504,7 @@ def flux_surface_kuiroukidis_quadrants(
     tau_up_left = t_0 * theta_up_left**2 + t_1 * theta_up_left**n_power
 
     tau_up_left = np.clip(tau_up_left, None, np.pi)
-    clip_arg = np.where(tau_up_left == np.pi)[0][0]
+    clip_arg = np.nonzero(tau_up_left == np.pi)[0][0]
     tau_up_left = tau_up_left[: clip_arg + 1]
 
     x_upper_right = r_0 * (
@@ -516,15 +541,15 @@ def flux_surface_kuiroukidis_quadrants(
     # The lower X-point does not match up with the input kappa_l and delta_l...
     corr_ratio = x_x_true / x_x_actual
     corr_power = 2
-    if corr_ratio == 1.0:
+    if corr_ratio == 1.0:  # noqa: PLR2004
         # For good measure, but the maths is wrong...
         correction = np.ones(n_quart)
-    elif corr_ratio < 1.0:
+    elif corr_ratio < 1.0:  # noqa: PLR2004
         correction = (
             1
             - np.linspace(0, (1 - corr_ratio) ** (1 / corr_power), n_quart) ** corr_power
         )
-    elif corr_ratio > 1.0:
+    elif corr_ratio > 1.0:  # noqa: PLR2004
         correction = (
             1
             + np.linspace(0, (corr_ratio - 1) ** (1 / corr_power), n_quart) ** corr_power
@@ -621,67 +646,71 @@ def flux_surface_kuiroukidis(
     )
 
 
-class KuiroukidisLCFS(GeometryParameterisation):
+@dataclass
+class KuiroukidisLCFSOptVariables(OptVariablesFrame):
+    r_0: OptVariable = ov(
+        "r_0",
+        9,
+        lower_bound=0,
+        upper_bound=np.inf,
+        description="Major radius",
+    )
+    z_0: OptVariable = ov(
+        "z_0",
+        0,
+        lower_bound=-np.inf,
+        upper_bound=np.inf,
+        description="Vertical coordinate at geometry centroid",
+    )
+    a: OptVariable = ov(
+        "a", 3, lower_bound=0, upper_bound=np.inf, description="Minor radius"
+    )
+    kappa_u: OptVariable = ov(
+        "kappa_u",
+        1.6,
+        lower_bound=1.0,
+        upper_bound=np.inf,
+        description="Upper elongation",
+    )
+    kappa_l: OptVariable = ov(
+        "kappa_l",
+        1.8,
+        lower_bound=1.0,
+        upper_bound=np.inf,
+        description="Lower elongation",
+    )
+    delta_u: OptVariable = ov(
+        "delta_u",
+        0.4,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Upper triangularity",
+    )
+    delta_l: OptVariable = ov(
+        "delta_l",
+        0.4,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Lower triangularity",
+    )
+    n_power: OptVariable = ov(
+        "n_power",
+        8,
+        lower_bound=2,
+        upper_bound=10,
+        description="Exponent power",
+    )
+
+
+class KuiroukidisLCFS(GeometryParameterisation[KuiroukidisLCFSOptVariables]):
     """
     Kuiroukidis last closed flux surface geometry parameterisation (adjusted).
     """
 
     __slots__ = ()
 
-    def __init__(self, var_dict=None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "r_0", 9, lower_bound=0, upper_bound=np.inf, descr="Major radius"
-                ),
-                BoundedVariable(
-                    "z_0",
-                    0,
-                    lower_bound=-np.inf,
-                    upper_bound=np.inf,
-                    descr="Vertical coordinate at geometry centroid",
-                ),
-                BoundedVariable(
-                    "a", 3, lower_bound=0, upper_bound=np.inf, descr="Minor radius"
-                ),
-                BoundedVariable(
-                    "kappa_u",
-                    1.6,
-                    lower_bound=1.0,
-                    upper_bound=np.inf,
-                    descr="Upper elongation",
-                ),
-                BoundedVariable(
-                    "kappa_l",
-                    1.8,
-                    lower_bound=1.0,
-                    upper_bound=np.inf,
-                    descr="Lower elongation",
-                ),
-                BoundedVariable(
-                    "delta_u",
-                    0.4,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Upper triangularity",
-                ),
-                BoundedVariable(
-                    "delta_l",
-                    0.4,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Lower triangularity",
-                ),
-                BoundedVariable(
-                    "n_power",
-                    8,
-                    lower_bound=2,
-                    upper_bound=10,
-                    descr="Exponent power",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = KuiroukidisLCFSOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
 
@@ -701,7 +730,15 @@ class KuiroukidisLCFS(GeometryParameterisation):
         CAD Wire of the geometry
         """
         x_quadrants, z_quadrants = flux_surface_kuiroukidis_quadrants(
-            *self.variables.values, n_points=n_points
+            self.variables.r_0.value,
+            self.variables.z_0.value,
+            self.variables.a.value,
+            self.variables.kappa_u.value,
+            self.variables.kappa_l.value,
+            self.variables.delta_u.value,
+            self.variables.delta_l.value,
+            int(self.variables.n_power.value),
+            n_points=n_points,
         )
 
         labels = ["upper_outer", "upper_inner", "lower_inner", "lower_outer"]
@@ -750,6 +787,73 @@ def calc_angles_pos_above(delta, kappa, t_pos):
     alpha_pos = -(1 + delta) * (1 - t_pos) / (2 * t_pos - 1)
     beta_pos = kappa * (1 - t_pos) / np.sqrt(2 * t_pos - 1)
     return alpha_0_pos, alpha_pos, beta_pos
+
+
+class _UpLow(Enum):
+    UPPER = auto()
+    LOWER = auto()
+
+
+class _InOut(Enum):
+    INNER = auto()
+    OUTER = auto()
+
+
+def _johner_quadrant(
+    delta: float, kappa: float, psi: float, n_pts: int, ul: _UpLow, io: _InOut
+) -> Tuple[float, float]:
+    calc_t = calc_t_neg if io is _InOut.INNER else calc_t_pos
+    t = calc_t(delta, kappa, psi)
+    conditional_point = 0.5
+    if t < conditional_point:
+        calc_angles = (
+            calc_angles_neg_below if io is _InOut.INNER else calc_angles_pos_below
+        )
+        alpha_0, alpha, beta = calc_angles(delta, kappa, t)
+
+        theta = np.arcsin(np.sqrt(1 - 2 * t) / (1 - t))
+        ls = (0, theta) if ul is _UpLow.UPPER else (-theta, 0)
+        theta = np.linspace(*ls, n_pts)
+
+        x = (
+            (alpha_0 - alpha * np.cos(theta))
+            if io is _InOut.INNER
+            else (alpha_0 + alpha * np.cos(theta))
+        )
+        z = beta * np.sin(theta)
+
+    elif t == conditional_point:
+        ls = (0, kappa) if ul is _UpLow.UPPER else (-kappa, 0)
+        z = np.linspace(*ls, n_pts)
+        x = (
+            -1 + z**2 * (1 - delta) / kappa**2
+            if io is _InOut.INNER
+            else -1 - z**2 * (1 + delta) / kappa**2
+        )
+
+    elif t == 1:
+        ls = (0, kappa) if ul is _UpLow.UPPER else (-kappa, 0)
+        z = np.linspace(*ls, n_pts)
+        x = (
+            -1 + z * (1 - delta) / kappa
+            if io is _InOut.INNER
+            else 1 - z * (1 + delta) / kappa
+        )
+    elif t > conditional_point:
+        calc_angles = (
+            calc_angles_neg_above if io is _InOut.INNER else calc_angles_pos_above
+        )
+
+        alpha_0, alpha, beta = calc_angles(delta, kappa, t)
+        phi = np.arcsinh(np.sqrt(2 * t - 1) / (1 - t))
+        ls = (0, phi) if ul is _UpLow.UPPER else (-phi, 0)
+        phi = np.linspace(*ls, n_pts)
+
+        x = alpha_0 + alpha * np.cosh(phi)
+        z = beta * np.sinh(phi)
+    else:
+        raise ValueError("Something is wrong with the Johner parameterisation.")
+    return x, z
 
 
 def flux_surface_johner_quadrants(
@@ -808,7 +912,6 @@ def flux_surface_johner_quadrants(
     z_quadrants:
         Plasma flux surface shape z quadrants
     """
-    # May appear tempting to refactor, but equations subtly different
     # Careful of bad angles or invalid plasma shape parameters
     if delta_u < 0 and delta_l < 0:
         delta_u *= -1
@@ -816,99 +919,27 @@ def flux_surface_johner_quadrants(
         negative = True
     else:
         negative = False
-    psi_u_neg, psi_u_pos, psi_l_neg, psi_l_pos = [
+    psi_u_neg, psi_u_pos, psi_l_neg, psi_l_pos = (
         np.deg2rad(i) for i in [psi_u_neg, psi_u_pos, psi_l_neg, psi_l_pos]
-    ]
+    )
 
     n_pts = int(n / 4)
     # inner upper
-    t_neg = calc_t_neg(delta_u, kappa_u, psi_u_neg)
-    if t_neg < 0.5:
-        theta_u_neg = np.arcsin(np.sqrt(1 - 2 * t_neg) / (1 - t_neg))
-        alpha_0_neg, alpha_neg, beta_neg = calc_angles_neg_below(delta_u, kappa_u, t_neg)
-        theta = np.linspace(0, theta_u_neg, n_pts)
-        x_ui = alpha_0_neg - alpha_neg * np.cos(theta)
-        z_ui = beta_neg * np.sin(theta)
-    elif t_neg == 0.5:
-        z_ui = np.linspace(0, kappa_u, n_pts)
-        x_ui = -1 + z_ui**2 * (1 - delta_u) / kappa_u**2
-    elif t_neg == 1:
-        z_ui = np.linspace(0, kappa_u, n_pts)
-        x_ui = -1 + z_ui * (1 - delta_u) / kappa_u
-    elif t_neg > 0.5:
-        phi_u_neg = np.arcsinh(np.sqrt(2 * t_neg - 1) / (1 - t_neg))
-        alpha_0_neg, alpha_neg, beta_neg = calc_angles_neg_above(delta_u, kappa_u, t_neg)
-        phi = np.linspace(0, phi_u_neg, n_pts)
-        x_ui = alpha_0_neg + alpha_neg * np.cosh(phi)
-        z_ui = beta_neg * np.sinh(phi)
-    else:
-        raise ValueError("Something is wrong with the Johner parameterisation.")
+    x_ui, z_ui = _johner_quadrant(
+        delta_u, kappa_u, psi_u_neg, n_pts, ul=_UpLow.UPPER, io=_InOut.INNER
+    )
     # inner lower
-    t_neg = calc_t_neg(delta_l, kappa_l, psi_l_neg)
-    if t_neg < 0.5:
-        theta_u_neg = np.arcsin(np.sqrt(1 - 2 * t_neg) / (1 - t_neg))
-        alpha_0_neg, alpha_neg, beta_neg = calc_angles_neg_below(delta_l, kappa_l, t_neg)
-        theta = np.linspace(-theta_u_neg, 0, n_pts)
-        x_li = alpha_0_neg - alpha_neg * np.cos(theta)
-        z_li = beta_neg * np.sin(theta)
-    elif t_neg == 0.5:
-        z_li = np.linspace(-kappa_u, 0, n_pts)
-        x_li = -1 + z_li**2 * (1 - delta_l) / kappa_l**2
-    elif t_neg == 1:
-        z_li = np.linspace(-kappa_l, 0, n_pts)
-        x_li = -1 + z_li * (1 - delta_l) / kappa_l
-    elif t_neg > 0.5:
-        phi_u_neg = np.arcsinh(np.sqrt(2 * t_neg - 1) / (1 - t_neg))
-        alpha_0_neg, alpha_neg, beta_neg = calc_angles_neg_above(delta_l, kappa_l, t_neg)
-        phi = np.linspace(-phi_u_neg, 0, n_pts)
-        x_li = alpha_0_neg + alpha_neg * np.cosh(phi)
-        z_li = beta_neg * np.sinh(phi)
-    else:
-        raise ValueError("Something is wrong with the Johner parameterisation.")
+    x_li, z_li = _johner_quadrant(
+        delta_l, kappa_l, psi_l_neg, n_pts, ul=_UpLow.LOWER, io=_InOut.INNER
+    )
     # outer upper
-    t_pos = calc_t_pos(delta_u, kappa_u, psi_u_pos)
-    if t_pos < 0.5:
-        theta_u_pos = np.arcsin(np.sqrt(1 - 2 * t_pos) / (1 - t_pos))
-        alpha_0_pos, alpha_pos, beta_pos = calc_angles_pos_below(delta_u, kappa_u, t_pos)
-        theta = np.linspace(0, theta_u_pos, n_pts)
-        x_uo = alpha_0_pos + alpha_pos * np.cos(theta)
-        z_uo = beta_pos * np.sin(theta)
-    elif t_pos == 0.5:
-        z_uo = np.linspace(0, kappa_u, n_pts)
-        x_uo = -1 - z_uo**2 * (1 + delta_u) / kappa_u**2
-    elif t_pos == 1:
-        z_uo = np.linspace(0, kappa_u, n_pts)
-        x_uo = 1 - z_uo * (1 + delta_u) / kappa_u
-    elif t_pos > 0.5:
-        phi_u_pos = np.arcsinh(np.sqrt(2 * t_pos - 1) / (1 - t_pos))
-        alpha_0_pos, alpha_pos, beta_pos = calc_angles_pos_above(delta_u, kappa_u, t_pos)
-        phi = np.linspace(0, phi_u_pos, n_pts)
-        x_uo = alpha_0_pos + alpha_pos * np.cosh(phi)
-        z_uo = beta_pos * np.sinh(phi)
-    else:
-        raise ValueError("Something is wrong with the Johner parameterisation.")
+    x_uo, z_uo = _johner_quadrant(
+        delta_u, kappa_u, psi_u_pos, n_pts, ul=_UpLow.UPPER, io=_InOut.OUTER
+    )
     # outer lower
-    t_pos = calc_t_pos(delta_l, kappa_l, psi_l_pos)
-    if t_pos < 0.5:
-        theta_l_pos = np.arcsin(np.sqrt(1 - 2 * t_pos) / (1 - t_pos))
-        alpha_0_pos, alpha_pos, beta_pos = calc_angles_pos_below(delta_l, kappa_l, t_pos)
-        theta = np.linspace(-theta_l_pos, 0, n_pts)
-        x_lo = alpha_0_pos + alpha_pos * np.cos(theta)
-        z_lo = beta_pos * np.sin(theta)
-    elif t_pos == 0.5:
-        z_lo = np.linspace(-kappa_l, 0, n_pts)
-        x_lo = -1 - z_lo**2 * (1 + delta_l) / kappa_l**2
-    elif t_pos == 1:
-        z_lo = np.linspace(-kappa_l, 0, n_pts)
-        x_lo = 1 - z_lo * (1 + delta_l) / kappa_l
-    elif t_pos > 0.5:
-        phi_l_pos = np.arcsinh(np.sqrt(2 * t_pos - 1) / (1 - t_pos))
-        alpha_0_pos, alpha_pos, beta_pos = calc_angles_pos_above(delta_l, kappa_l, t_pos)
-        phi = np.linspace(-phi_l_pos, 0, n_pts)
-        x_lo = alpha_0_pos + alpha_pos * np.cosh(phi)
-        z_lo = beta_pos * np.sinh(phi)
-    else:
-        raise ValueError("Something is wrong with the Johner parameterisation.")
+    x_lo, z_lo = _johner_quadrant(
+        delta_l, kappa_l, psi_l_pos, n_pts, ul=_UpLow.LOWER, io=_InOut.OUTER
+    )
 
     x_quadrants = [x_ui, x_uo[::-1], x_lo[::-1], x_li]
     z_quadrants = [z_ui, z_uo[::-1], z_lo[::-1], z_li]
@@ -994,88 +1025,86 @@ def flux_surface_johner(
     )
 
 
-class JohnerLCFS(GeometryParameterisation):
+@dataclass
+class JohnerLCFSOptVariables(OptVariablesFrame):
+    r_0: OptVariable = ov(
+        "r_0", 9, lower_bound=6, upper_bound=12, description="Major radius"
+    )
+    z_0: OptVariable = ov(
+        "z_0",
+        0,
+        lower_bound=-1,
+        upper_bound=1,
+        description="Vertical coordinate at geometry centroid",
+    )
+    a: OptVariable = ov("a", 6, lower_bound=1, upper_bound=6, description="Minor radius")
+    kappa_u: OptVariable = ov(
+        "kappa_u",
+        1.6,
+        lower_bound=1.0,
+        upper_bound=3.0,
+        description="Upper elongation",
+    )
+    kappa_l: OptVariable = ov(
+        "kappa_l",
+        1.8,
+        lower_bound=1.0,
+        upper_bound=3.0,
+        description="Lower elongation",
+    )
+    delta_u: OptVariable = ov(
+        "delta_u",
+        0.4,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Upper triangularity",
+    )
+    delta_l: OptVariable = ov(
+        "delta_l",
+        0.4,
+        lower_bound=0.0,
+        upper_bound=1.0,
+        description="Lower triangularity",
+    )
+    phi_u_neg: OptVariable = ov(
+        "phi_u_neg",
+        180,
+        lower_bound=0,
+        upper_bound=190,
+        description="Upper inner angle [°]",
+    )
+    phi_u_pos: OptVariable = ov(
+        "phi_u_pos",
+        10,
+        lower_bound=0,
+        upper_bound=20,
+        description="Upper outer angle [°]",
+    )
+    phi_l_neg: OptVariable = ov(
+        "phi_l_neg",
+        -120,
+        lower_bound=-130,
+        upper_bound=45,
+        description="Lower inner angle [°]",
+    )
+    phi_l_pos: OptVariable = ov(
+        "phi_l_pos",
+        30,
+        lower_bound=0,
+        upper_bound=45,
+        description="Lower outer angle [°]",
+    )
+
+
+class JohnerLCFS(GeometryParameterisation[JohnerLCFSOptVariables]):
     """
     Johner last closed flux surface geometry parameterisation.
     """
 
     __slots__ = ()
 
-    def __init__(self, var_dict=None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "r_0", 9, lower_bound=6, upper_bound=12, descr="Major radius"
-                ),
-                BoundedVariable(
-                    "z_0",
-                    0,
-                    lower_bound=-1,
-                    upper_bound=1,
-                    descr="Vertical coordinate at geometry centroid",
-                ),
-                BoundedVariable(
-                    "a", 6, lower_bound=1, upper_bound=6, descr="Minor radius"
-                ),
-                BoundedVariable(
-                    "kappa_u",
-                    1.6,
-                    lower_bound=1.0,
-                    upper_bound=3.0,
-                    descr="Upper elongation",
-                ),
-                BoundedVariable(
-                    "kappa_l",
-                    1.8,
-                    lower_bound=1.0,
-                    upper_bound=3.0,
-                    descr="Lower elongation",
-                ),
-                BoundedVariable(
-                    "delta_u",
-                    0.4,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Upper triangularity",
-                ),
-                BoundedVariable(
-                    "delta_l",
-                    0.4,
-                    lower_bound=0.0,
-                    upper_bound=1.0,
-                    descr="Lower triangularity",
-                ),
-                BoundedVariable(
-                    "phi_u_neg",
-                    180,
-                    lower_bound=0,
-                    upper_bound=190,
-                    descr="Upper inner angle [°]",
-                ),
-                BoundedVariable(
-                    "phi_u_pos",
-                    10,
-                    lower_bound=0,
-                    upper_bound=20,
-                    descr="Upper outer angle [°]",
-                ),
-                BoundedVariable(
-                    "phi_l_neg",
-                    -120,
-                    lower_bound=-130,
-                    upper_bound=45,
-                    descr="Lower inner angle [°]",
-                ),
-                BoundedVariable(
-                    "phi_l_pos",
-                    30,
-                    lower_bound=0,
-                    upper_bound=45,
-                    descr="Lower outer angle [°]",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = JohnerLCFSOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
 

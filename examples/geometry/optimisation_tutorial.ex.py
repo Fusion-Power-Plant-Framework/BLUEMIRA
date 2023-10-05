@@ -40,10 +40,17 @@ A quick tutorial on the optimisation of geometry in bluemira
 
 # %% [markdown]
 # # Optimisation of Geometry
+
+# %% [markdown]
+# ## ⚠️ This method of defining optimisations is deprecated ⚠️
+# See
+# [examples/optimisation/geometry_optimisation](../optimisation/geometry_optimisation.ex.py)
+
+# %% [markdown]
 # ## Introduction
 #
-# We're going to set up some geometry optimisation problems and solve them with different
-# optimisation algorithms.
+# We're going to set up some geometry optimisation problems and solve them with
+# different optimisation algorithms.
 
 # %%
 import numpy as np
@@ -113,10 +120,12 @@ my_problem.optimise()
 
 # %%
 print(
-    f"x1: value: {parameterisation_1.variables['x1'].value}, upper_bound: {parameterisation_1.variables['x1'].upper_bound}"
+    f"x1: value: {parameterisation_1.variables['x1'].value}, upper_bound:"
+    f" {parameterisation_1.variables['x1'].upper_bound}"
 )
 print(
-    f"x2: value: {parameterisation_1.variables['x2'].value}, lower_bound: {parameterisation_1.variables['x2'].lower_bound}"
+    f"x2: value: {parameterisation_1.variables['x2'].value}, lower_bound:"
+    f" {parameterisation_1.variables['x2'].lower_bound}"
 )
 
 # %% [markdown]
@@ -154,10 +163,12 @@ problem.optimise()
 
 # %%
 print(
-    f"x1: value: {parameterisation_2.variables['x1'].value}, upper_bound: {parameterisation_2.variables['x1'].upper_bound}"
+    f"x1: value: {parameterisation_2.variables['x1'].value}, upper_bound:"
+    f" {parameterisation_2.variables['x1'].upper_bound}"
 )
 print(
-    f"x2: value: {parameterisation_2.variables['x2'].value}, lower_bound: {parameterisation_2.variables['x2'].lower_bound}"
+    f"x2: value: {parameterisation_2.variables['x2'].value}, lower_bound:"
+    f" {parameterisation_2.variables['x2'].lower_bound}"
 )
 
 

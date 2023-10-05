@@ -33,20 +33,14 @@ class CodesError(base_err.BluemiraError):
     Error class for use in the codes module
     """
 
-    pass
-
 
 class FreeCADError(base_err.BluemiraError):
     """
     Error class for use in the geometry module where FreeCAD throws an error.
     """
 
-    pass
-
 
 class InvalidCADInputsError(base_err.BluemiraError):
     """
     Error class for use in the geometry module where inputs are not valid.
     """
-
-    pass

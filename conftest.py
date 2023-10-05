@@ -93,4 +93,4 @@ def pytest_configure(config):
 
     logic_string = " and ".join(strings)
 
-    setattr(config.option, "markexpr", logic_string)
+    config.option.markexpr = logic_string

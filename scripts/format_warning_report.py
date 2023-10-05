@@ -22,7 +22,7 @@ WARNINGS_KEY = "warnings"
 
 
 @dataclass(frozen=True, eq=True)
-class Warning:
+class Warning:  # noqa: A001
     """Stores information from a Python warning."""
 
     message: str
@@ -51,10 +51,10 @@ def parse_args(sys_args: List[str]) -> argparse.Namespace:
 
 def load_warnings(file_path: str) -> Set[Warning]:
     """Load a set of warnings from file."""
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         data = json.load(f)
     try:
-        return set([Warning(**warning) for warning in data[WARNINGS_KEY]])
+        return {Warning(**warning) for warning in data[WARNINGS_KEY]}
     except KeyError:  # no warnings found
         return set()
 
@@ -65,13 +65,12 @@ def format_warnings_list(warnings: Iterable[Warning]) -> List[str]:
     for warning in warnings:
         try:
             whens[warning.when].append(warning)
-        except KeyError:
+        except KeyError:  # noqa: PERF203
             whens[warning.when] = [warning]
     lines = []
     for when, warns in whens.items():
         lines.append(f"#### On {when}\n")
-        for warn in warns:
-            lines.append(f"- `{warn}`")
+        lines.extend([f"- `{warn}`" for warn in warns])
         lines.append("")
     return lines[:-1]  # we do not need a trailing new line
 
@@ -89,11 +88,7 @@ def make_collapsable(md_lines: List[str], summary: str) -> List[str]:
 
 def elements_not_in(head: Iterable[Any], ref: Iterable[Any]) -> List:
     """Find the elements that are in head, but not ref."""
-    not_in = []
-    for head_el in head:
-        if head_el not in ref:
-            not_in.append(head_el)
-    return not_in
+    return [head_el for head_el in head if head_el not in ref]
 
 
 def compare_warnings(
@@ -143,7 +138,7 @@ if __name__ == "__main__":
 
     try:
         exit_code = format_warning_report(sys.argv[1:])
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         print(exc)
         exit_code = -1
     sys.exit(exit_code)

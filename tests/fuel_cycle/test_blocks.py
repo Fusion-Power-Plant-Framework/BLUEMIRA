@@ -21,6 +21,7 @@
 
 import json
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -76,18 +77,13 @@ class TestSqrtFittedSinks:
         path = get_bluemira_path("fuel_cycle/blanket_fw_T_retention", subfolder="data")
 
         # Get all the data files
-        files = []
-        for file in os.listdir(path):
-            if os.path.splitext(file)[-1] == ".json":
-                files.append(file)
+        files = [file for file in os.listdir(path) if Path(file).suffix == ".json"]
 
         # Compiles the data from the files
         data = {}
         for file in files:
-            filepath = os.sep.join([path, file])
-            short_name = os.path.splitext(file)[0]
-            with open(filepath, "r") as fh:
-                data[short_name] = json.load(fh)
+            with open(Path(path, file)) as fh:
+                data[Path(file).stem] = json.load(fh)
 
         # Convert the data to arrays and inventories to kg
         for v in data.values():
@@ -95,7 +91,7 @@ class TestSqrtFittedSinks:
             v["inventory"] = np.array(v["inventory"]) / 1000
 
         # Fit the data with a sqrt threshold model
-        for k, v in data.items():
+        for v in data.values():
             p_opt = fit_sink_data(v["time"], v["inventory"], method="sqrt", plot=False)
 
             x_fit = np.linspace(0, max(v["time"]), 50)
@@ -148,7 +144,7 @@ class TestSqrtFittedSinks:
             y_interp = interpolation(t)[:-1]
             y_model = component.inventory[:-1]
             y_mean = np.mean(y_interp)
-            ss_tot = np.sum((y_interp - y_mean**2))
+            ss_tot = np.sum(y_interp - y_mean**2)
             ss_res = np.sum((y_interp - y_model) ** 2)
             r_2 = 1 - ss_res / ss_tot
 

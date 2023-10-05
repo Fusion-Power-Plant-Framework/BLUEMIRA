@@ -28,9 +28,10 @@ from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from matplotlib.pyplot import Axes
+
     from bluemira.structural.geometry import Geometry
-    from bluemira.structural.symmetry import CyclicSymmetry
     from bluemira.structural.loads import LoadCase
+    from bluemira.structural.symmetry import CyclicSymmetry
 
 import numpy as np
 

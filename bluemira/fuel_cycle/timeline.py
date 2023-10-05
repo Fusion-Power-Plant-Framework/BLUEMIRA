@@ -22,7 +22,7 @@
 """
 Partially randomised fusion reactor load signal object and tools
 """
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -115,9 +115,7 @@ class OperationPhase(Phase):
         n_DD_reactions: float,
         plasma_current: float,
         t_start: float = 0.0,
-        availability_strategy: OperationalAvailabilityStrategy = LogNormalAvailabilityStrategy(
-            sigma=2.0
-        ),
+        availability_strategy: Optional[OperationalAvailabilityStrategy] = None,
     ):
         super().__init__()
         self.name = name
@@ -129,6 +127,8 @@ class OperationPhase(Phase):
         self.t_min_down = t_min_down
         self._dist = None
 
+        if availability_strategy is None:
+            availability_strategy = LogNormalAvailabilityStrategy(sigma=2.0)
         outages = self.calculate_outages(availability_strategy)
         t, inventory = np.zeros(6 * n_pulse), np.zeros(6 * n_pulse)
         DT_rate, DD_rate = np.zeros(6 * n_pulse), np.zeros(6 * n_pulse)
@@ -189,8 +189,8 @@ class OperationPhase(Phase):
 
         dist += self.t_min_down
         self._dist = dist  # Store for plotting/debugging
-        t_dwell = np.random.permutation(dist)
-        return t_dwell
+        rng = np.random.default_rng()
+        return rng.permutation(dist)
 
     def plot_dist(self):
         """
@@ -204,10 +204,8 @@ class OperationPhase(Phase):
         ax.set_xlabel("$t_{interpulse}$ [s]")
         ax.set_ylabel(r"$n_{outages}$")
         ax.annotate(
-            "$n_{{pulse}}$ = {0} \n$T_{{out}}$ = {1} years\
-        \n $t_{{out_{{max}}}}$ = {2} days".format(
-                self.n_pulse, round(t_down_check, 2), max_down
-            ),
+            "$n_{{pulse}}$ = {} \n$T_{{out}}$ = {} years        \n $t_{{out_{{max}}}}$ ="
+            " {} days".format(self.n_pulse, round(t_down_check, 2), max_down),
             xy=(0.5, 0.5),
             xycoords="figure fraction",
         )
@@ -352,10 +350,7 @@ class Timeline:
         phases = []
         j = 0  # Indexing for different length lists
         for i, (name, duration) in enumerate(zip(phase_names, phase_durations)):
-            if i == 0:
-                t_start = 0
-            else:
-                t_start = phases[i - 1].t[-1]
+            t_start = 0 if i == 0 else phases[i - 1].t[-1]
             if "Phase P" in name:
                 p = OperationPhase(
                     name,
@@ -390,18 +385,17 @@ class Timeline:
         """
 
         def concatenate(p_phases, k_key):
-            a = np.concatenate(([getattr(p, k_key) for p in p_phases]))
-            return a
+            return np.concatenate([getattr(p, k_key) for p in p_phases])
 
         for key in ["t", "inventory", "DT_rate", "DD_rate"]:
             setattr(self, key, concatenate(phases, key))
-        self.t_unplanned_m = sum([getattr(p, "t_unplanned_down") for p in phases])
-        t = [getattr(p, "t") for p in phases]
+        self.t_unplanned_m = sum([p.t_unplanned_down for p in phases])
+        t = [p.t for p in phases]
         lens = np.array([len(i) for i in t])
         self.mci = np.cumsum(lens)
 
         # TODO: fix how rt is calculated for varying pulse lengths
-        fuse_indices = np.where(self.DT_rate != 0)[0]
+        fuse_indices = np.nonzero(self.DT_rate)[0]
         self.ft = np.zeros(len(self.t))
         for i in fuse_indices[1::2]:
             self.ft[i] = self.t[i] - self.t[i - 1]

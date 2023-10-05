@@ -22,15 +22,14 @@
 
 from enum import auto
 from pathlib import Path
-from typing import Any, Dict, Iterable, Union
+from typing import Any, Dict, Iterable, Optional, Union
 
 import numpy as np
 from scipy.interpolate import interp1d
 
 from bluemira.base.parameter_frame import ParameterFrame
 from bluemira.codes.error import CodesError
-from bluemira.codes.interface import CodesSolver
-from bluemira.codes.interface import RunMode as BaseRunMode
+from bluemira.codes.interface import BaseRunMode, CodesSolver
 from bluemira.codes.plasmod.api._outputs import PlasmodOutputs
 from bluemira.codes.plasmod.api._run import Run
 from bluemira.codes.plasmod.api._setup import Setup
@@ -88,7 +87,7 @@ class Solver(CodesSolver):
     def __init__(
         self,
         params: Union[Dict, ParameterFrame],
-        build_config: Dict[str, Any] = None,
+        build_config: Optional[Dict[str, Any]] = None,
     ):
         # Init task objects on execution so parameters can be edited
         # between separate 'execute' calls.

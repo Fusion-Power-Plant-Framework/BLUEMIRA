@@ -75,13 +75,11 @@ def create_compound_from_component(comp: Component) -> BluemiraCompound:
     """
     Creates a BluemiraCompound from the children's shapes of a component.
     """
-    boundary = []
     if comp.is_leaf and hasattr(comp, "shape") and comp.shape:
-        boundary.append(comp.shape)
+        boundary = [comp.shape]
     else:
-        for c in comp.leaves:
-            if hasattr(c, "shape") and c.shape:
-                boundary.append(c.shape)
+        boundary = [c.shape for c in comp.leaves if hasattr(c, "shape") and c.shape]
+
     return BluemiraCompound(label=comp.name, boundary=boundary)
 
 
@@ -94,13 +92,10 @@ def serialize_component(comp: Component) -> Dict:
     """
     type_ = type(comp)
 
-    output = []
     if isinstance(comp, Component):
+        output = [serialize_component(child) for child in comp.children]
         cdict = {"label": comp.name, "children": output}
-        for child in comp.children:
-            output.append(serialize_component(child))
         if isinstance(comp, PhysicalComponent):
             cdict["shape"] = serialize_shape(comp.shape)
         return {str(type(comp).__name__): cdict}
-    else:
-        raise NotImplementedError(f"Serialization non implemented for {type_}")
+    raise NotImplementedError(f"Serialization non implemented for {type_}")

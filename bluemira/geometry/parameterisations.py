@@ -26,13 +26,30 @@ Geometry parameterisations
 from __future__ import annotations
 
 import abc
+import copy
 import json
+import warnings
+from contextlib import suppress
+from dataclasses import dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Dict, Iterable, List, Optional, TextIO, Tuple, Union
+from pathlib import Path
+from typing import (
+    Any,
+    Dict,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    TextIO,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from scipy.special import iv as bessel
 
 from bluemira.display.plotter import plot_2d
@@ -46,13 +63,12 @@ from bluemira.geometry.tools import (
     wire_closure,
 )
 from bluemira.geometry.wire import BluemiraWire
-from bluemira.utilities.opt_variables import BoundedVariable, OptVariables
+from bluemira.utilities.opt_variables import OptVariable, OptVariablesFrame, VarDictT, ov
 from bluemira.utilities.plot_tools import str_to_latex
 
 __all__ = [
     "GeometryParameterisation",
     "PictureFrame",
-    "PictureFrameMeta",
     "PictureFrameTools",
     "PFrameSection",
     "PolySpline",
@@ -61,8 +77,10 @@ __all__ = [
     "TripleArc",
 ]
 
+OptVariablesFrameT = TypeVar("OptVariablesFrameT", bound=OptVariablesFrame)
 
-class GeometryParameterisation(abc.ABC):
+
+class GeometryParameterisation(abc.ABC, Generic[OptVariablesFrameT]):
     """
     A geometry parameterisation class facilitating geometry optimisation.
 
@@ -72,9 +90,9 @@ class GeometryParameterisation(abc.ABC):
     variables with initial values, and override the create_shape method.
     """
 
-    __slots__ = ("name", "variables", "n_ineq_constraints")
+    __slots__ = ("name", "_variables")
 
-    def __init__(self, variables: OptVariables):
+    def __init__(self, variables: OptVariablesFrameT):
         """
         Parameters
         ----------
@@ -82,9 +100,17 @@ class GeometryParameterisation(abc.ABC):
             Set of optimisation variables of the GeometryParameterisation
         """
         self.name = self.__class__.__name__
-        self.variables = variables
-        self.n_ineq_constraints = 0
-        super().__init__()
+        self._variables = variables
+
+    @property
+    def n_ineq_constraints(self) -> int:
+        """Number of inequality constraints in the GeometryParameterisation"""
+        return 0
+
+    @property
+    def variables(self) -> OptVariablesFrameT:
+        """The variables of the GeometryParameterisation"""
+        return self._variables
 
     def adjust_variable(
         self,
@@ -124,7 +150,7 @@ class GeometryParameterisation(abc.ABC):
         self.variables.fix_variable(name, value)
 
     def shape_ineq_constraints(
-        self, constraint: np.ndarray, x: np.ndarray, grad: np.ndarray
+        self, constraint: np.ndarray, x: np.ndarray, grad: np.ndarray  # noqa: ARG002
     ):
         """
         Inequality constraint function for the variable vector of the geometry
@@ -139,44 +165,51 @@ class GeometryParameterisation(abc.ABC):
             Normalised vector of free variables
         grad:
             Gradient matrix of the constraint (assign in place)
+
+        Notes
+        -----
+        Deprecated please use `f_ineq_constraint` and `df_ineq_constraint`
+        """
+        warnings.warn(
+            "Use of 'shape_ineq_constraints' method is "
+            "deprecated and it will be removed in version 2.0.0.\n"
+            "See "
+            "https://bluemira.readthedocs.io/en/latest/optimisation/"
+            "optimisation.html "
+            "for documentation of the new optimisation module.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.f_ineq_constraint()
+
+    def f_ineq_constraint(self):
+        """
+        Inequality constraint function for the variable vector of the geometry
+        parameterisation. This is used when internal consistency between different
+        un-fixed variables is required.
+
         """
         if self.n_ineq_constraints < 1:
             raise GeometryParameterisationError(
-                f"Cannot apply shape_ineq_constraints to {self.__class__.__name__}: it"
+                f"Cannot apply shape_ineq_constraints to {type(self).__name__}: it"
                 "has no inequality constraints."
             )
 
-    def _process_x_norm_fixed(self, x_norm: np.ndarray) -> List[float]:
+    @property
+    def tolerance(self) -> npt.NDArray:
         """
-        Utility for processing a set of free, normalised variables, and folding the fixed
-        un-normalised variables back into a single list of all actual values.
-
-        Parameters
-        ----------
-        x_norm:
-            Normalised vector of variable values
-
-        Returns
-        -------
-        List of ordered actual (un-normalised) values
+        Optimisation tolerance for the geometry parameterisation.
         """
-        fixed_idx = self.variables._fixed_variable_indices
+        return np.array([np.finfo(float).eps])
 
-        # Note that we are dealing with normalised values when coming from the optimiser
-        x_actual = list(self.variables.get_values_from_norm(x_norm))
-
-        if fixed_idx:
-            x_fixed = self.variables.values
-            for i in fixed_idx:
-                x_actual.insert(i, x_fixed[i])
-        return x_actual
-
-    def _get_x_norm_index(self, name: str) -> int:
+    def get_x_norm_index(self, name: str) -> int:
         """
         Get the index of a variable name in the modified-length x_norm vector
 
         Parameters
         ----------
+        variables:
+            Bounded optimisation variables
         name:
             Variable name for which to get the index
 
@@ -196,6 +229,33 @@ class GeometryParameterisation(abc.ABC):
                 count += 1
         return idx_actual - count
 
+    def process_x_norm_fixed(self, x_norm: np.ndarray) -> List[float]:
+        """
+        Utility for processing a set of free, normalised variables, and folding the fixed
+        un-normalised variables back into a single list of all actual values.
+
+        Parameters
+        ----------
+        variables:
+            Bounded optimisation variables
+        x_norm:
+            Normalised vector of variable values
+
+        Returns
+        -------
+        List of ordered actual (un-normalised) values
+        """
+        fixed_idx = self.variables._fixed_variable_indices
+
+        # Note that we are dealing with normalised values when coming from the optimiser
+        x_actual = list(self.variables.get_values_from_norm(x_norm))
+
+        if fixed_idx:
+            x_fixed = self.variables.values
+            for i in fixed_idx:
+                x_actual.insert(i, x_fixed[i])
+        return x_actual
+
     @abc.abstractmethod
     def create_shape(self, label: str = "", **kwargs: Dict[str, Any]) -> BluemiraWire:
         """
@@ -210,7 +270,6 @@ class GeometryParameterisation(abc.ABC):
         -------
         CAD Wire of the geometry
         """
-        pass
 
     def to_json(self, file: str):
         """
@@ -224,7 +283,7 @@ class GeometryParameterisation(abc.ABC):
         self.variables.to_json(file)
 
     @classmethod
-    def from_json(cls, file: Union[str, TextIO]) -> GeometryParameterisation:
+    def from_json(cls, file: Union[Path, str, TextIO]) -> GeometryParameterisation:
         """
         Create the GeometryParameterisation from a json file.
 
@@ -233,14 +292,15 @@ class GeometryParameterisation(abc.ABC):
         file:
             The path to the file, or an open file handle that supports reading.
         """
-        if isinstance(file, str):
-            with open(file, "r") as fh:
+        if isinstance(file, (Path, str)):
+            with open(file) as fh:
                 return cls.from_json(fh)
 
         var_dict = json.load(file)
         return cls(var_dict)
 
-    def _annotator(self, ax, key: str, xy1: Tuple, xy2: Tuple, xy3: Tuple):
+    @staticmethod
+    def _annotator(ax, key: str, xy1: Tuple, xy2: Tuple, xy3: Tuple):
         """
         Create annotation arrow with label
 
@@ -273,7 +333,7 @@ class GeometryParameterisation(abc.ABC):
             },
         )
         ax.annotate(
-            r"$\it{" f"{str_to_latex(key).strip('$')}" "}$",
+            r"$\it{" f"{str_to_latex(key).strip('$')}" "}$",  # noqa: ISC001
             xy=xy3,
             xycoords="data",
             xytext=(0, 5),
@@ -294,31 +354,31 @@ class GeometryParameterisation(abc.ABC):
         """
         offset_ar_x = 0
         offset_ar_z = 0
-        for key, var in self.variables.as_dict().items():
-            if key.startswith("x"):
+        for v in self.variables:
+            if v.name.startswith("x"):
                 self._annotator(
                     ax,
-                    key,
+                    v.name,
                     (0, offset_ar_x),
-                    (var["_value"], offset_ar_x),
-                    (var["_value"] * 0.4, offset_ar_x),
+                    (v.value, offset_ar_x),
+                    (v.value * 0.4, offset_ar_x),
                 )
                 ax.plot([0, 0], [0, offset_ar_x], color="k")
-                ax.plot([var["_value"], var["_value"]], [0, offset_ar_x], color="k")
+                ax.plot([v.value, v.value], [0, offset_ar_x], color="k")
                 offset_ar_x += 2
-            elif key.startswith("z") or key[1] == "z":
+            elif v.name.startswith("z") or v.name[1] == "z":
                 xcor = shape.center_of_mass[0] + offset_ar_z
                 self._annotator(
                     ax,
-                    key,
+                    v.name,
                     (xcor, 0),
-                    (xcor, var["_value"]),
-                    (xcor, var["_value"] * 0.4),
+                    (xcor, v.value),
+                    (xcor, v.value * 0.4),
                 )
                 ax.plot([shape.center_of_mass[0], xcor], [0, 0], color="k")
                 ax.plot(
                     [shape.center_of_mass[0], xcor],
-                    [var["_value"], var["_value"]],
+                    [v.value, v.value],
                     color="k",
                 )
                 offset_ar_z += 1.5
@@ -348,7 +408,28 @@ class GeometryParameterisation(abc.ABC):
         return ax
 
 
-class PrincetonD(GeometryParameterisation):
+@dataclass
+class PrincetonDOptVariables(OptVariablesFrame):
+    x1: OptVariable = ov(
+        "x1", 4, lower_bound=2, upper_bound=6, description="Inboard limb radius"
+    )
+    x2: OptVariable = ov(
+        "x2",
+        14,
+        lower_bound=10,
+        upper_bound=18,
+        description="Outboard limb radius",
+    )
+    dz: OptVariable = ov(
+        "dz",
+        0,
+        lower_bound=-0.5,
+        upper_bound=0.5,
+        description="Vertical offset from z=0",
+    )
+
+
+class PrincetonD(GeometryParameterisation[PrincetonDOptVariables]):
     """
     Princeton D geometry parameterisation.
 
@@ -376,34 +457,12 @@ class PrincetonD(GeometryParameterisation):
     """
 
     __slots__ = ()
+    n_ineq_constraints: int = 1
 
-    def __init__(self, var_dict: Optional[Dict[str, float]] = None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "x1", 4, lower_bound=2, upper_bound=6, descr="Inboard limb radius"
-                ),
-                BoundedVariable(
-                    "x2",
-                    14,
-                    lower_bound=10,
-                    upper_bound=18,
-                    descr="Outboard limb radius",
-                ),
-                BoundedVariable(
-                    "dz",
-                    0,
-                    lower_bound=-0.5,
-                    upper_bound=0.5,
-                    descr="Vertical offset from z=0",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = PrincetonDOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
-
         super().__init__(variables)
-        self.n_ineq_constraints = 1
 
     def create_shape(self, label: str = "", n_points: int = 2000) -> BluemiraWire:
         """
@@ -422,7 +481,9 @@ class PrincetonD(GeometryParameterisation):
         CAD Wire of the geometry
         """
         x, z = self._princeton_d(
-            *self.variables.values,
+            self.variables.x1.value,
+            self.variables.x2.value,
+            self.variables.dz.value,
             n_points,
         )
         xyz = np.array([x, np.zeros(len(x)), z])
@@ -439,11 +500,15 @@ class PrincetonD(GeometryParameterisation):
         return BluemiraWire([outer_arc, straight_segment], label=label)
 
     def shape_ineq_constraints(
-        self, constraint: np.ndarray, x_norm: np.ndarray, grad: np.ndarray
+        self,
+        constraint: np.ndarray,
+        x_norm: np.ndarray,  # noqa: ARG002
+        grad: np.ndarray,
     ) -> np.ndarray:
         """
         Inequality constraint function for the variable vector of the geometry
-        parameterisation.
+        parameterisation. This is used when internal consistency between different
+        un-fixed variables is required.
 
         Parameters
         ----------
@@ -453,24 +518,42 @@ class PrincetonD(GeometryParameterisation):
             Normalised vector of free variables
         grad:
             Gradient matrix of the constraint (assign in place)
+
+        Notes
+        -----
+        Deprecated please use `f_ineq_constraint` and `df_ineq_constraint`
         """
-        x_actual = self._process_x_norm_fixed(x_norm)
-
-        x1, x2, _ = x_actual
-
-        constraint[0] = x1 - x2
-
-        idx_x1 = self._get_x_norm_index("x1")
-        idx_x2 = self._get_x_norm_index("x2")
-
-        if grad.size > 0:
-            grad[:] = np.zeros(len(x_norm))
-            if not self.variables["x1"].fixed:
-                grad[0, idx_x1] = 1
-            if not self.variables["x2"].fixed:
-                grad[0, idx_x2] = -1
+        warnings.warn(
+            "Use of 'shape_ineq_constraints' method is "
+            "deprecated and it will be removed in version 2.0.0.\n"
+            "See "
+            "https://bluemira.readthedocs.io/en/latest/optimisation/"
+            "optimisation.html "
+            "for documentation of the new optimisation module.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        constraint[:] = self.f_ineq_constraint()
+        grad[:] = self.df_ineq_constraint()
 
         return constraint
+
+    def f_ineq_constraint(self) -> np.ndarray:
+        """Inequality constraint for PrincetonD."""
+        free_vars = self.variables.get_normalised_values()
+        x1, x2, _ = self.process_x_norm_fixed(free_vars)
+        return np.array([x1 - x2])
+
+    def df_ineq_constraint(self) -> np.ndarray:
+        """Inequality constraint gradient for PrincetonD."""
+        opt_vars = self.variables
+        free_vars = opt_vars.get_normalised_values()
+        grad = np.zeros((1, len(free_vars)))
+        if not self.variables.x1.fixed:
+            grad[0][self.get_x_norm_index("x1")] = 1
+        if not self.variables.x2.fixed:
+            grad[0][self.get_x_norm_index("x2")] = -1
+        return grad
 
     @staticmethod
     def _princeton_d(
@@ -515,7 +598,7 @@ class PrincetonD(GeometryParameterisation):
             :math:`I_{n}` is the n-th order modified Bessel function
             :math:`x_{1}` is the inner radial position of the shape
             :math:`x_{2}` is the outer radial position of the shape
-        """  # noqa :W505
+        """
         if x2 <= x1:
             raise GeometryParameterisationError(
                 "Princeton D parameterisation requires an x2 value "
@@ -527,7 +610,10 @@ class PrincetonD(GeometryParameterisation):
         theta = np.linspace(-0.5 * np.pi, 1.5 * np.pi, npoints)
         s = np.zeros(npoints, dtype="complex128")
         n = 0
-        while True:  # sum convergent series
+        ds = 1
+
+        # sum convergent series
+        while np.max(abs(ds)) >= 1e-14:  # noqa: PLR2004
             n += 1
 
             ds = 1j / n * (np.exp(-1j * n * theta) - 1)
@@ -535,8 +621,6 @@ class PrincetonD(GeometryParameterisation):
             ds *= np.exp(1j * n * np.pi / 2)
             ds *= (bessel(n - 1, k) + bessel(n + 1, k)) / 2
             s += ds
-            if np.max(abs(ds)) < 1e-14:
-                break
 
         z = abs(xo * k * (bessel(1, k) * theta + s))
         x = xo * np.exp(k * np.sin(theta))
@@ -545,7 +629,45 @@ class PrincetonD(GeometryParameterisation):
         return x, z
 
 
-class TripleArc(GeometryParameterisation):
+@dataclass
+class TripleArcOptVaribles(OptVariablesFrame):
+    x1: OptVariable = ov(
+        "x1", 4.486, lower_bound=4, upper_bound=5, description="Inner limb radius"
+    )
+    dz: OptVariable = ov(
+        "dz",
+        0,
+        lower_bound=-1,
+        upper_bound=1,
+        description="Vertical offset from z=0",
+    )
+    sl: OptVariable = ov(
+        "sl", 6.428, lower_bound=5, upper_bound=10, description="Straight length"
+    )
+    f1: OptVariable = ov(
+        "f1", 3, lower_bound=2, upper_bound=12, description="rs == f1*z small"
+    )
+    f2: OptVariable = ov(
+        "f2", 4, lower_bound=2, upper_bound=12, description="rm == f2*rs mid"
+    )
+
+    a1: OptVariable = ov(
+        "a1",
+        20,
+        lower_bound=5,
+        upper_bound=120,
+        description="Small arc angle [degrees]",
+    )
+    a2: OptVariable = ov(
+        "a2",
+        40,
+        lower_bound=10,
+        upper_bound=120,
+        description="Middle arc angle [degrees]",
+    )
+
+
+class TripleArc(GeometryParameterisation[TripleArcOptVaribles]):
     """
     Triple-arc up-down symmetric geometry parameterisation.
 
@@ -581,56 +703,23 @@ class TripleArc(GeometryParameterisation):
     """
 
     __slots__ = ()
+    n_ineq_constraints: int = 1
 
-    def __init__(self, var_dict: Optional[Dict[str, float]] = None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "x1", 4.486, lower_bound=4, upper_bound=5, descr="Inner limb radius"
-                ),
-                BoundedVariable(
-                    "dz",
-                    0,
-                    lower_bound=-1,
-                    upper_bound=1,
-                    descr="Vertical offset from z=0",
-                ),
-                BoundedVariable(
-                    "sl", 6.428, lower_bound=5, upper_bound=10, descr="Straight length"
-                ),
-                BoundedVariable(
-                    "f1", 3, lower_bound=2, upper_bound=12, descr="rs == f1*z small"
-                ),
-                BoundedVariable(
-                    "f2", 4, lower_bound=2, upper_bound=12, descr="rm == f2*rs mid"
-                ),
-                BoundedVariable(
-                    "a1",
-                    20,
-                    lower_bound=5,
-                    upper_bound=120,
-                    descr="Small arc angle [degrees]",
-                ),
-                BoundedVariable(
-                    "a2",
-                    40,
-                    lower_bound=10,
-                    upper_bound=120,
-                    descr="Middle arc angle [degrees]",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = TripleArcOptVaribles()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
-        self.n_ineq_constraints = 1
 
     def shape_ineq_constraints(
-        self, constraint: np.ndarray, x_norm: np.ndarray, grad: np.ndarray
+        self,
+        constraint: np.ndarray,
+        x_norm: np.ndarray,  # noqa: ARG002
+        grad: np.ndarray,
     ) -> np.ndarray:
         """
         Inequality constraint function for the variable vector of the geometry
-        parameterisation.
+        parameterisation. This is used when internal consistency between different
+        un-fixed variables is required.
 
         Parameters
         ----------
@@ -640,25 +729,48 @@ class TripleArc(GeometryParameterisation):
             Normalised vector of free variables
         grad:
             Gradient matrix of the constraint (assign in place)
+
+        Notes
+        -----
+        Deprecated please use `f_ineq_constraint` and `df_ineq_constraint`
         """
-        x_actual = self._process_x_norm_fixed(x_norm)
-
-        _, _, _, _, _, a1, a2 = x_actual
-
-        constraint[0] = a1 + a2 - 180
-
-        idx_a1 = self._get_x_norm_index("a1")
-        idx_a2 = self._get_x_norm_index("a2")
-
-        if grad.size > 0:
-            g = np.zeros(len(x_norm))
-            if not self.variables["a1"].fixed:
-                g[idx_a1] = 1
-            if not self.variables["a2"].fixed:
-                g[idx_a2] = 1
-            grad[0, :] = g
+        warnings.warn(
+            "Use of 'shape_ineq_constraints' method is "
+            "deprecated and it will be removed in version 2.0.0.\n"
+            "See "
+            "https://bluemira.readthedocs.io/en/latest/optimisation/"
+            "optimisation.html "
+            "for documentation of the new optimisation module.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        constraint[:] = self.f_ineq_constraint()
+        grad[:] = self.df_ineq_constraint()
 
         return constraint
+
+    def f_ineq_constraint(self) -> np.ndarray:
+        """
+        Inequality constraint for TripleArc.
+
+        Constrain such that a1 + a2 is less than or equal to 180 degrees.
+        """
+        norm_vals = self.variables.get_normalised_values()
+        x_actual = self.process_x_norm_fixed(norm_vals)
+        _, _, _, _, _, a1, a2 = x_actual
+        return np.array([a1 + a2 - 180])
+
+    def df_ineq_constraint(self) -> np.ndarray:
+        """Inequality constraint gradient for TripleArc."""
+        free_vars = self.variables.get_normalised_values()
+        g = np.zeros((1, len(free_vars)))
+        if not self.variables.a1.fixed:
+            idx_a1 = self.get_x_norm_index("a1")
+            g[0][idx_a1] = 1
+        if not self.variables.a2.fixed:
+            idx_a2 = self.get_x_norm_index("a2")
+            g[0][idx_a2] = 1
+        return g
 
     def create_shape(self, label: str = "") -> BluemiraWire:
         """
@@ -726,7 +838,7 @@ class TripleArc(GeometryParameterisation):
             make_circle_arc_3P(p6, p65, p7, label="lower_inner_arc"),
         ]
 
-        if sl != 0.0:
+        if sl != 0.0:  # noqa: PLR2004
             straight_segment = wire_closure(
                 BluemiraWire(wires), label="straight_segment"
             )
@@ -736,7 +848,7 @@ class TripleArc(GeometryParameterisation):
         wire.translate((0, 0, dz))
         return wire
 
-    def _label_function(self, ax, shape: BluemiraWire):
+    def _label_function(self, ax, shape: BluemiraWire):  # noqa: PLR6301
         """
         Adds labels to parameterisation plots
 
@@ -753,7 +865,76 @@ class TripleArc(GeometryParameterisation):
         offset_x, offset_z = super()._label_function(ax, shape)
 
 
-class SextupleArc(GeometryParameterisation):
+@dataclass
+class SextupleArcOptVariables(OptVariablesFrame):
+    x1: OptVariable = ov(
+        "x1",
+        4.486,
+        lower_bound=4,
+        upper_bound=5,
+        description="Inner limb radius",
+    )
+    z1: OptVariable = ov(
+        "z1",
+        5,
+        lower_bound=0,
+        upper_bound=10,
+        description="Inboard limb height",
+    )
+    r1: OptVariable = ov(
+        "r1", 4, lower_bound=4, upper_bound=12, description="1st arc radius"
+    )
+    r2: OptVariable = ov(
+        "r2", 5, lower_bound=4, upper_bound=12, description="2nd arc radius"
+    )
+    r3: OptVariable = ov(
+        "r3", 6, lower_bound=4, upper_bound=12, description="3rd arc radius"
+    )
+    r4: OptVariable = ov(
+        "r4", 7, lower_bound=4, upper_bound=12, description="4th arc radius"
+    )
+    r5: OptVariable = ov(
+        "r5", 8, lower_bound=4, upper_bound=12, description="5th arc radius"
+    )
+    a1: OptVariable = ov(
+        "a1",
+        45,
+        lower_bound=5,
+        upper_bound=50,
+        description="1st arc angle [degrees]",
+    )
+    a2: OptVariable = ov(
+        "a2",
+        60,
+        lower_bound=10,
+        upper_bound=80,
+        description="2nd arc angle [degrees]",
+    )
+
+    a3: OptVariable = ov(
+        "a3",
+        90,
+        lower_bound=10,
+        upper_bound=100,
+        description="3rd arc angle [degrees]",
+    )
+    a4: OptVariable = ov(
+        "a4",
+        40,
+        lower_bound=10,
+        upper_bound=80,
+        description="4th arc angle [degrees]",
+    )
+    a5: OptVariable = ov(
+        "a5",
+        30,
+        lower_bound=10,
+        upper_bound=80,
+        description="5th arc angle [degrees]",
+    )
+
+
+class SextupleArc(GeometryParameterisation[SextupleArcOptVariables]):
     """
     Sextuple-arc up-down asymmetric geometry parameterisation.
 
@@ -782,79 +963,23 @@ class SextupleArc(GeometryParameterisation):
     """
 
     __slots__ = ()
+    n_ineq_constraints: int = 1
 
-    def __init__(self, var_dict: Optional[Dict[str, float]] = None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "x1", 4.486, lower_bound=4, upper_bound=5, descr="Inner limb radius"
-                ),
-                BoundedVariable(
-                    "z1", 5, lower_bound=0, upper_bound=10, descr="Inboard limb height"
-                ),
-                BoundedVariable(
-                    "r1", 4, lower_bound=4, upper_bound=12, descr="1st arc radius"
-                ),
-                BoundedVariable(
-                    "r2", 5, lower_bound=4, upper_bound=12, descr="2nd arc radius"
-                ),
-                BoundedVariable(
-                    "r3", 6, lower_bound=4, upper_bound=12, descr="3rd arc radius"
-                ),
-                BoundedVariable(
-                    "r4", 7, lower_bound=4, upper_bound=12, descr="4th arc radius"
-                ),
-                BoundedVariable(
-                    "r5", 8, lower_bound=4, upper_bound=12, descr="5th arc radius"
-                ),
-                BoundedVariable(
-                    "a1",
-                    45,
-                    lower_bound=5,
-                    upper_bound=50,
-                    descr="1st arc angle [degrees]",
-                ),
-                BoundedVariable(
-                    "a2",
-                    60,
-                    lower_bound=10,
-                    upper_bound=80,
-                    descr="2nd arc angle [degrees]",
-                ),
-                BoundedVariable(
-                    "a3",
-                    90,
-                    lower_bound=10,
-                    upper_bound=100,
-                    descr="3rd arc angle [degrees]",
-                ),
-                BoundedVariable(
-                    "a4",
-                    40,
-                    lower_bound=10,
-                    upper_bound=80,
-                    descr="4th arc angle [degrees]",
-                ),
-                BoundedVariable(
-                    "a5",
-                    30,
-                    lower_bound=10,
-                    upper_bound=80,
-                    descr="5th arc angle [degrees]",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = SextupleArcOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
-        self.n_ineq_constraints = 1
 
     def shape_ineq_constraints(
-        self, constraint: np.ndarray, x_norm: np.ndarray, grad: np.ndarray
+        self,
+        constraint: np.ndarray,
+        x_norm: np.ndarray,  # noqa: ARG002
+        grad: np.ndarray,
     ) -> np.ndarray:
         """
         Inequality constraint function for the variable vector of the geometry
-        parameterisation.
+        parameterisation. This is used when internal consistency between different
+        un-fixed variables is required.
 
         Parameters
         ----------
@@ -864,23 +989,47 @@ class SextupleArc(GeometryParameterisation):
             Normalised vector of free variables
         grad:
             Gradient matrix of the constraint (assign in place)
+
+        Notes
+        -----
+        Deprecated please use `f_ineq_constraint` and `df_ineq_constraint`
         """
-        x_actual = self._process_x_norm_fixed(x_norm)
-
-        _, _, _, _, _, _, _, a1, a2, a3, a4, a5 = x_actual
-
-        constraint[0] = a1 + a2 + a3 + a4 + a5 - 360
-        var_strings = ["a1", "a2", "a3", "a4", "a5"]
-
-        if grad.size > 0:
-            g = np.zeros(len(x_norm))
-            for var in var_strings:
-                if not self.variables[var].fixed:
-                    g[self._get_x_norm_index(var)] = 1
-
-            grad[0, :] = g
+        warnings.warn(
+            "Use of 'shape_ineq_constraints' method is "
+            "deprecated and it will be removed in version 2.0.0.\n"
+            "See "
+            "https://bluemira.readthedocs.io/en/latest/optimisation/"
+            "optimisation.html "
+            "for documentation of the new optimisation module.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        constraint[:] = self.f_ineq_constraint()
+        grad[:] = self.df_ineq_constraint()
 
         return constraint
+
+    def f_ineq_constraint(self) -> np.ndarray:
+        """
+        Inequality constraint for TripleArc.
+
+        Constrain such that sum of the 5 angles is less than or equal to 360
+        degrees.
+        """
+        x_norm = self.variables.get_normalised_values()
+        x_actual = self.process_x_norm_fixed(x_norm)
+        _, _, _, _, _, _, _, a1, a2, a3, a4, a5 = x_actual
+        return np.array([a1 + a2 + a3 + a4 + a5 - 360])
+
+    def df_ineq_constraint(self) -> np.ndarray:
+        """Inequality constraint gradient for TripleArc."""
+        x_norm = self.variables.get_normalised_values()
+        gradient = np.zeros((1, len(x_norm)))
+        for var in ["a1", "a2", "a3", "a4", "a5"]:
+            if not self.variables[var].fixed:
+                var_idx = self.get_x_norm_index(var)
+                gradient[0][var_idx] = 1
+        return gradient
 
     @staticmethod
     def _project_centroid(xc, zc, xi, zi, ri):
@@ -963,7 +1112,7 @@ class SextupleArc(GeometryParameterisation):
 
         return BluemiraWire(wires, label=label)
 
-    def _label_function(self, ax, shape: BluemiraWire):
+    def _label_function(self, ax, shape: BluemiraWire):  # noqa: PLR6301
         """
         Adds labels to parameterisation plots
 
@@ -980,7 +1129,144 @@ class SextupleArc(GeometryParameterisation):
         offset_x, offset_z = super()._label_function(ax, shape)
 
 
-class PolySpline(GeometryParameterisation):
+@dataclass
+class PolySplineOptVariables(OptVariablesFrame):
+    x1: OptVariable = ov(
+        "x1",
+        4.3,
+        lower_bound=4,
+        upper_bound=5,
+        description="Inner limb radius",
+    )
+    x2: OptVariable = ov(
+        "x2",
+        16.56,
+        lower_bound=5,
+        upper_bound=25,
+        description="Outer limb radius",
+    )
+    z2: OptVariable = ov(
+        "z2",
+        0.03,
+        lower_bound=-2,
+        upper_bound=2,
+        description="Outer note vertical shift",
+    )
+    height: OptVariable = ov(
+        "height",
+        15.5,
+        lower_bound=10,
+        upper_bound=50,
+        description="Full height",
+    )
+    top: OptVariable = ov(
+        "top",
+        0.52,
+        lower_bound=0.2,
+        upper_bound=1,
+        description="Horizontal shift",
+    )
+    upper: OptVariable = ov(
+        "upper",
+        0.67,
+        lower_bound=0.2,
+        upper_bound=1,
+        description="Vertical shift",
+    )
+    dz: OptVariable = ov(
+        "dz",
+        -0.6,
+        lower_bound=-5,
+        upper_bound=5,
+        description="Vertical offset",
+    )
+    flat: OptVariable = ov(
+        "flat",
+        0,
+        lower_bound=0,
+        upper_bound=1,
+        description="Fraction of straight outboard leg",
+    )
+    tilt: OptVariable = ov(
+        "tilt",
+        4,
+        lower_bound=-45,
+        upper_bound=45,
+        description="Outboard angle [degrees]",
+    )
+    bottom: OptVariable = ov(
+        "bottom",
+        0.4,
+        lower_bound=0,
+        upper_bound=1,
+        description="Lower horizontal shift",
+    )
+    lower: OptVariable = ov(
+        "lower",
+        0.67,
+        lower_bound=0.2,
+        upper_bound=1,
+        description="Lower vertical shift",
+    )
+    l0s: OptVariable = ov(
+        "l0s",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable first segment start",
+    )
+    l1s: OptVariable = ov(
+        "l1s",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable second segment start",
+    )
+    l2s: OptVariable = ov(
+        "l2s",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable third segment start",
+    )
+    l3s: OptVariable = ov(
+        "l3s",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable fourth segment start",
+    )
+    l0e: OptVariable = ov(
+        "l0e",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable first segment end",
+    )
+    l1e: OptVariable = ov(
+        "l1e",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable second segment end",
+    )
+    l2e: OptVariable = ov(
+        "l2e",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable third segment end",
+    )
+    l3e: OptVariable = ov(
+        "l3e",
+        0.8,
+        lower_bound=0.1,
+        upper_bound=1.9,
+        description="Tension variable fourth segment end",
+    )
+
+
+class PolySpline(GeometryParameterisation[PolySplineOptVariables]):
     """
     Simon McIntosh's Poly-Bézier-spline geometry parameterisation (19 variables).
 
@@ -1029,121 +1315,8 @@ class PolySpline(GeometryParameterisation):
 
     __slots__ = ()
 
-    def __init__(self, var_dict: Optional[Dict[str, float]] = None):
-        variables = OptVariables(
-            [
-                BoundedVariable(
-                    "x1", 4.3, lower_bound=4, upper_bound=5, descr="Inner limb radius"
-                ),
-                BoundedVariable(
-                    "x2", 16.56, lower_bound=5, upper_bound=25, descr="Outer limb radius"
-                ),
-                BoundedVariable(
-                    "z2",
-                    0.03,
-                    lower_bound=-2,
-                    upper_bound=2,
-                    descr="Outer note vertical shift",
-                ),
-                BoundedVariable(
-                    "height", 15.5, lower_bound=10, upper_bound=50, descr="Full height"
-                ),
-                BoundedVariable(
-                    "top", 0.52, lower_bound=0.2, upper_bound=1, descr="Horizontal shift"
-                ),
-                BoundedVariable(
-                    "upper", 0.67, lower_bound=0.2, upper_bound=1, descr="Vertical shift"
-                ),
-                BoundedVariable(
-                    "dz", -0.6, lower_bound=-5, upper_bound=5, descr="Vertical offset"
-                ),
-                BoundedVariable(
-                    "flat",
-                    0,
-                    lower_bound=0,
-                    upper_bound=1,
-                    descr="Fraction of straight outboard leg",
-                ),
-                BoundedVariable(
-                    "tilt",
-                    4,
-                    lower_bound=-45,
-                    upper_bound=45,
-                    descr="Outboard angle [degrees]",
-                ),
-                BoundedVariable(
-                    "bottom",
-                    0.4,
-                    lower_bound=0,
-                    upper_bound=1,
-                    descr="Lower horizontal shift",
-                ),
-                BoundedVariable(
-                    "lower",
-                    0.67,
-                    lower_bound=0.2,
-                    upper_bound=1,
-                    descr="Lower vertical shift",
-                ),
-                BoundedVariable(
-                    "l0s",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable first segment start",
-                ),
-                BoundedVariable(
-                    "l1s",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable second segment start",
-                ),
-                BoundedVariable(
-                    "l2s",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable third segment start",
-                ),
-                BoundedVariable(
-                    "l3s",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable fourth segment start",
-                ),
-                BoundedVariable(
-                    "l0e",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable first segment end",
-                ),
-                BoundedVariable(
-                    "l1e",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable second segment end",
-                ),
-                BoundedVariable(
-                    "l2e",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable third segment end",
-                ),
-                BoundedVariable(
-                    "l3e",
-                    0.8,
-                    lower_bound=0.1,
-                    upper_bound=1.9,
-                    descr="Tension variable fourth segment end",
-                ),
-            ],
-            frozen=True,
-        )
+    def __init__(self, var_dict: Optional[VarDictT] = None):
+        variables = PolySplineOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
         super().__init__(variables)
 
@@ -1239,7 +1412,7 @@ class PolySpline(GeometryParameterisation):
 
         return p1, p2
 
-    def _label_function(self, ax, shape: BluemiraWire):
+    def _label_function(self, ax, shape: BluemiraWire):  # noqa: PLR6301
         """
         Adds labels to parameterisation plots
 
@@ -1460,7 +1633,7 @@ class PictureFrameTools:
         c_o = [x_out - r_o, 0.0, z + r_o if flip else z - r_o]
 
         # Inner Corner
-        if r_i != 0.0:
+        if r_i != 0.0:  # noqa: PLR2004
             wires.append(
                 make_circle(
                     r_i,
@@ -1477,7 +1650,7 @@ class PictureFrameTools:
         wires.append(make_polygon([p2, p1] if flip else [p1, p2], label=f"{label}_limb"))
 
         # Outer corner
-        if r_o != 0.0:
+        if r_o != 0.0:  # noqa: PLR2004
             wires.append(
                 make_circle(
                     r_o,
@@ -1590,104 +1763,106 @@ class PFrameSection(Enum):
         return self.value(*args, **kwargs)
 
 
-class PictureFrameMeta(type(GeometryParameterisation), type(PictureFrameTools)):
-    """
-    A Metaclass to define the customisations on a given PictureFrame parameterisation
+@dataclass
+class PictureFrameOptVariables(OptVariablesFrame):
+    x1: OptVariable = ov(
+        "x1",
+        0.4,
+        lower_bound=0.3,
+        upper_bound=0.5,
+        description="Inner limb radius",
+    )
+    x2: OptVariable = ov(
+        "x2",
+        9.5,
+        lower_bound=9.4,
+        upper_bound=9.8,
+        description="Outer limb radius",
+    )
+    z1: OptVariable = ov(
+        "z1",
+        9.5,
+        lower_bound=8,
+        upper_bound=10.5,
+        description="Upper limb height",
+    )
+    z2: OptVariable = ov(
+        "z2",
+        -9.5,
+        lower_bound=-10.5,
+        upper_bound=-8,
+        description="Lower limb height",
+    )
+    ri: OptVariable = ov(
+        "ri",
+        0.1,
+        lower_bound=0,
+        upper_bound=2,
+        description="Inboard corner radius",
+    )
+    ro: OptVariable = ov(
+        "ro",
+        2,
+        lower_bound=1,
+        upper_bound=5,
+        description="Outboard corner radius",
+    )
+    x3: OptVariable = ov(
+        "x3",
+        2.5,
+        lower_bound=2.4,
+        upper_bound=2.6,
+        description="Curve start radius",
+    )
+    z1_peak: OptVariable = ov(
+        "z1_peak",
+        11,
+        lower_bound=6,
+        upper_bound=12,
+        description="Upper limb curve height",
+    )
+    z2_peak: OptVariable = ov(
+        "z2_peak",
+        -11,
+        lower_bound=-12,
+        upper_bound=-6,
+        description="Lower limb curve height",
+    )
+    x4: OptVariable = ov(
+        "x4",
+        1.1,
+        lower_bound=1,
+        upper_bound=1.3,
+        description="Middle limb radius",
+    )
+    z3: OptVariable = ov(
+        "z3",
+        6.5,
+        lower_bound=6,
+        upper_bound=8,
+        description="Taper angle stop height",
+    )
 
-    The methods required to create modified upper, lower or inner legs
-    are set here
-
-    """
-
-    def __call__(
-        cls,  # noqa: N805
-        var_dict: Optional[Dict] = None,
-        *,
-        upper: Union[str, PFrameSection] = PFrameSection.FLAT,
-        lower: Union[str, PFrameSection] = PFrameSection.FLAT,
-        inner: Optional[Union[str, PFrameSection]] = None,
-    ) -> PictureFrame:
-        """
-        Set up the modified PictureFrame class
-        """
-        cls.upper = upper if isinstance(upper, PFrameSection) else PFrameSection[upper]
-        cls.lower = lower if isinstance(lower, PFrameSection) else PFrameSection[lower]
-
-        if isinstance(inner, str):
-            inner = PFrameSection[inner]
-
-        if isinstance(inner, PFrameSection):
-            cls.inner = inner
-            cls.inner_vars = lambda self, v: (v.x1, v.x4, v.z3, v.z1 - v.ri, v.z2 + v.ri)
-        elif inner is None:
-            cls.inner = cls._connect_straight_to_inner_limb
-            cls.inner_vars = lambda self, v: (
-                [v.x1, 0, v.z2 + v.ri],
-                [v.x1, 0, v.z1 - v.ri],
-            )
-
-        if (
-            isinstance(cls.inner, PFrameSection)
-            and cls.inner != PFrameSection.TAPERED_INNER
-        ):
-            raise ValueError(f"The inner leg cannot be {cls.inner}")
-
-        if cls.upper == PFrameSection.CURVED:
-            cls.upper_vars = lambda self, v: (
-                v.x2,
-                v.x3,
-                v.x4 if self.inner is PFrameSection.TAPERED_INNER else v.x1,
-                v.z1_peak,
-                v.z1,
-                v.ri,
-            )
-        elif cls.upper == PFrameSection.FLAT:
-            cls.upper_vars = lambda self, v: (
-                v.x4 if self.inner is PFrameSection.TAPERED_INNER else v.x1,
-                v.x2,
-                v.z1,
-                v.ri,
-                v.ro,
-            )
-        else:
-            raise ValueError(f"The upper leg cannot be {cls.upper}")
-
-        if cls.lower == PFrameSection.CURVED:
-            cls.lower_vars = lambda self, v: (
-                v.x2,
-                v.x3,
-                v.x4 if self.inner is PFrameSection.TAPERED_INNER else v.x1,
-                v.z2_peak,
-                v.z2,
-                v.ri,
-            )
-        elif cls.lower == PFrameSection.FLAT:
-            cls.lower_vars = lambda self, v: (
-                v.x4 if self.inner is PFrameSection.TAPERED_INNER else v.x1,
-                v.x2,
-                v.z2,
-                v.ri,
-                v.ro,
-            )
-        else:
-            raise ValueError(f"The lower leg cannot be {cls.lower}")
-
-        cls.outer = cls._connect_to_outer_limb
-
-        cls.outer_vars = lambda self, top_leg, bot_leg, v: (
-            top_leg if self.upper is PFrameSection.CURVED else [v.x2, 0, v.z1 - v.ro],
-            bot_leg if self.lower is PFrameSection.CURVED else [v.x2, 0, v.z2 + v.ro],
-            self.upper is PFrameSection.CURVED,
-            self.lower is PFrameSection.CURVED,
-        )
-
-        obj = cls.__new__(cls)
-        obj.__init__(var_dict)
-        return obj
+    def configure(
+        self,
+        upper: Union[str, PFrameSection],
+        lower: Union[str, PFrameSection],
+        inner: Optional[Union[str, PFrameSection]],
+    ):
+        """Fix variables based on the upper, lower and inner limbs."""
+        if upper is PFrameSection.CURVED and lower is PFrameSection.CURVED:
+            self.ro.fixed = True
+        elif upper is PFrameSection.FLAT and lower is PFrameSection.FLAT:
+            self.z1_peak.fixed = True
+            self.z2_peak.fixed = True
+            self.x3.fixed = True
+        if inner is not PFrameSection.TAPERED_INNER:
+            self.x4.fixed = True
+            self.z3.fixed = True
 
 
 class PictureFrame(
-    GeometryParameterisation, PictureFrameTools, metaclass=PictureFrameMeta
+    GeometryParameterisation[PictureFrameOptVariables], PictureFrameTools
 ):
     """
     Picture-frame geometry parameterisation.
@@ -1751,78 +1926,40 @@ class PictureFrame(
         ]
     )
 
-    def __init__(self, var_dict: Optional[Dict[str, float]] = None):
-        bounded_vars = [
-            BoundedVariable(
-                "x1", 0.4, lower_bound=0.3, upper_bound=0.5, descr="Inner limb radius"
-            ),
-            BoundedVariable(
-                "x2", 9.5, lower_bound=9.4, upper_bound=9.8, descr="Outer limb radius"
-            ),
-            BoundedVariable(
-                "z1", 9.5, lower_bound=8, upper_bound=10.5, descr="Upper limb height"
-            ),
-            BoundedVariable(
-                "z2", -9.5, lower_bound=-10.5, upper_bound=-8, descr="Lower limb height"
-            ),
-            BoundedVariable(
-                "ri",
-                0.1,
-                lower_bound=0,
-                upper_bound=2,
-                descr="Inboard corner radius",
-            ),
-            BoundedVariable(
-                "ro", 2, lower_bound=1, upper_bound=5, descr="Outboard corner radius"
-            ),
-        ]
+    def __init__(
+        self,
+        var_dict: Optional[VarDictT] = None,
+        *,
+        upper: Union[str, PFrameSection] = PFrameSection.FLAT,
+        lower: Union[str, PFrameSection] = PFrameSection.FLAT,
+        inner: Optional[Union[str, PFrameSection]] = None,
+    ):
+        self.upper = upper if isinstance(upper, PFrameSection) else PFrameSection[upper]
+        self.lower = lower if isinstance(lower, PFrameSection) else PFrameSection[lower]
 
-        if PFrameSection.CURVED in [self.upper, self.lower]:
-            bounded_vars += [
-                BoundedVariable(
-                    "x3",
-                    2.5,
-                    lower_bound=2.4,
-                    upper_bound=2.6,
-                    descr="Curve start radius",
-                ),
-                BoundedVariable(
-                    "z1_peak",
-                    11,
-                    lower_bound=6,
-                    upper_bound=12,
-                    descr="Upper limb curve height",
-                ),
-                BoundedVariable(
-                    "z2_peak",
-                    -11,
-                    lower_bound=-12,
-                    upper_bound=-6,
-                    descr="Lower limb curve height",
-                ),
-            ]
+        if isinstance(inner, str):
+            inner = PFrameSection[inner]
+        self.inner = inner
 
-        if self.inner == PFrameSection.TAPERED_INNER:
-            bounded_vars += [
-                BoundedVariable(
-                    "x4",
-                    1.1,
-                    lower_bound=1,
-                    upper_bound=1.3,
-                    descr="Middle limb radius",
-                ),
-                BoundedVariable(
-                    "z3",
-                    6.5,
-                    lower_bound=6,
-                    upper_bound=8,
-                    descr="Taper angle stop height",
-                ),
-            ]
-
-        variables = OptVariables(bounded_vars, frozen=True)
+        variables = PictureFrameOptVariables()
         variables.adjust_variables(var_dict, strict_bounds=False)
+        variables.configure(self.upper, self.lower, self.inner)
         super().__init__(variables)
+
+    def __deepcopy__(self, memo) -> PictureFrame:
+        """Picture Frame deepcopy"""
+        cls = type(self)
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k in (*self.__slots__, *super().__slots__):
+            with suppress(AttributeError):
+                v = getattr(self, k)
+                setattr(
+                    result,
+                    k,
+                    v if isinstance(v, PFrameSection) else copy.deepcopy(v, memo),
+                )
+        return result
 
     def create_shape(self, label: str = "") -> BluemiraWire:
         """
@@ -1837,21 +1974,84 @@ class PictureFrame(
         -------
         CAD Wire of the Picture Frame geometry
         """
-        inb_leg = self.inner(*self.inner_vars(self.variables))
-        top_leg = self.upper(*self.upper_vars(self.variables), flip=False)
-        bot_leg = self.lower(*self.lower_vars(self.variables), flip=True)
-        out_leg = self.outer(*self.outer_vars(top_leg, bot_leg, self.variables))
+        inb_leg = self._make_inb_leg()
+        top_leg = self._make_upper_lower_leg(make_upper_section=True, flip=False)
+        bot_leg = self._make_upper_lower_leg(make_upper_section=False, flip=True)
+        out_leg = self._make_out_leg(top_leg, bot_leg)
 
         return BluemiraWire([inb_leg, top_leg, out_leg, bot_leg], label=label)
+
+    def _make_inb_leg(self):
+        v = self.variables
+        if isinstance(self.inner, PFrameSection):
+            if self.inner is not PFrameSection.TAPERED_INNER:
+                raise ValueError(f"The inner leg cannot be {self.inner}")
+            return self.inner(
+                v.x1.value,
+                v.x4.value,
+                v.z3.value,
+                v.z1 - v.ri,
+                v.z2 + v.ri,
+            )
+        if self.inner is None:
+            return self._connect_straight_to_inner_limb(
+                [v.x1.value, 0, v.z2 + v.ri],
+                [v.x1.value, 0, v.z1 - v.ri],
+            )
+        return None
+
+    def _make_upper_lower_leg(self, make_upper_section: bool, flip: bool):
+        v = self.variables
+        section_func: PFrameSection = self.upper if make_upper_section else self.lower
+        if section_func == PFrameSection.CURVED:
+            return section_func(
+                v.x2.value,
+                v.x3.value,
+                v.x4.value if self.inner is PFrameSection.TAPERED_INNER else v.x1.value,
+                v.z1_peak.value if make_upper_section else v.z2_peak.value,
+                v.z1.value if make_upper_section else v.z2.value,
+                v.ri.value,
+                flip=flip,
+            )
+        if section_func == PFrameSection.FLAT:
+            return section_func(
+                v.x4.value if self.inner is PFrameSection.TAPERED_INNER else v.x1.value,
+                v.x2.value,
+                v.z1.value if make_upper_section else v.z2.value,
+                v.ri.value,
+                v.ro.value,
+                flip=flip,
+            )
+        raise ValueError(f"The leg cannot be {section_func}")
+
+    def _make_out_leg(self, top_leg, bot_leg):
+        v = self.variables
+        return self._connect_to_outer_limb(
+            (
+                top_leg
+                if self.upper is PFrameSection.CURVED
+                else [v.x2.value, 0, v.z1 - v.ro]
+            ),
+            (
+                bot_leg
+                if self.lower is PFrameSection.CURVED
+                else [v.x2.value, 0, v.z2 + v.ro]
+            ),
+            self.upper is PFrameSection.CURVED,
+            self.lower is PFrameSection.CURVED,
+        )
 
     def _label_function(self, ax, shape):
         super()._label_function(ax, shape)
         ro = self.variables.ro
         ri = self.variables.ri
         z = self.variables.z1
-        x_in = getattr(
-            self.variables, "x4" if "x4" in self.variables._var_dict else "x1"
+        x_in = (
+            self.variables.x4
+            if self.inner is PFrameSection.TAPERED_INNER
+            else self.variables.x1
         )
+
         x_out = self.variables.x2
         _r1 = ri * (1 - np.sqrt(0.5))
         _r2 = ro * (1 - np.sqrt(0.5))

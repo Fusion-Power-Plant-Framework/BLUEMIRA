@@ -43,15 +43,11 @@ class BuilderError(BluemiraError):
     Exception class for Builders.
     """
 
-    pass
-
 
 class ComponentError(BluemiraError):
     """
     Exception class for Components.
     """
-
-    pass
 
 
 class LogsError(BluemiraError):
@@ -59,23 +55,17 @@ class LogsError(BluemiraError):
     Exception class for Components.
     """
 
-    pass
-
 
 class ParameterError(BluemiraError):
     """
     Exception class for Parameters.
     """
 
-    pass
-
 
 class DesignError(BluemiraError):
     """
     Exception class for Designs.
     """
-
-    pass
 
 
 class ReactorError(BluemiraError):

@@ -30,19 +30,18 @@ import enum
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 if TYPE_CHECKING:
+    import numpy as np
+
+    from bluemira.geometry.coordinates import Coordinates
     from bluemira.geometry.placement import BluemiraPlacement
 
 # import for abstract class
 from abc import ABC, abstractmethod
 
-import numpy as np
-
-import bluemira.mesh.meshing as meshing
-
 # import freecad api
 from bluemira.codes import _freecadapi as cadapi
 from bluemira.geometry.bound_box import BoundingBox
-from bluemira.geometry.coordinates import Coordinates
+from bluemira.mesh import meshing
 
 
 class GeoMeshable(meshing.Meshable):
@@ -50,7 +49,7 @@ class GeoMeshable(meshing.Meshable):
     Extended Meshable class for BluemiraGeo objects.
     """
 
-    def remove_mesh_options(self, recursive: bool = False):
+    def remove_mesh_options(self, recursive: bool = False):  # noqa: ARG002
         """
         Remove mesh options for this object.
         """
@@ -60,7 +59,7 @@ class GeoMeshable(meshing.Meshable):
                 if isinstance(obj, GeoMeshable):
                     obj.remove_mesh_options(recursive=True)
 
-    def print_mesh_options(self, recursive: bool = True):
+    def print_mesh_options(self, recursive: bool = True):  # noqa: ARG002
         """
         Print the mesh options for this object.
         """
@@ -68,9 +67,13 @@ class GeoMeshable(meshing.Meshable):
         output = []
         output.append(self.mesh_options)
         if hasattr(self, "boundary"):
-            for obj in self.boundary:
-                if isinstance(obj, GeoMeshable):
-                    output.append(obj.print_mesh_options(True))
+            output.extend(
+                [
+                    obj.print_mesh_options(True)
+                    for obj in self.boundary
+                    if isinstance(obj, GeoMeshable)
+                ]
+            )
         return output
 
 
@@ -171,7 +174,6 @@ class BluemiraGeo(ABC, GeoMeshable):
         Create the shape from the boundary
         """
         # Note: this is the "hidden" connection with primitive shapes
-        pass
 
     @property
     def shape(self) -> cadapi.apiShape:
@@ -391,14 +393,13 @@ class BluemiraGeo(ABC, GeoMeshable):
                 cadapi.change_placement(o, placement._shape)
         cadapi.change_placement(self.shape, placement._shape)
 
-    def __repr__(self) -> str:  # noqa D105
-        new = []
-        new.append(f"([{type(self).__name__}] = Label: {self.label}")
-        new.append(f" length: {self.length}")
-        new.append(f" area: {self.area}")
-        new.append(f" volume: {self.volume}")
-        new.append(")")
-        return ", ".join(new)
+    def __repr__(self) -> str:  # noqa: D105
+        return (
+            f"([{type(self).__name__}] = Label: {self.label}, "
+            f"length: {self.length}, "
+            f"area: {self.area}, "
+            f"volume: {self.volume})"
+        )
 
     def copy(self, label: Optional[str] = None):
         """
@@ -428,7 +429,6 @@ class BluemiraGeo(ABC, GeoMeshable):
         """
         The vertexes of the BluemiraGeo.
         """
-        pass
 
     @property
     @abstractmethod
@@ -436,7 +436,6 @@ class BluemiraGeo(ABC, GeoMeshable):
         """
         The edges of the BluemiraGeo.
         """
-        pass
 
     @property
     @abstractmethod
@@ -444,7 +443,6 @@ class BluemiraGeo(ABC, GeoMeshable):
         """
         The wires of the BluemiraGeo.
         """
-        pass
 
     @property
     @abstractmethod
@@ -452,7 +450,6 @@ class BluemiraGeo(ABC, GeoMeshable):
         """
         The faces of the BluemiraGeo.
         """
-        pass
 
     @property
     @abstractmethod
@@ -460,7 +457,6 @@ class BluemiraGeo(ABC, GeoMeshable):
         """
         The shells of the BluemiraGeo.
         """
-        pass
 
     @property
     @abstractmethod
@@ -468,4 +464,3 @@ class BluemiraGeo(ABC, GeoMeshable):
         """
         The solids of the BluemiraGeo.
         """
-        pass

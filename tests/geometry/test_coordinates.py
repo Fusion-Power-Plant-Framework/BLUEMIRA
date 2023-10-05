@@ -19,13 +19,14 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
 from copy import deepcopy
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
+from bluemira.base.constants import EPS
 from bluemira.base.file import get_bluemira_path
 from bluemira.display.plotter import plot_coordinates
 from bluemira.geometry.coordinates import (
@@ -77,8 +78,7 @@ def trace_torus_orbit(r_1, r_2, n_r_2_turns, n_points):
     z = r_2 * np.sin(theta)
 
     direction = 1 if n_r_2_turns > 0.0 else -1
-    xyz_array = np.array([x[::direction], y[::direction], z[::direction]])
-    return xyz_array
+    return np.array([x[::direction], y[::direction], z[::direction]])
 
 
 class TestPerimeter:
@@ -86,7 +86,7 @@ class TestPerimeter:
         # 2 x 2 square
         x = [0, 2, 2, 0, 0]
         y = [0, 0, 2, 2, 0]
-        assert get_perimeter(x, y) == 8.0
+        assert get_perimeter(x, y) == pytest.approx(8.0, rel=0, abs=EPS)
 
 
 class TestGetNormal:
@@ -140,6 +140,8 @@ class TestGetCentroid:
 
 
 class TestCoordinates:
+    rng = np.random.default_rng()
+
     def test_array_init(self):
         xyz = np.array([[0, 1, 2, 3], [0, 0, 0, 0], [0, 1, 2, 3]])
         c1 = Coordinates(xyz)
@@ -153,7 +155,7 @@ class TestCoordinates:
         assert np.allclose(c1[2], xyz[2])
 
     def test_bad_array_init(self):
-        a = np.random.rand(4, 4)
+        a = self.rng.random((4, 4))
         with pytest.raises(CoordinatesError):
             Coordinates(a)
 
@@ -214,9 +216,9 @@ class TestCoordinates:
     def test_indexing(self):
         xyz = np.array([[0, 1, 2, 3], [0, 0, 0, 0], [0, 1, 2, 3]])
         c1 = Coordinates(xyz)
-        assert np.alltrue(xyz[0] == c1[0])
-        assert np.alltrue(xyz[1] == c1[1])
-        assert np.alltrue(xyz[2] == c1[2])
+        assert np.all(xyz[0] == c1[0])
+        assert np.all(xyz[1] == c1[1])
+        assert np.all(xyz[2] == c1[2])
 
         assert np.allclose([3, 0, 3], c1[:, -1])
 
@@ -225,9 +227,9 @@ class TestCoordinates:
         x1, y1, z1 = xyz
         c1 = Coordinates(xyz)
         x2, y2, z2 = c1
-        assert np.alltrue(x1 == x2)
-        assert np.alltrue(y1 == y2)
-        assert np.alltrue(z1 == z2)
+        assert np.all(x1 == x2)
+        assert np.all(y1 == y2)
+        assert np.all(z1 == z2)
 
     def test_reverse(self):
         xyz = np.array([[0, 1, 2, 3], [0, 0, 0, 0], [0, 1, 2, 3]])
@@ -238,19 +240,19 @@ class TestCoordinates:
         assert np.allclose(c.z, xyz[2][::-1])
 
     def test_translate(self):
-        a = np.random.rand(3, 123)
-        v = np.random.rand(3)
+        a = self.rng.random((3, 123))
+        v = self.rng.random(3)
         c = Coordinates(a)
         c.translate(v)
 
         assert np.allclose(a + v.reshape(3, 1), c)
 
     def test_rotate(self):
-        a = np.random.rand(3, 123)
-        v = np.random.rand(3)
-        base = np.random.rand(3)
-        direction = np.random.rand(3)
-        degree = 360 * np.random.rand(1)
+        a = self.rng.random((3, 123))
+        v = self.rng.random(3)
+        base = self.rng.random(3)
+        direction = self.rng.random(3)
+        degree = 360 * self.rng.random(1)
         c = Coordinates(a)
         c2 = deepcopy(c)
         c.rotate(base, direction, degree)
@@ -301,10 +303,10 @@ class TestCoordinates:
                 ]
             )
         )
-        v = np.random.rand(3)
-        base = np.random.rand(3)
-        direction = np.random.rand(3)
-        degree = 360 * np.random.rand(1)
+        v = self.rng.random(3)
+        base = self.rng.random(3)
+        direction = self.rng.random(3)
+        degree = 360 * self.rng.random(1)
         c.rotate(base, direction, degree)
         assert c.is_planar
 
@@ -390,7 +392,7 @@ class TestShortCoordinates:
         line2 = Coordinates([[0, 1], [0, 1], [0, 1]])
         assert line == line2
 
-    @pytest.mark.parametrize("c, length", [(point, 0.0), (line, np.sqrt(3))])
+    @pytest.mark.parametrize(("c", "length"), [(point, 0.0), (line, np.sqrt(3))])
     def test_length(self, c, length):
         measured = c.length
         np.testing.assert_almost_equal(measured, length)
@@ -402,11 +404,11 @@ class TestShortCoordinates:
         assert "Cannot set planar properties" in caplog.messages[0]
 
     @pytest.mark.parametrize("c", [point, line])
-    def test_is_planar(self, c, caplog):
+    def test_is_planar(self, c):
         assert not c.is_planar
 
     @pytest.mark.parametrize(
-        "c, com", [(point, np.array([0, 0, 0])), (line, np.array([0.5, 0.5, 0.5]))]
+        ("c", "com"), [(point, np.array([0, 0, 0])), (line, np.array([0.5, 0.5, 0.5]))]
     )
     def test_center_of_mass(self, c, com):
         measured = c.center_of_mass
@@ -432,7 +434,7 @@ class TestShortCoordinates:
     def test_check_ccw(self, c):
         assert not c.check_ccw()
 
-    @pytest.mark.parametrize("c, lenn", [(point, 1), (line, 2)])
+    @pytest.mark.parametrize(("c", "lenn"), [(point, 1), (line, 2)])
     def test_len(self, c, lenn):
         assert len(c) == lenn
 
@@ -569,9 +571,7 @@ class TestInPolygon:
         """
         Regression test on a closed LCFS and an equilibrium grid.
         """
-        filename = os.sep.join([TEST_PATH, "in_polygon_test.json"])
-
-        lcfs = Coordinates.from_json(filename)
+        lcfs = Coordinates.from_json(Path(TEST_PATH, "in_polygon_test.json"))
 
         x = np.linspace(4.383870967741935, 13.736129032258066, 65)
         z = np.linspace(-7.94941935483871, 7.94941935483871, 65)
@@ -598,15 +598,13 @@ class TestIntersections:
         plt.show()
         plt.close("all")
 
-    @pytest.mark.parametrize("c1, c2", [["x", "z"], ["x", "y"], ["y", "z"]])
+    @pytest.mark.parametrize(("c1", "c2"), [("x", "z"), ("x", "y"), ("y", "z")])
     def test_get_intersect(self, c1, c2):
         loop1 = Coordinates({c1: [0, 0.5, 1, 2, 3, 4, 0], c2: [1, 1, 1, 1, 2, 5, 5]})
         loop2 = Coordinates({c1: [1.5, 1.5, 2.5, 2.5, 2.5], c2: [4, -4, -4, -4, 5]})
         shouldbe = [[1.5, 1], [2.5, 1.5], [2.5, 5]]
         intersect = np.array(
-            get_intersect(
-                getattr(loop1, "".join([c1, c2])), getattr(loop2, "".join([c1, c2]))
-            )
+            get_intersect(getattr(loop1, f"{c1}{c2}"), getattr(loop2, f"{c1}{c2}"))
         )
         correct = np.array(shouldbe).T
         np.testing.assert_allclose(intersect, correct)
@@ -624,18 +622,10 @@ class TestIntersections:
 
     @pytest.mark.parametrize("file", ["", "2"])
     def test_join_intersect_arg(self, file):
-        tf = Coordinates.from_json(
-            os.sep.join([TEST_PATH, f"test_TF_intersect{file}.json"])
-        )
-        lp = Coordinates.from_json(
-            os.sep.join([TEST_PATH, f"test_LP_intersect{file}.json"])
-        )
-        eq = Coordinates.from_json(
-            os.sep.join([TEST_PATH, f"test_EQ_intersect{file}.json"])
-        )
-        up = Coordinates.from_json(
-            os.sep.join([TEST_PATH, f"test_UP_intersect{file}.json"])
-        )
+        tf = Coordinates.from_json(Path(TEST_PATH, f"test_TF_intersect{file}.json"))
+        lp = Coordinates.from_json(Path(TEST_PATH, f"test_LP_intersect{file}.json"))
+        eq = Coordinates.from_json(Path(TEST_PATH, f"test_EQ_intersect{file}.json"))
+        up = Coordinates.from_json(Path(TEST_PATH, f"test_UP_intersect{file}.json"))
 
         _, ax = plt.subplots()
         for coords in [tf, up, eq, lp]:

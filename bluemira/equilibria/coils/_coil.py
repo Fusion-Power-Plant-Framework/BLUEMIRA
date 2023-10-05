@@ -164,8 +164,8 @@ class Coil(CoilFieldsMixin):
         self,
         x: float,
         z: float,
-        dx: float = None,
-        dz: float = None,
+        dx: Optional[float] = None,
+        dz: Optional[float] = None,
         name: Optional[str] = None,
         ctype: Union[str, CoilType] = CoilType.NONE,
         current: float = 0,
@@ -211,8 +211,8 @@ class Coil(CoilFieldsMixin):
         """
         return (
             f"{type(self).__name__}({self.name} ctype={self.ctype.name} x={self.x:.2g}"
-            f" z={self.z:.2g} dx={self.dx:.2g} dz={self.dz:.2g} current={self.current:.2g}"
-            f" j_max={self.j_max:.2g} b_max={self.b_max:.2g}"
+            f" z={self.z:.2g} dx={self.dx:.2g} dz={self.dz:.2g}"
+            f" current={self.current:.2g} j_max={self.j_max:.2g} b_max={self.b_max:.2g}"
             f" discretisation={self.discretisation:.2g})"
         )
 
@@ -244,7 +244,8 @@ class Coil(CoilFieldsMixin):
             self, ax=ax, subcoil=subcoil, label=label, force=force, **kwargs
         )
 
-    def n_coils(self) -> int:
+    @staticmethod
+    def n_coils() -> int:
         """
         Number of coils in coil
 
@@ -329,14 +330,14 @@ class Coil(CoilFieldsMixin):
     @property
     def x_boundary(self):
         """Get coil x coordinate boundary"""
-        if getattr(self, "_x_boundary") is not None:
+        if getattr(self, "_x_boundary", None) is not None:
             return self._x_boundary
         return self._make_boundary(self.x, self.z, self.dx, self.dz)[0]
 
     @property
     def z_boundary(self):
         """Get coil z coordinate boundary"""
-        if getattr(self, "_z_boundary") is not None:
+        if getattr(self, "_z_boundary", None) is not None:
             return self._z_boundary
         return self._make_boundary(self.x, self.z, self.dx, self.dz)[1]
 
@@ -562,8 +563,7 @@ class Coil(CoilFieldsMixin):
         if not np.isnan(self.j_max):
             half_width = 0.5 * np.sqrt(abs(current) / self.j_max)
             return half_width, half_width
-        else:
-            return self.dx, self.dz
+        return self.dx, self.dz
 
     @staticmethod
     def _make_boundary(

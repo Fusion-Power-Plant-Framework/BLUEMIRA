@@ -1,12 +1,33 @@
+# bluemira is an integrated inter-disciplinary design tool for future fusion
+# reactors. It incorporates several modules, some of which rely on other
+# codes, to carry out a range of typical conceptual fusion reactor design
+# activities.
+#
+# Copyright (C) 2021-2023 M. Coleman, J. Cook, F. Franza, I.A. Maione, S. McIntosh,
+#                         J. Morris, D. Short
+#
+# bluemira is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# bluemira is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 import io
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Union
+from typing import ClassVar, Union
 from unittest import mock
 
 import pint
 import pytest
 
+from bluemira.base.constants import EPS
 from bluemira.base.parameter_frame import Parameter, ParameterFrame, make_parameter_frame
 from bluemira.base.parameter_frame._parameter import ParamDictT
 
@@ -22,6 +43,11 @@ class BasicFrame(ParameterFrame):
     age: Parameter[int]
 
 
+class NoDataclassFrame(ParameterFrame):
+    height: Parameter[float]
+    age: Parameter[int]
+
+
 @dataclass
 class BrokenFrame(ParameterFrame):
     height: float
@@ -31,8 +57,13 @@ class TestParameterFrame:
     def setup_method(self):
         self.frame = BasicFrame.from_dict(deepcopy(FRAME_DATA))
 
+    def test_frame_defined_with_dataclass_annotation(self, caplog):
+        NoDataclassFrame()
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == "WARNING"
+
     def test_init_from_dict_sets_valid_entries(self):
-        assert self.frame.height.value == 1.805
+        assert self.frame.height.value == pytest.approx(1.805, rel=0, abs=EPS)
         assert self.frame.height.unit == "m"
         assert (
             self.frame.age.value
@@ -43,8 +74,13 @@ class TestParameterFrame:
         assert self.frame.age.unit == "s"
 
     @pytest.mark.parametrize(
-        "name, value",
-        [("name", 100), ("value", "wrong type"), ("value", 30.5), ("unit", 0.5)],
+        ("name", "value"),
+        [
+            ("name", 100),
+            ("value", "wrong type"),
+            ("value", 30.532423),
+            ("unit", 0.5),
+        ],
     )
     def test_from_dict_TypeError_given_invalid_type(self, name, value):
         data = {
@@ -68,13 +104,13 @@ class TestParameterFrame:
             "weight": {"value": 60, "unit": "kg"},
         }
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             BasicFrame.from_dict(data)
 
     def test_from_dict_ValueError_given_missing_parameter(self):
         data = {"height": {"value": 180.5, "unit": "m"}}
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             BasicFrame.from_dict(data)
 
     def test_to_dict_returns_input_to_from_dict(self):
@@ -113,7 +149,11 @@ class TestParameterFrame:
             BadFrame.from_dict({"x": {"value": 10}})
 
     def test_a_default_frame_is_empty(self):
-        assert len(ParameterFrame().to_dict()) == 0
+        @dataclass
+        class GenericFrame(ParameterFrame):
+            ...
+
+        assert len(GenericFrame().to_dict()) == 0
 
     def test_from_json_reads_json_string(self):
         json_str = """{
@@ -123,7 +163,7 @@ class TestParameterFrame:
 
         frame = BasicFrame.from_json(json_str)
 
-        assert frame.height.value == 1.805
+        assert frame.height.value == pytest.approx(1.805, rel=0, abs=EPS)
         assert frame.height.unit == "m"
         assert frame.age.value == pint.Quantity(30, "year").to("s").magnitude
         assert frame.age.unit == "s"
@@ -137,7 +177,7 @@ class TestParameterFrame:
 
         frame = BasicFrame.from_json(json_io)
 
-        assert frame.height.value == 1.805
+        assert frame.height.value == pytest.approx(1.805, rel=0, abs=EPS)
         assert frame.height.unit == "m"
         assert frame.age.value == pint.Quantity(30, "year").to("s").magnitude
         assert frame.age.unit == "s"
@@ -152,7 +192,7 @@ class TestParameterFrame:
         ):
             frame = BasicFrame.from_json("./some/path")
 
-        assert frame.height.value == 1.805
+        assert frame.height.value == pytest.approx(1.805, rel=0, abs=EPS)
         assert frame.height.unit == "m"
         assert frame.age.value == pint.Quantity(30, "year").to("s").magnitude
         assert frame.age.unit == "s"
@@ -181,7 +221,7 @@ class TestParameterFrame:
     def test_update_values_edits_frames_values(self):
         self.frame.update_values({"height": 160.4}, source="a test")
 
-        assert self.frame.height.value == 160.4
+        assert self.frame.height.value == pytest.approx(160.4, rel=0, abs=EPS)
         assert self.frame.height.source == "a test"
         assert (
             self.frame.age.value
@@ -194,7 +234,7 @@ class TestParameterFrame:
     def test_update_using_values_edits_frames_values(self):
         self.frame.update({"height": 160.4})
 
-        assert self.frame.height.value == 160.4
+        assert self.frame.height.value == pytest.approx(160.4, rel=0, abs=EPS)
         assert (
             self.frame.age.value
             == pint.Quantity(FRAME_DATA["age"]["value"], FRAME_DATA["age"]["unit"])
@@ -202,7 +242,7 @@ class TestParameterFrame:
             .magnitude
         )
 
-    @pytest.mark.parametrize("func", ("update_from_dict", "update"))
+    @pytest.mark.parametrize("func", ["update_from_dict", "update"])
     def test_update_from_dict(self, func):
         getattr(self.frame, func)(
             {
@@ -216,12 +256,12 @@ class TestParameterFrame:
             }
         )
 
-        assert self.frame.height.value == 160.4
+        assert self.frame.height.value == pytest.approx(160.4, rel=0, abs=EPS)
         assert self.frame.height.source == "a test"
         assert self.frame.age.value == pint.Quantity(20, "years").to("s").magnitude
         assert self.frame.age.source != "a test"
 
-    @pytest.mark.parametrize("func", ("update_from_frame", "update"))
+    @pytest.mark.parametrize("func", ["update_from_frame", "update"])
     def test_update_from_frame(self, func):
         update_frame = BasicFrame.from_dict(
             {
@@ -235,12 +275,12 @@ class TestParameterFrame:
         )
         getattr(self.frame, func)(update_frame)
 
-        assert self.frame.height.value == 160.4
+        assert self.frame.height.value == pytest.approx(160.4, rel=0, abs=EPS)
         assert self.frame.height.source == "a test"
         assert self.frame.age.value == pint.Quantity(20, "years").to("s").magnitude
         assert self.frame.age.source != "a test"
 
-    @pytest.mark.parametrize("func", ("update_from_frame", "update"))
+    @pytest.mark.parametrize("func", ["update_from_frame", "update"])
     def test_update_from_frame_with_None(self, func):
         update_frame = BasicFrame.from_dict(
             {
@@ -254,12 +294,12 @@ class TestParameterFrame:
         )
         getattr(self.frame, func)(update_frame)
 
-        assert self.frame.height.value == 160.4
+        assert self.frame.height.value == pytest.approx(160.4, rel=0, abs=EPS)
         assert self.frame.height.source == "a test"
         assert self.frame.age.value is None
         assert self.frame.age.source != "a test"
 
-    @pytest.mark.parametrize("func", ("update_from_dict", "update"))
+    @pytest.mark.parametrize("func", ["update_from_dict", "update"])
     def test_update_from_dict_with_None(self, func):
         getattr(self.frame, func)(
             {
@@ -273,7 +313,7 @@ class TestParameterFrame:
             }
         )
 
-        assert self.frame.height.value == 160.4
+        assert self.frame.height.value == pytest.approx(160.4, rel=0, abs=EPS)
         assert self.frame.height.source == "a test"
         assert self.frame.age.value is None
         assert self.frame.age.source != "a test"
@@ -306,7 +346,7 @@ class TestParameterFrame:
         return call_kwargs["headers"], table_rows, frame_data
 
     @pytest.mark.parametrize(
-        "head_keys, result",
+        ("head_keys", "result"),
         zip(
             [None, ["name", "value"]],
             [ParamDictT.__annotations__.keys(), ["name", "value"]],
@@ -361,12 +401,12 @@ class TestParameterFrame:
         for no, (tr, dvi) in enumerate(zip(table_rows, data_values_index)):
             # name is correct
             assert tr[0] == data_keys[no]
-            for ind, val in data_values[dvi].items():
+            for ind in data_values[dvi]:
                 try:
                     assert tr[headers.index(ind)] == frame_data[data_keys[no]][ind]
-                except ValueError as ve:
+                except ValueError as ve:  # noqa: PERF203
                     if ind in head_keys:
-                        raise ve
+                        raise
                 except AssertionError as ae:
                     if ind == "value":
                         assert (
@@ -374,14 +414,11 @@ class TestParameterFrame:
                             == f"{frame_data[data_keys[no]][ind]: 5g}"
                         )
                     else:
-                        raise ae
+                        raise
 
     def test_iterating_returns_parameters_in_declaration_order(self):
         frame = BasicFrame.from_dict(FRAME_DATA)
-
-        params = []
-        for param in frame:
-            params.append(param)
+        params = list(frame)
 
         assert all(isinstance(p, Parameter) for p in params)
         assert [p.name for p in params] == ["height", "age"]
@@ -395,13 +432,57 @@ class TestParameterFrame:
 
         basic_frame = BasicFrame.from_dict(FRAME_DATA)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             OtherFrame.from_frame(basic_frame)
 
-    def test_from_json_ValueError_given_non_string_or_buffer(self):
-        with pytest.raises(ValueError) as error:
+    def test_from_json_TypeError_given_non_string_or_buffer(self):
+        with pytest.raises(TypeError) as error:
             BasicFrame.from_json(["x"])
         assert "Cannot read JSON" in str(error)
+
+    def test_init_of_ParameterFrame_raises_TypeError(self):
+        with pytest.raises(TypeError):
+            ParameterFrame()
+
+    def test_init_with_non_Parameters_raises_TypeError(self):
+        @dataclass
+        class GenericFrame(ParameterFrame):
+            A: float
+
+        with pytest.raises(TypeError):
+            GenericFrame(5)
+
+    def test_definition_with_non_Parameters_raises_TypeError(self):
+        @dataclass
+        class GenericFrame(ParameterFrame):
+            A: float
+
+        with pytest.raises(TypeError):
+            GenericFrame(Parameter("A", 5))
+
+    def test_init_Parameter_has_wrong_name_raises_TypeError(self):
+        @dataclass
+        class GenericFrame(ParameterFrame):
+            A: Parameter[float]
+
+        with pytest.raises(TypeError):
+            GenericFrame(Parameter("B", 5))
+
+    def test_init_SI_unit_enforcement(self):
+        @dataclass
+        class GenericFrame(ParameterFrame):
+            A: Parameter[float]
+
+        frm = GenericFrame(Parameter("A", 5, "cm"))
+
+        assert frm.A.unit == "m"
+        assert frm.A.value == pytest.approx(0.05)
+        assert frm.A.source == "unit enforcement"
+
+        frm = GenericFrame(Parameter("A", 5, "m"))
+        assert frm.A.unit == "m"
+        assert frm.A.value == pytest.approx(5)
+        assert frm.A.source == ""
 
 
 @dataclass
@@ -446,7 +527,7 @@ class UnitFrame5(ParameterFrame):
 
 
 class TestParameterFrameUnits:
-    SIMPLE_FRAME_DATA = {
+    SIMPLE_FRAME_DATA: ClassVar = {
         "length": {"value": 180.5, "unit": "in"},
         "time": {"value": 30, "unit": "day"},
         "mass": {"value": 1, "unit": "tonne"},
@@ -454,13 +535,13 @@ class TestParameterFrameUnits:
         "string": {"value": "Hello 👋", "unit": ""},
     }
 
-    COMPLEX_FRAME_DATA = {
+    COMPLEX_FRAME_DATA: ClassVar = {
         "magfield": {"value": 5000, "unit": "gamma"},
         "energy": {"value": 30, "unit": "keV"},
         "pressure": {"value": 1, "unit": "atm"},
     }
 
-    WEIRD_FRAME_DATA = {
+    WEIRD_FRAME_DATA: ClassVar = {
         "damagepertime": {"value": 30, "unit": "dpa/fpy"},
         "timeperdamage": {"value": 30, "unit": "fpy/dpa"},
         "damage": {"value": 30, "unit": "dpa"},
@@ -469,14 +550,14 @@ class TestParameterFrameUnits:
         "per_on_time": {"value": 1, "unit": "1/fpy"},
     }
 
-    ANGLE_FRAME_DATA = {
+    ANGLE_FRAME_DATA: ClassVar = {
         "angle": {"value": 5, "unit": "radian"},
         "angle2": {"value": 5, "unit": "grade"},
         "angleperthing": {"value": 5, "unit": "radian/m"},
         "thingperangle": {"value": 5, "unit": "W/turn"},
     }
 
-    WTF_FRAME_DATA = {
+    WTF_FRAME_DATA: ClassVar = {
         "wtf1": {"value": 5, "unit": "m^2/grade.W/(Pa.fpy)"},
         "wtf2": {"value": 5, "unit": "dpa.m^2/rad.W/(Pa.fpy)"},
         "wtf3": {"value": 5, "unit": "dpa^-1.m^2/turn.W/(Pa.fpy)"},
@@ -543,13 +624,13 @@ class TestParameterFrameUnits:
     def test_bad_unit(self):
         frame_data = deepcopy(self.SIMPLE_FRAME_DATA)
         frame_data["length"]["unit"] = "I_am_a_unit"
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             frame = UnitFrame1.from_dict(frame_data)
 
 
 class TestParameterSetup:
     def test_params_None(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             make_parameter_frame(FRAME_DATA, None)
         with pytest.raises(TypeError):
             make_parameter_frame(None, BasicFrame)

@@ -101,7 +101,7 @@ class TestBlanketDesigner:
 
     @pytest.mark.parametrize("cut_angle", [90, 90.01, 100])
     def test_ValueError_given_cut_angle_ge_90(self, cut_angle):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             BlanketDesigner(
                 self.params,
                 self.boundary,

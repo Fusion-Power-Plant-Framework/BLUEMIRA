@@ -55,8 +55,6 @@ class MixedFaceAreaError(GeometryError):
     area enclosed by the original coordinates.
     """
 
-    pass
-
 
 # =============================================================================
 # Utility functions used exclusively in this file
@@ -152,9 +150,10 @@ def offset(
     ox[0::2], ox[1::2] = off_p2[0], off_p[0]
     oz[0::2], oz[1::2] = off_p2[1], off_p[1]
     off_s = np.array([ox[2:], oz[2:]]).T
-    pnts = []
-    for i in range(len(off_s[:, 0]) - 2)[0::2]:
-        pnts.append(vector_intersect(off_s[i], off_s[i + 1], off_s[i + 3], off_s[i + 2]))
+    pnts = [
+        vector_intersect(off_s[i], off_s[i + 1], off_s[i + 3], off_s[i + 2])
+        for i in range(len(off_s[:, 0]) - 2)[0::2]
+    ]
     pnts.append(pnts[0])
     pnts = np.array(pnts)[:-1][::-1]  # sorted ccw nicely
     if closed:
@@ -255,8 +254,7 @@ def convert_coordinates_to_wire(
         "polygon": partial(make_wire, spline=False),
         "spline": partial(make_wire, spline=True),
     }
-    wire = method_map[method](x, y, z, label=label, **kwargs)
-    return wire
+    return method_map[method](x, y, z, label=label, **kwargs)
 
 
 def convert_coordinates_to_face(
@@ -299,8 +297,7 @@ def convert_coordinates_to_face(
         "polygon": partial(make_face, spline=False),
         "spline": partial(make_face, spline=True),
     }
-    face = method_map[method](x, y, z, label=label, **kwargs)
-    return face
+    return method_map[method](x, y, z, label=label, **kwargs)
 
 
 def make_mixed_wire(
@@ -378,8 +375,7 @@ def make_mixed_wire(
                 "- falling back to a polygon wire."
             )
             return make_wire(x, y, z, label=label)
-        else:
-            raise
+        raise
 
     return mfm.wire
 
@@ -465,8 +461,7 @@ def make_mixed_face(
                 "- falling back to a polygon face."
             )
             return make_face(x, y, z, label=label)
-        else:
-            raise
+        raise
 
     # Sometimes there won't be a RuntimeError, and you get a free SIGSEGV for your
     # troubles.
@@ -474,19 +469,17 @@ def make_mixed_face(
     coords_area = get_area(x, y, z)
     if np.isclose(coords_area, face_area, rtol=area_rtol):
         return mfm.face
-    else:
-        if allow_fallback:
-            bluemira_warn(
-                f"CAD: MixedFaceMaker resulted in a face with area {face_area} "
-                f"but the provided coordinates enclosed an area of {coords_area} "
-                "- falling back to a polygon face."
-            )
-            return make_face(x, y, z, label=label)
-        else:
-            raise MixedFaceAreaError(
-                f"MixedFaceMaker resulted in a face with area {face_area} "
-                f"but the provided coordinates enclosed an area of {coords_area}."
-            )
+    if allow_fallback:
+        bluemira_warn(
+            f"CAD: MixedFaceMaker resulted in a face with area {face_area} "
+            f"but the provided coordinates enclosed an area of {coords_area} "
+            "- falling back to a polygon face."
+        )
+        return make_face(x, y, z, label=label)
+    raise MixedFaceAreaError(
+        f"MixedFaceMaker resulted in a face with area {face_area} "
+        f"but the provided coordinates enclosed an area of {coords_area}."
+    )
 
 
 def make_wire(
@@ -667,7 +660,7 @@ class MixedFaceMaker:
         seg_lengths = _segment_lengths(self.x, self.y, self.z)
         median = np.median(seg_lengths)
 
-        long_indices = np.where(seg_lengths > self.median_factor * median)[0]
+        long_indices = np.nonzero(seg_lengths > self.median_factor * median)[0]
 
         # find sharp angle indices
         angles = np.zeros(len(self.x) - 2)
@@ -691,7 +684,7 @@ class MixedFaceMaker:
             angles = np.append(angles, join_angle)
 
         angles = np.rad2deg(angles)
-        sharp_indices = np.where((angles <= self.a_acute) & (angles != 0))[0]
+        sharp_indices = np.nonzero((angles <= self.a_acute) & (angles != 0))[0]
         # Convert angle numbering to segment numbering (both segments of angle)
         sharp_edge_indices = []
         for index in sharp_indices:
@@ -710,8 +703,7 @@ class MixedFaceMaker:
                 vertices.extend([index])
             else:
                 vertices.extend([index, index + 1])
-        vertices = np.unique(np.array(vertices, dtype=int))
-        return vertices
+        return np.unique(np.array(vertices, dtype=int))
 
     def _get_polygon_sequences(self, vertices: np.ndarray) -> List[List[float]]:
         """
@@ -745,10 +737,9 @@ class MixedFaceMaker:
             if delta <= self.n_segments:
                 # Spline would be too short, so stitch polygons together
                 continue
-            else:
-                end = vertex
-                sequences.append([start, end])
-                start = vertices[i + 1]  # reset start index
+            end = vertex
+            sequences.append([start, end])
+            start = vertices[i + 1]  # reset start index
 
         if not sequences:
             raise GeometryError("Not a good candidate for a mixed face ==> spline")
@@ -766,29 +757,30 @@ class MixedFaceMaker:
         first_p_vertex = sequences[0][0]
         last_p_vertex = sequences[-1][1]
 
-        if first_p_vertex <= self.n_segments:
-            if self.num_points - last_p_vertex <= self.n_segments:
-                start_offset = self.n_segments - first_p_vertex
-                end_offset = (self.num_points - last_p_vertex) + self.n_segments
-                total = start_offset + end_offset
-                if total <= self.n_segments:
-                    start = sequences[-1][0]
-                    end = sequences[0][1]
-                    # Remove first sequence
-                    sequences = sequences[1:]
-                    # Replace last sequence with bridged sequence
-                    sequences[-1] = [start, end]
-
-        last_p_vertex = sequences[-1][1]
-        if self.num_points - last_p_vertex <= self.n_segments:
-            # There is a small spline section at the end of the coordinates, that
-            # needs to be bridged
-            if sequences[0][0] == 0:
-                # There is no bridge -> take action
+        if (
+            first_p_vertex <= self.n_segments
+            and self.num_points - last_p_vertex <= self.n_segments
+        ):
+            start_offset = self.n_segments - first_p_vertex
+            end_offset = (self.num_points - last_p_vertex) + self.n_segments
+            total = start_offset + end_offset
+            if total <= self.n_segments:
                 start = sequences[-1][0]
                 end = sequences[0][1]
+                # Remove first sequence
                 sequences = sequences[1:]
+                # Replace last sequence with bridged sequence
                 sequences[-1] = [start, end]
+
+        last_p_vertex = sequences[-1][1]
+        # There is a small spline section at the end of the coordinates, that
+        # needs to be bridged
+        if self.num_points - last_p_vertex <= self.n_segments and sequences[0][0] == 0:
+            # There is no bridge -> take action
+            start = sequences[-1][0]
+            end = sequences[0][1]
+            sequences = sequences[1:]
+            sequences[-1] = [start, end]
 
         return sequences
 
@@ -830,11 +822,10 @@ class MixedFaceMaker:
         if last[1] == self.num_points:
             # NOTE: if this is true, there can't be a polygon bridge
             pass
+        elif last[0] > last[1]:  # there is a polygon bridge
+            spline_sequences.append([last[1], polygon_sequences[0][0]])
         else:
-            if last[0] > last[1]:  # there is a polygon bridge
-                spline_sequences.append([last[1], polygon_sequences[0][0]])
-            else:
-                spline_sequences.append([last[1], self.num_points])
+            spline_sequences.append([last[1], self.num_points])
 
         # Check if we need to make a spline bridge
         spline_first = spline_sequences[0][0]
@@ -907,7 +898,7 @@ class MixedFaceMaker:
                         ]
                     )
                 clean_coords = self._clean_coordinates(coords)
-                if all(shape >= 2 for shape in clean_coords.shape):
+                if all(shape >= 2 for shape in clean_coords.shape):  # noqa: PLR2004
                     s_coords.append(clean_coords)
 
         self.spline_coords = spline_coords
@@ -929,11 +920,10 @@ class MixedFaceMaker:
         for i, coords in enumerate(coords_order[:-1]):
             if not (coords[:, -1] == coords_order[i + 1][:, 0]).all():
                 coords_order[i + 1] = coords_order[i + 1][:, ::-1]
-                if i == 0:
+                if i == 0 and not (coords[:, -1] == coords_order[i + 1][:, 0]).all():
+                    coords = coords[:, ::-1]  # noqa: PLW2901
                     if not (coords[:, -1] == coords_order[i + 1][:, 0]).all():
-                        coords = coords[:, ::-1]
-                        if not (coords[:, -1] == coords_order[i + 1][:, 0]).all():
-                            coords_order[i + 1] = coords_order[i + 1][:, ::-1]
+                        coords_order[i + 1] = coords_order[i + 1][:, ::-1]
 
         if self.flag_spline_first:
             set1 = [
@@ -955,7 +945,7 @@ class MixedFaceMaker:
             ]
 
         wires = []
-        for i, (a, b) in enumerate(zip_longest(set1, set2)):
+        for a, b in zip_longest(set1, set2):
             if a is not None:
                 wires.append(a)
 

@@ -21,8 +21,8 @@
 """
 Defines the setup task for running PROCESS.
 """
-import os
-from typing import Dict, Union
+from pathlib import Path
+from typing import ClassVar, Dict, Optional, Union
 
 from bluemira.codes.error import CodesError
 from bluemira.codes.interface import CodesSetup
@@ -53,7 +53,7 @@ class Setup(CodesSetup):
         The PROCESS parameters that do not exist in Bluemira.
     """
 
-    MODELS = {
+    MODELS: ClassVar = {
         "iefrf": CurrentDriveEfficiencyModel,
         "i_tf_sup": TFCoilConductorTechnology,
     }
@@ -63,7 +63,7 @@ class Setup(CodesSetup):
         params: ProcessSolverParams,
         in_dat_path: str,
         template_in_dat: Union[str, ProcessInputs] = None,
-        problem_settings: Dict[str, Union[float, str]] = None,
+        problem_settings: Optional[Dict[str, Union[float, str]]] = None,
     ):
         super().__init__(params, PROCESS_NAME)
 
@@ -135,8 +135,7 @@ def _make_writer(template_in_dat: Union[str, Dict[str, _INVariable]]) -> InDat:
         indat = InDat(filename=None)
         indat.data = template_in_dat
         return indat
-    elif isinstance(template_in_dat, str) and os.path.isfile(template_in_dat):
+    if isinstance(template_in_dat, str) and Path(template_in_dat).is_file():
         # InDat autoloads IN.DAT without checking for existence
         return InDat(filename=template_in_dat)
-    else:
-        raise CodesError(f"Template IN.DAT '{template_in_dat}' is not a file.")
+    raise CodesError(f"Template IN.DAT '{template_in_dat}' is not a file.")

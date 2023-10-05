@@ -20,6 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import json
+from typing import ClassVar
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -52,7 +53,8 @@ def test_analyticalsolvergrouper():
     a2 = ArbitraryPlanarRectangularXSCircuit(circle2, dx_coil, dz_coil, current)
     solver = SourceGroup([a, a2])
 
-    points = np.random.uniform(low=-10, high=10, size=(10, 3))
+    rng = np.random.default_rng()
+    points = rng.uniform(low=-10, high=10, size=(10, 3))
     for point in points:
         field = solver.field(*point)  # random point :)
         field2 = a.field(*point) + a2.field(*point)
@@ -96,16 +98,16 @@ def test_mixedsourcesolver():
     )
 
     arc_1 = CircularArcCurrentSource(
-        [-1, 0, 1], [0, 0, 1], [-1, 0, 0], [0, 1, 0], dz, dx, 1, np.pi / 2, current
+        [-1, 0, 1], [0, 0, 1], [-1, 0, 0], [0, 1, 0], dz, dx, 1, 90, current
     )
     arc_2 = CircularArcCurrentSource(
-        [-1, 0, -1], [-1, 0, 0], [0, 0, -1], [0, 1, 0], dz, dx, 1, np.pi / 2, current
+        [-1, 0, -1], [-1, 0, 0], [0, 0, -1], [0, 1, 0], dz, dx, 1, 90, current
     )
     arc_3 = CircularArcCurrentSource(
-        [1, 0, -1], [0, 0, -1], [1, 0, 0], [0, 1, 0], dz, dx, 1, np.pi / 2, current
+        [1, 0, -1], [0, 0, -1], [1, 0, 0], [0, 1, 0], dz, dx, 1, 90, current
     )
     arc_4 = CircularArcCurrentSource(
-        [1, 0, 1], [1, 0, 0], [0, 0, 1], [0, 1, 0], dz, dx, 1, np.pi / 2, current
+        [1, 0, 1], [1, 0, 0], [0, 0, 1], [0, 1, 0], dz, dx, 1, 90, current
     )
 
     solver = SourceGroup([bar_1, bar_2, bar_3, bar_4, arc_1, arc_2, arc_3, arc_4])
@@ -141,9 +143,9 @@ def test_mixedsourcesolver():
 
 
 class TestArbitraryPlanarXSCircuit:
-    pd_inputs = {"x1": {"value": 4}, "x2": {"value": 16}, "dz": {"value": 0}}
+    pd_inputs: ClassVar = {"x1": {"value": 4}, "x2": {"value": 16}, "dz": {"value": 0}}
 
-    pf_inputs = {
+    pf_inputs: ClassVar = {
         "x1": {"value": 5},
         "x2": {"value": 10},
         "z1": {"value": 10},
@@ -151,7 +153,7 @@ class TestArbitraryPlanarXSCircuit:
         "ri": {"value": 0.4},
         "ro": {"value": 1},
     }
-    ta_inputs = {
+    ta_inputs: ClassVar = {
         "x1": {"value": 4},
         "dz": {"value": 0},
         "sl": {"value": 6.5},
@@ -161,18 +163,20 @@ class TestArbitraryPlanarXSCircuit:
         "a2": {"value": 40},
     }
 
-    parameterisations = [
-        PrincetonD,
-        TripleArc,
-        PictureFrame,
-    ]
-    p_inputs = [pd_inputs, ta_inputs, pf_inputs]
+    p_inputs = (pd_inputs, ta_inputs, pf_inputs)
     clockwises = [False] * len(p_inputs) + [True] * len(p_inputs)
-    p_inputs = p_inputs * 2
-    parameterisations = parameterisations * 2
+    p_inputs = p_inputs * 2  # noqa: PIE794
+    parameterisations = tuple(
+        [
+            PrincetonD,
+            TripleArc,
+            PictureFrame,
+        ]
+        * 2
+    )
 
     @pytest.mark.parametrize(
-        "parameterisation, inputs, clockwise",
+        ("parameterisation", "inputs", "clockwise"),
         zip(parameterisations, p_inputs, clockwises),
     )
     def test_circuits_are_continuous_and_chained(
@@ -245,16 +249,16 @@ class TestCariddiBenchmark:
         R_0 = 8.87
         n_TF = 18
 
-        with open(root + "/DEMO_2015_cariddi_ripple_xz.json", "r") as f:
+        with open(root + "/DEMO_2015_cariddi_ripple_xz.json") as f:
             data = json.load(f)
             cls.cariddi_ripple = data["z"]
 
-        with open(root + "/DEMO_2015_ripple_xz.json", "r") as f:
+        with open(root + "/DEMO_2015_ripple_xz.json") as f:
             data = json.load(f)
             cls.x_rip = data["x"]
             cls.z_rip = data["z"]
 
-        with open(root + "/DEMO_2015_TF_xz.json", "r") as f:
+        with open(root + "/DEMO_2015_TF_xz.json") as f:
             data = json.load(f)
             x = data["x"]
             z = data["z"]
@@ -271,11 +275,11 @@ class TestCariddiBenchmark:
 
         # Smooth out graphically determined TF centreline...
         length_norm = vector_lengthnorm(x, z)
-        l_interp = np.linspace(0, 1, 150)
+        l_interp = np.linspace(0, 1, 100)
         x = UnivariateSpline(length_norm, x, s=0.02)(l_interp)
         z = UnivariateSpline(length_norm, z, s=0.02)(l_interp)
 
-        coil_loop = Coordinates({"x": x[:-10], "y": 0, "z": z[:-10]})
+        coil_loop = Coordinates({"x": x[10:-10], "y": 0, "z": z[10:-10]})
         coil_loop.close()
         cls.coil_loop = coil_loop
 

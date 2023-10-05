@@ -27,10 +27,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from bluemira.structural.geometry import Geometry, DeformedGeometry
-    from bluemira.structural.element import Element
-    from bluemira.structural.node import Node
     from matplotlib.pyplot import Axes
+
+    from bluemira.structural.element import Element
+    from bluemira.structural.geometry import DeformedGeometry, Geometry
+    from bluemira.structural.node import Node
 
 from copy import deepcopy
 
@@ -238,8 +239,7 @@ class BasePlotter:
                         loads.append(load["w"] / element.length)
 
             for node in self.geometry.nodes:
-                for load in node.loads:
-                    loads.append(load["Q"])
+                loads.extend(load["Q"] for load in node.loads)
 
             self._force_size = np.max(np.abs(loads))
 
@@ -301,10 +301,10 @@ class BasePlotter:
             if node.supports.any():
                 for i, support in enumerate(node.supports):
                     vector = length * LOAD_INT_VECTORS[i]
-                    if support and i < 3:
+                    if support and i < 3:  # noqa: PLR2004
                         # Linear support (single black arrow)
                         _plot_force(self.ax, node, vector, color="k")
-                    elif support and i >= 3:
+                    elif support and i >= 3:  # noqa: PLR2004
                         # Moment support (double red arrow, offset to enable overlap)
                         _plot_moment(self.ax, node, vector, support=True, color="g")
 
@@ -406,7 +406,7 @@ class BasePlotter:
         point = np.array(
             [element.node_1.x, element.node_1.y, element.node_1.z], dtype=float
         )
-        point += (np.array([1.0, 0.0, 0.0]) * np.float(load["x"])) @ dcm
+        point += (np.array([1.0, 0.0, 0.0]) * float(load["x"])) @ dcm
         self.ax.quiver(*point - load, *load, color="r")
 
     def _plot_distributed_load(self, element, load):
@@ -527,7 +527,7 @@ class StressDeformedGeometryPlotter(BasePlotter):
         if smin == smax:
 
             class SameColour:
-                def __call__(self, value):
+                def __call__(self, _):
                     return 0.5
 
             return SameColour()

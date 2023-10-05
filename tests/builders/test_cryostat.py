@@ -55,7 +55,7 @@ class TestCryostatBuilder:
 
     def test_outward_kink_raises_ValueError(self):
         builder = CryostatBuilder(self.params, {}, 8, 10)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             builder.build()
 
 

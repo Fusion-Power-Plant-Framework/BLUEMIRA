@@ -22,6 +22,7 @@
 """
 Static API to optimisation library
 """
+import warnings
 from pprint import pformat
 from typing import Union
 
@@ -33,6 +34,15 @@ from bluemira.codes._nlopt_api import NLOPTOptimiser
 from bluemira.utilities.tools import is_num
 
 __all__ = ["approx_derivative", "Optimiser"]
+
+warnings.warn(
+    f"The module '{__name__}' is deprecated and will be removed in version 2.0.0.\n"
+    "See "
+    "https://bluemira.readthedocs.io/en/latest/optimisation/optimisation.html "
+    "for documentation of the new optimisation module.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 def approx_derivative(
@@ -111,7 +121,7 @@ class Optimiser(NLOPTOptimiser):
 
 
     The grad and constraint matrices must be assigned in place.
-    """  # noqa :W505
+    """  # noqa: W505
 
     def optimise(self, x0=None, check_constraints: bool = True):
         """
@@ -243,7 +253,7 @@ class Optimiser(NLOPTOptimiser):
                     ]
                 )
                 bluemira_warn(
-                    "Some constraints have not been adequately satisfied.\n" f"{message}"
+                    f"Some constraints have not been adequately satisfied.\n{message}"
                 )
             return False
         return True

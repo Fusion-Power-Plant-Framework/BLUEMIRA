@@ -71,7 +71,7 @@ class CoilGroupFieldsMixin:
         """
         x, z = np.ascontiguousarray(x), np.ascontiguousarray(z)
 
-        ind = np.where(self._quad_weighting != 0)
+        ind = np.nonzero(self._quad_weighting)
         out = np.zeros((*x.shape, *self._quad_x.shape))
 
         out[(*(slice(None) for _ in x.shape), *ind)] = greens_psi(
@@ -210,15 +210,11 @@ class CoilGroupFieldsMixin:
             )
             if np.all(~inside):
                 return greens_func(x, z)
-            elif np.all(inside):
+            if np.all(inside):
                 # Not called for circuits as they will always be a mixture
                 return semianalytic_func(x, z)
-            else:
-                return self._combined_control(
-                    inside, x, z, greens_func, semianalytic_func
-                )
-        else:
-            return greens_func(x, z)
+            return self._combined_control(inside, x, z, greens_func, semianalytic_func)
+        return greens_func(x, z)
 
     def _combined_control(
         self,
@@ -360,7 +356,7 @@ class CoilGroupFieldsMixin:
             _quad_z = self._quad_z
             _quad_weight = self._quad_weighting
 
-        ind = np.where(_quad_weight != 0)
+        ind = np.nonzero(_quad_weight)
         out = np.zeros((*x.shape, *_quad_x.shape))
 
         out[(*(slice(None) for _ in x.shape), *ind)] = greens(
@@ -586,7 +582,7 @@ class CoilGroupFieldsMixin:
             semianalytic_Bz, x, z, split, coil_x, coil_z, coil_dx, coil_dz
         )
 
-    def F(self, eqcoil: CoilGroup) -> np.ndarray:  # noqa :N802
+    def F(self, eqcoil: CoilGroup) -> np.ndarray:
         """
         Calculate the force response at the coil centre including the coil
         self-force.
@@ -596,12 +592,12 @@ class CoilGroupFieldsMixin:
              \\mathbf{F} = \\mathbf{j}\\times \\mathbf{B}
             F_x = IB_z+\\dfrac{\\mu_0I^2}{4\\pi X}\\textrm{ln}\\bigg(\\dfrac{8X}{r_c}-1+\\xi/2\\bigg)
             F_z = -IBx
-        """  # noqa :W505
+        """  # noqa: W505, E501
         multiplier = self.current * 2 * np.pi * self.x
         cr = self._current_radius
         if any(cr != 0):
             # true divide errors for zero current coils
-            cr_ind = np.where(cr != 0)
+            cr_ind = np.nonzero(cr)
             fx = np.zeros_like(cr)
             fx[cr_ind] = (
                 MU_0
@@ -619,7 +615,7 @@ class CoilGroupFieldsMixin:
             ]
         ).T
 
-    def control_F(self, coil: CoilGroup) -> np.ndarray:  # noqa :N802
+    def control_F(self, coil: CoilGroup) -> np.ndarray:
         """
         Returns the Green's matrix element for the coil mutual force.
 
@@ -631,9 +627,9 @@ class CoilGroupFieldsMixin:
         response = np.zeros((x.size, coil.x.size, 2))
         coils = coil._coils
         for j, coil2 in enumerate(coils):
-            xw = np.where(x == coil2.x)[0]
-            zw = np.where(z == coil2.z)[0]
-            same_pos = np.where(xw == zw)[0]
+            xw = np.nonzero(x == coil2.x)[0]
+            zw = np.nonzero(z == coil2.z)[0]
+            same_pos = np.nonzero(xw == zw)[0]
             if same_pos.size > 0:
                 # self inductance
                 xxw = xw[same_pos]
@@ -643,7 +639,7 @@ class CoilGroupFieldsMixin:
                 mask = np.zeros_like(Bz, dtype=bool)
                 mask[same_pos] = True
                 if any(cr != 0):
-                    cr_ind = np.where(cr != 0)
+                    cr_ind = np.nonzero(cr)
                     Bz[mask][cr_ind] = (
                         MU_0
                         / (4 * np.pi * x[cr_ind])
@@ -943,8 +939,8 @@ class CoilFieldsMixin(CoilGroupFieldsMixin):
         )
         return (x >= x_min) & (x <= x_max) & (z >= z_min) & (z <= z_max)
 
+    @staticmethod
     def _combined_control(
-        self,
         inside: np.ndarray,
         x: np.ndarray,
         z: np.ndarray,
@@ -990,8 +986,8 @@ class CoilFieldsMixin(CoilGroupFieldsMixin):
         semianalytic: Callable,
         x: np.ndarray,
         z: np.ndarray,
-        *args,
-        **kwargs,
+        *_args,
+        **_kwargs,
     ):
         """
         Calculate [psi, Bx, Bz] response at (x, z) due to a unit

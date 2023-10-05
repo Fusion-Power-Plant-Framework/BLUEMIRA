@@ -26,9 +26,9 @@ The bluemira equilibria module
 from bluemira.equilibria.coils import Coil, CoilSet, SymmetricCircuit
 from bluemira.equilibria.equilibrium import Breakdown, Equilibrium
 from bluemira.equilibria.find import (
-    find_flux_surfs,
     find_LCFS_separatrix,
     find_OX_points,
+    find_flux_surfs,
 )
 from bluemira.equilibria.grid import Grid
 from bluemira.equilibria.limiter import Limiter
@@ -53,3 +53,32 @@ from bluemira.equilibria.shapes import (
     flux_surface_manickam,
 )
 from bluemira.equilibria.solve import PicardIterator
+
+__all__ = [
+    "Coil",
+    "CoilSet",
+    "SymmetricCircuit",
+    "Breakdown",
+    "Equilibrium",
+    "find_flux_surfs",
+    "find_LCFS_separatrix",
+    "find_OX_points",
+    "Grid",
+    "Limiter",
+    "AutoConstraints",
+    "FieldNullConstraint",
+    "IsofluxConstraint",
+    "MagneticConstraintSet",
+    "PsiBoundaryConstraint",
+    "PsiConstraint",
+    "CoilsetPositionCOP",
+    "NestedCoilsetPositionCOP",
+    "TikhonovCurrentCOP",
+    "UnconstrainedTikhonovCurrentGradientCOP",
+    "BetaIpProfile",
+    "CustomProfile",
+    "PicardIterator",
+    "flux_surface_cunningham",
+    "flux_surface_johner",
+    "flux_surface_manickam",
+]

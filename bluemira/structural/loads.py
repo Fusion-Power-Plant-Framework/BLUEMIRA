@@ -38,7 +38,7 @@ def _check_load_type(load_type, sub_type="all"):
             f"Cannot set a force load with a moment load type: {load_type}"
         )
 
-    elif sub_type == "moment" and load_type not in LOAD_TYPES[3:]:
+    if sub_type == "moment" and load_type not in LOAD_TYPES[3:]:
         raise StructuralError(
             f"Cannot set a moment load with a force load type: {load_type}"
         )

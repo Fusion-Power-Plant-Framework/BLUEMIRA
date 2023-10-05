@@ -134,4 +134,4 @@ Two input objects are required to perform the analysis:
 * a geometry object, representing the first wall (i.e. all potentially flux-intercepting surfaces).
   The geometry must be closed.
 
-See `examples/radiation_transport/heat_flux_calculation.py`.
+See the example: :doc:`../examples/radiation_transport/heat_flux_calculation`.

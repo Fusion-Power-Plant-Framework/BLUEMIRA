@@ -27,7 +27,7 @@ Credit: F. Loiseau, R. Delaporte-Mathurin, and C. Weickhmann
 """
 
 import json
-import os
+from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 import meshio
@@ -91,12 +91,12 @@ def msh_to_xdmf(
     """
     dimensions = _check_dimensions(dimensions)
 
-    file_path = os.path.join(directory, mesh_name)
-    if not os.path.exists(file_path):
+    file_path = Path(directory, mesh_name)
+    if not file_path.exists():
         raise MeshConversionError(f"No such file: {file_path}")
 
     file_prefix = mesh_name.split(".")[0]
-    mesh = meshio.read(file_path)
+    mesh = meshio.read(file_path.as_posix())
     _export_domain(mesh, file_prefix, directory, dimensions)
     _export_boundaries(mesh, file_prefix, directory, dimensions)
     _export_link_file(mesh, file_prefix, directory)
@@ -116,6 +116,7 @@ def import_mesh(
         Whether or not to subdomains are present (defaults to False)
     directory:
         Directory in which the MSH file and XDMF files exist
+
     Returns
     -------
     mesh:
@@ -127,38 +128,38 @@ def import_mesh(
     link_dict:
         Link dictionary between MSH and XDMF objects
     """
-    domain_file = os.path.join(directory, f"{file_prefix}_{DOMAIN_SUFFIX}")
-    boundary_file = os.path.join(directory, f"{file_prefix}_{BOUNDARY_SUFFIX}")
-    link_file = os.path.join(directory, f"{file_prefix}_{LINKFILE_SUFFIX}")
+    domain_file = Path(directory, f"{file_prefix}_{DOMAIN_SUFFIX}")
+    boundary_file = Path(directory, f"{file_prefix}_{BOUNDARY_SUFFIX}")
+    link_file = Path(directory, f"{file_prefix}_{LINKFILE_SUFFIX}")
     files = [domain_file, boundary_file, link_file]
-    exists = [os.path.exists(file) for file in files]
+    exists = [file.exists() for file in files]
 
     if not all(exists):
-        msg = "\n".join([fn for fn, exist in zip(files, exists) if not exist])
+        msg = "\n".join([fn.as_posix() for fn, exist in zip(files, exists) if not exist])
         raise MeshConversionError(f"No mesh file(s) found:\n {msg}")
 
     mesh = Mesh()
 
-    with XDMFFile(domain_file) as file:
+    with XDMFFile(domain_file.as_posix()) as file:
         file.read(mesh)
 
     dimension = mesh.topology().dim()
     boundaries_mvc = MeshValueCollection("size_t", mesh, dim=dimension)
 
-    with XDMFFile(boundary_file) as file:
+    with XDMFFile(boundary_file.as_posix()) as file:
         file.read(boundaries_mvc, "boundaries")
 
     boundaries_mf = MeshFunctionSizet(mesh, boundaries_mvc)
 
     if subdomains:
         subdomains_mvc = MeshValueCollection("size_t", mesh, dim=dimension)
-        with XDMFFile(domain_file) as file:
+        with XDMFFile(domain_file.as_posix()) as file:
             file.read(subdomains_mvc, "subdomains")
         subdomains_mf = MeshFunctionSizet(mesh, subdomains_mvc)
     else:
         subdomains_mf = None
 
-    with open(link_file, "r") as file:
+    with open(link_file) as file:
         link_dict = json.load(file)
 
     return mesh, boundaries_mf, subdomains_mf, link_dict
@@ -210,7 +211,7 @@ def _export_domain(mesh, file_prefix, directory, dimensions):
     domain = _make_mesh(mesh, dimensions, cells, cell_data)
 
     _write_mesh(
-        os.path.join(directory, f"{file_prefix}_{DOMAIN_SUFFIX}"),
+        Path(directory, f"{file_prefix}_{DOMAIN_SUFFIX}").as_posix(),
         domain,
     )
 
@@ -237,7 +238,7 @@ def _export_boundaries(mesh, file_prefix, directory, dimensions):
     boundaries = _make_mesh(mesh, dimensions, cells, cell_data)
 
     _write_mesh(
-        os.path.join(directory, f"{file_prefix}_{BOUNDARY_SUFFIX}"),
+        Path(directory, f"{file_prefix}_{BOUNDARY_SUFFIX}").as_posix(),
         boundaries,
     )
 
@@ -263,8 +264,7 @@ def _export_link_file(mesh, file_prefix, directory):
         )
     )
 
-    filename = os.path.join(directory, f"{file_prefix}_{LINKFILE_SUFFIX}")
-    with open(filename, "w") as file:
+    with open(Path(directory, f"{file_prefix}_{LINKFILE_SUFFIX}"), "w") as file:
         json.dump(table, file, indent=4)
 
 

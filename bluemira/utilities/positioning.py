@@ -75,7 +75,6 @@ class XZGeometryInterpolator(abc.ABC):
         """
         Convert parametric-space 'L' values to physical x-z space.
         """
-        pass
 
     @abc.abstractmethod
     def to_L(
@@ -84,14 +83,12 @@ class XZGeometryInterpolator(abc.ABC):
         """
         Convert physical x-z space values to parametric-space 'L' values.
         """
-        pass
 
     @abc.abstractproperty
     def dimension(self) -> int:
         """
         The dimension of the parametric space
         """
-        pass
 
 
 class PathInterpolator(XZGeometryInterpolator):
@@ -196,8 +193,9 @@ class RegionInterpolator(XZGeometryInterpolator):
         # Yes, the "area" of a 2-D scipy ConvexHull is its perimeter...
         if not np.allclose(hull.area, geometry.length, atol=EPS):
             raise PositionerError(
-                "RegionInterpolator can only handle convex geometries. Perimeter "
-                f"difference between convex hull and geometry: {hull.area - geometry.length}"
+                "RegionInterpolator can only handle convex geometries. Perimeter"
+                " difference between convex hull and geometry:"
+                f" {hull.area - geometry.length}"
             )
 
     def to_xz(
@@ -232,7 +230,7 @@ class RegionInterpolator(XZGeometryInterpolator):
         intersect = slice_shape(self.geometry, plane)
         if len(intersect) == 1:
             x = intersect[0][0]
-        elif len(intersect) == 2:
+        elif len(intersect) == 2:  # noqa: PLR2004
             x_min, x_max = sorted([intersect[0][0], intersect[1][0]])
             x = x_min + (x_max - x_min) * l_0
         else:
@@ -316,11 +314,11 @@ class RegionInterpolator(XZGeometryInterpolator):
             l_0, l_1 = self._intersect_filter(
                 x, l_1, [False] if intersect is None else intersect
             )
-        elif len(intersect) == 2:
+        elif len(intersect) == 2:  # noqa: PLR2004
             x_min, x_max = sorted([intersect[0][0], intersect[1][0]])
             l_0 = np.clip((x - x_min) / (x_max - x_min), 0.0, 1.0)
         elif len(intersect) == 1:
-            l_0 = float(l_1 == 1.0)
+            l_0 = float(l_1 == 1.0)  # noqa: PLR2004
         else:
             raise PositionerError("Unexpected number of intersections in L conversion.")
         return l_0, l_1
@@ -386,7 +384,7 @@ class PositionMapper:
         return np.array(
             [
                 tool.to_xz(l_values[i])
-                for i, tool, in enumerate(self.interpolators.values())
+                for i, tool in enumerate(self.interpolators.values())
             ]
         ).T
 

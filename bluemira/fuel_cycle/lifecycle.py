@@ -24,8 +24,8 @@ Fusion power reactor lifecycle object.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,11 +34,13 @@ from matplotlib.lines import Line2D
 from bluemira.base.constants import S_TO_YR, YR_TO_S, raw_uc
 from bluemira.base.look_and_feel import bluemira_print, bluemira_warn
 from bluemira.fuel_cycle.timeline import Timeline
-from bluemira.fuel_cycle.timeline_tools import (
-    LearningStrategy,
-    OperationalAvailabilityStrategy,
-)
 from bluemira.utilities.tools import abs_rel_difference, is_num, json_writer
+
+if TYPE_CHECKING:
+    from bluemira.fuel_cycle.timeline_tools import (
+        LearningStrategy,
+        OperationalAvailabilityStrategy,
+    )
 
 __all__ = ["LifeCycle"]
 
@@ -143,18 +145,20 @@ class LifeCycle:
         for i in range(ndivch_in1blk):
             p_str = "Phase P1." + str(i + 1)
             m_str = "Phase M1." + str(i + 1)
-            phases.append([divl, p_str])
-            phases.append([m_short, m_str])
+            phases.extend(([divl, p_str], [m_short, m_str]))
             count = i
         if ndivch_in1blk == 0:
             count = 0
-        phases.append([blk1l % divl, "Phase P1." + str(count + 2)])
-        phases.append([m_long, "Phase M1." + str(count + 2)])
+        phases.extend(
+            (
+                [blk1l % divl, "Phase P1." + str(count + 2)],
+                [m_long, "Phase M1." + str(count + 2)],
+            )
+        )
         for i in range(ndivch_in2blk):
             p_str = "Phase P2." + str(i + 1)
             m_str = "Phase M2." + str(i + 1)
-            phases.append([divl, p_str])
-            phases.append([m_short, m_str])
+            phases.extend(([divl, p_str], [m_short, m_str]))
             count2 = i
         phases.append([blk2l % divl, "Phase P2." + str(count2 + 1)])
         self.phase_durations = [p[0] for p in phases]
@@ -223,12 +227,11 @@ class LifeCycle:
         """
         Calculate the number of pulses per phase.
         """
-        n_pulse_p = []
-        for i in range(len(phases)):
-            if phases[i][1].startswith("Phase P"):
-                # TODO: Change to //
-                n_pulse_p.append(int(round(YR_TO_S * phases[i][0] / self.t_flattop, 0)))
-        self.n_pulse_p = n_pulse_p
+        self.n_pulse_p = [
+            int(YR_TO_S * phases[i][0] // self.t_flattop)
+            for i in range(len(phases))
+            if phases[i][1].startswith("Phase P")
+        ]
 
     def get_op_phases(self) -> List[float]:
         """
@@ -297,7 +300,7 @@ class LifeCycle:
         actual_lf = self.fpy / actual_life
         delt = abs_rel_difference(actual_life, life)
         delta2 = abs_rel_difference(actual_lf, self.params.A_global)
-        if delt > 0.015:
+        if delt > 0.015:  # noqa: PLR2004
             bluemira_warn(
                 "FuelCycle::Lifecyle: discrepancy between actual and planned\n"
                 "reactor lifetime\n"
@@ -313,7 +316,7 @@ class LifeCycle:
                 self.inputs,
             )  # Phoenix
 
-        if delta2 > 0.015:
+        if delta2 > 0.015:  # noqa: PLR2004
             bluemira_warn(
                 "FuelCycle::Lifecyle: availability discrepancy greater than\n"
                 "specified tolerance\n"
@@ -365,10 +368,7 @@ class LifeCycle:
                 c = "r"
                 length = p_d
                 rt.append(rt[-1] + p_d)
-                if p_n.startswith("Phase M1.2"):
-                    m = "s"
-                else:
-                    m = "o"
+                m = "s" if p_n.startswith("Phase M1.2") else "o"
                 ax.plot(rt[-1] - p_d / 2, 0.3, marker=m, color="r", ms=25)
                 ax.axvspan(s, s + length, color=c, alpha=0.2)
             h -= 0.08 * self.fpy
@@ -446,10 +446,8 @@ class LifeCycle:
             ax.set_xlim([0, 6])
             ax.legend()
         plt.title(
-            "Breakdown of DEMO reactor lifetime\n A = {0:.2f},"
-            "{1:.2f} fpy, {2:.2f} years".format(
-                self.params.A_global, self.fpy, self.T.plant_life
-            )
+            f"Breakdown of DEMO reactor lifetime\n A = {self.params.A_global:.2f},"
+            f"{self.fpy:.2f} fpy, {self.T.plant_life:.2f} years"
         )
 
     def write(self, filename: str, **kwargs):
@@ -460,14 +458,14 @@ class LifeCycle:
         data = self.T.to_dict()
         return json_writer(data, filename, **kwargs)
 
-    def read(self, filename: str):
+    @staticmethod
+    def read(filename: str):
         """
         Load a Timeline from a JSON file.
         """
         bluemira_print(f"Reading {filename}")
         with open(filename) as f_h:
-            data = json.load(f_h)
-        return data
+            return json.load(f_h)
 
 
 @dataclass
@@ -480,10 +478,10 @@ class LifeCycleParams:
     I_p: float = 19e6
     """Plasma current [A]. None."""
 
-    bmd: float = raw_uc(150, "days", "s")
+    bmd: float = field(default_factory=lambda: raw_uc(150, "days", "s"))
     """Blanket maintenance duration [days]. Full replacement intervention duration."""
 
-    dmd: float = raw_uc(90, "days", "s")
+    dmd: float = field(default_factory=lambda: raw_uc(90, "days", "s"))
     """Divertor maintenance duration [s]. Full replacement intervention duration."""
 
     t_pulse: float = 7200

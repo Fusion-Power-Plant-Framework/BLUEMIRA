@@ -49,10 +49,12 @@ class TestInscribedRectangle:
         c_s.translate(i)
         complex_shape = boolean_cut(complex_shape, c_s)[0]
 
-    complex_shape = complex_shape.boundary[0].discretize(byedges=True, ndiscr=100)
+    complex_shape = complex_shape.boundary[0].discretize(  # noqa: PIE794
+        byedges=True, ndiscr=100
+    )
 
-    shapes = [square, diamond, circle, complex_shape]
-    convex = [True, True, True, False]
+    shapes = (square, diamond, circle, complex_shape)
+    convex = (True, True, True, False)
 
     aspectratios = np.logspace(-1, 1, num=5)
 
@@ -60,7 +62,7 @@ class TestInscribedRectangle:
 
     MIN_AREA = MINIMUM_LENGTH**2
 
-    @pytest.mark.parametrize("shape, convex", zip(shapes, convex))
+    @pytest.mark.parametrize(("shape", "convex"), zip(shapes, convex))
     def test_inscribed_rectangle(self, shape, convex):
         x = y = 5
         self.r = False
@@ -75,7 +77,14 @@ class TestInscribedRectangle:
         fig, ax = plt.subplots()
 
         shape_face = BluemiraFace(make_polygon(shape, closed=True))
-        plot_2d(shape_face, self.po, ax=ax, linewidth=0.1, show=False, zorder=-10)
+        plot_2d(
+            shape_face,
+            self.po,
+            ax=ax,
+            face_options={"zorder": -10},
+            wire_options={"linewidth": 0.1},
+            show=False,
+        )
         for i in range(x):
             for j in range(y):
                 point = points[:, i, j]
@@ -105,22 +114,22 @@ class TestInscribedRectangle:
 
                         ax.plot(point[0], point[2], marker="o")
                         ax.plot(sq.x, sq.z, linewidth=0.1, color="k")
+                        # Some overlaps are points or lines of 0 area
+                        if tf is not None and not all(
+                            get_area(*t.xz) <= self.MIN_AREA for t in tf
+                        ):
+                            self.assertion_error_creator(
+                                "Overlap", [dx, dz, point, k, convex]
+                            )
 
-                        if tf is not None:
-                            # Some overlaps are points or lines of 0 area
-                            if not all([get_area(*t.xz) <= self.MIN_AREA for t in tf]):
-                                self.assertion_error_creator(
-                                    "Overlap", [dx, dz, point, k, convex]
+                            for t in tf:
+                                t.plot(
+                                    ax,
+                                    facecolor="r",
+                                    edgecolor="r",
+                                    linewidth=1,
+                                    zorder=40,
                                 )
-
-                                for t in tf:
-                                    t.plot(
-                                        ax,
-                                        facecolor="r",
-                                        edgecolor="r",
-                                        linewidth=1,
-                                        zorder=40,
-                                    )
 
                         if not np.allclose(dx / dz, k):
                             self.assertion_error_creator("Aspect", [dx, dz, dx / dz, k])

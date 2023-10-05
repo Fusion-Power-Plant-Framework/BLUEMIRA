@@ -22,121 +22,98 @@
 """
 Optimisation variable class.
 """
-
 from __future__ import annotations
 
 import json
-from operator import attrgetter
-from typing import Dict, List, Optional, TextIO, Union
+from dataclasses import MISSING, Field, field
+from pathlib import Path
+from typing import Dict, Generator, Optional, TextIO, TypedDict, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 from tabulate import tabulate
 
 from bluemira.base.look_and_feel import bluemira_warn
-from bluemira.display.palettes import BLUEMIRA_PALETTE
 from bluemira.utilities.error import OptVariablesError
 from bluemira.utilities.tools import json_writer
 
 
-def normalise_value(value, lower_bound, upper_bound):
-    """
-    Normalise a value uniformly [0 -> 1].
+class OptVarVarDictValueT(TypedDict, total=False):
+    """Typed dictionary for a the values of an OptVariable from a var_dict."""
 
-    Parameters
-    ----------
     value: float
-        Value to normalise
     lower_bound: float
-        Lower bound at which to normalise
     upper_bound: float
-        Upper bound at which to normalise
-
-    Returns
-    -------
-    v_norm: float
-        Normalised value [0 -> 1]
-    """
-    return (value - lower_bound) / (upper_bound - lower_bound)
+    fixed: bool
 
 
-def denormalise_value(v_norm, lower_bound, upper_bound):
-    """
-    Denormalise a value uniformly from [0 -> 1] w.r.t bounds.
+VarDictT = Dict[str, OptVarVarDictValueT]
 
-    Parameters
-    ----------
-    v_norm: float
-        Normalised value
-    lower_bound: float
-        Lower bound at which to denormalise
-    upper_bound: float
-        Upper bound at which to denormalise
 
-    Returns
-    -------
+class OptVarDictT(TypedDict):
+    """Typed dictionary representation of an OptVariable."""
+
+    name: str
     value: float
-        Denormalised value w.r.t. bounds
-    """
-    return lower_bound + v_norm * (upper_bound - lower_bound)
+    lower_bound: float
+    upper_bound: float
+    fixed: bool
+    description: str
 
 
-class BoundedVariableEncoder(json.JSONEncoder):
-    """
-    A JSONEncoder for serialising BoundedVariable instances.
-    """
+class OptVarSerializedT(TypedDict):
+    """Typed dictionary for a serialised OptVariable."""
 
-    def default(self, obj):
-        """
-        Serialises a Bounded Variable by extracting the value, lower_bound, upper_bound,
-        and fixed properties.
-        """
-        if isinstance(obj, BoundedVariable):
-            return {
-                "value": obj.value,
-                "lower_bound": obj.lower_bound,
-                "upper_bound": obj.upper_bound,
-                "fixed": obj.fixed,
-            }
-        return super().default(obj)
+    value: float
+    lower_bound: float
+    upper_bound: float
+    fixed: bool
+    description: str
 
 
-class BoundedVariable:
+class OptVariable:
     """
     A bounded variable, uniformly normalised from 0 to 1 w.r.t. its bounds.
 
     Parameters
     ----------
-    name: str
+    name:
         Name of the variable
     value: float
         Value of the variable
-    lower_bound: float
+    lower_bound:
         Lower bound of the variable
-    upper_bound: float
+    upper_bound:
         Upper bound of the variable
-    fixed: bool
+    fixed:
         Whether or not the variable is to be held constant
-    descr: str
+    description:
         Description of the variable
     """
 
-    __slots__ = ("name", "_value", "lower_bound", "upper_bound", "fixed", "_description")
+    __slots__ = ("name", "_value", "lower_bound", "upper_bound", "fixed", "description")
 
-    def __init__(self, name, value, lower_bound, upper_bound, fixed=False, descr=None):
+    def __init__(
+        self,
+        name: str,
+        value: float,
+        lower_bound: float,
+        upper_bound: float,
+        fixed: bool = False,
+        description: Optional[str] = None,
+    ):
         self.name = name
-        self._validate_bounds(lower_bound, upper_bound)
-        self._validate_value(value, lower_bound, upper_bound)
+
+        self._value = value
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
-        self._value = None
-        self.fixed = False  # Required to set value initially
-        self.value = value
         self.fixed = fixed
-        self._description = descr
+        self.description = description
+
+        self._validate_bounds()
+        self._validate_value(value)
 
     @property
-    def value(self):
+    def value(self) -> float:
         """
         The value of the variable.
         """
@@ -150,23 +127,29 @@ class BoundedVariable:
         if self.fixed:
             raise OptVariablesError("Cannot set the value of a fixed variable.")
 
-        self._validate_value(value, self.lower_bound, self.upper_bound)
+        self._validate_value(value)
         self._value = value
 
     @property
-    def description(self):
+    def normalised_value(self) -> float:
         """
-        The description of the variable.
+        The value uniformly normalised between 0 and 1 w.r.t. its bounds
         """
-        return self._description
+        return (self.value - self.lower_bound) / (self.upper_bound - self.lower_bound)
 
-    def fix(self, value: float):
+    def from_normalised(self, norm: float) -> float:
+        """
+        The value from a normalised value between [0 -> 1], w.r.t its bounds
+        """
+        return self.lower_bound + norm * (self.upper_bound - self.lower_bound)
+
+    def fix(self, value: Optional[float] = None):
         """
         Fix the variable at a specified value. Ignores bounds.
 
         Parameters
         ----------
-        value: float
+        value:
             Value at which to fix the variable.
         """
         self.fixed = True
@@ -174,27 +157,29 @@ class BoundedVariable:
             self._value = value
 
     def adjust(
-        self, value=None, lower_bound=None, upper_bound=None, *, strict_bounds=True
+        self,
+        value: Optional[float] = None,
+        lower_bound: Optional[float] = None,
+        upper_bound: Optional[float] = None,
+        strict_bounds: bool = True,
     ):
         """
-        Adjust the BoundedVariable.
+        Adjust the OptVariable.
 
         Parameters
         ----------
-        name: str
-            Name of the variable to adjust
-        value: Optional[float]
+        value:
             Value of the variable to set
-        lower_bound: Optional[float]
+        lower_bound:
             Value of the lower bound to set
-        upper_bound: Optional[float]
+        upper_bound:
             Value of the upper to set
-        strict_bounds: bool
+        strict_bounds:
             If True, will raise errors if values are outside the bounds. If False, the
             bounds are dynamically adjusted to match the value.
         """
         if self.fixed:
-            raise OptVariablesError("Cannot adjust a fixed variable.")
+            raise OptVariablesError(f"'{self.name}' is fixed and cannot be adjusted.")
 
         if lower_bound is not None:
             self.lower_bound = lower_bound
@@ -202,59 +187,94 @@ class BoundedVariable:
         if upper_bound is not None:
             self.upper_bound = upper_bound
 
-        self._validate_bounds(self.lower_bound, self.upper_bound)
-
         if value is not None:
             if not strict_bounds:
-                self._adjust_bounds(value, self.lower_bound, self.upper_bound)
-
+                self._adjust_bounds_to(value)
             self.value = value
 
-    @property
-    def normalised_value(self) -> float:
-        """
-        The normalised value of the variable.
-        """
-        return normalise_value(self.value, self.lower_bound, self.upper_bound)
+        self._validate_bounds()
 
-    def _adjust_bounds(self, value, lower_bound, upper_bound):
+    def as_dict(self) -> OptVarDictT:
+        """Dictionary representation of OptVariable, can be used for serialisation"""
+        return {
+            "name": self.name,
+            "value": self.value,
+            "lower_bound": self.lower_bound,
+            "upper_bound": self.upper_bound,
+            "fixed": self.fixed,
+            "description": self.description or "",
+        }
+
+    def as_serializable(self) -> OptVarSerializedT:
+        """Dictionary representation of OptVariable"""
+        return {
+            "value": self.value,
+            "lower_bound": self.lower_bound,
+            "upper_bound": self.upper_bound,
+            "fixed": self.fixed,
+            "description": self.description or "",
+        }
+
+    @classmethod
+    def from_serialized(cls, name: str, data: OptVarSerializedT):
+        """Create an OptVariable from a dictionary"""
+        return cls(
+            name=name,
+            value=data["value"],
+            lower_bound=data["lower_bound"],
+            upper_bound=data["upper_bound"],
+            fixed=data["fixed"],
+            description=data["description"],
+        )
+
+    def _adjust_bounds_to(self, value):
         """
         Adjust the bounds to the value
         """
-        if value < lower_bound:
+        if value < self.lower_bound:
             bluemira_warn(
-                f"BoundedVariable '{self.name}': value was set to below its lower bound. Adjusting bound."
+                f"OptVariable '{self.name}': value was set to below its lower bound."
+                " Adjusting bound."
             )
             self.lower_bound = value
 
-        if value > upper_bound:
+        if value > self.upper_bound:
             bluemira_warn(
-                f"BoundedVariable '{self.name}': value was set to above its upper bound. Adjusting bound."
+                f"OptVariable '{self.name}': value was set to above its upper bound."
+                " Adjusting bound."
             )
             self.upper_bound = value
 
-    def _validate_bounds(self, lower_bound, upper_bound):
-        if lower_bound > upper_bound:
+    def _validate_bounds(self):
+        if self.lower_bound > self.upper_bound:
             raise OptVariablesError(
-                f"BoundedVariable '{self.name}': lower bound is higher than upper bound."
+                f"OptVariable '{self.name}' - lower bound is higher than upper bound."
             )
 
-    def _validate_value(self, value, lower_bound, upper_bound):
-        if not lower_bound <= value <= upper_bound:
+    def _validate_value(self, value):
+        if not self.lower_bound <= value <= self.upper_bound:
             raise OptVariablesError(
-                f"BoundedVariable '{self.name}': value {value} is out of bounds."
+                f"OptVariable '{self.name}' - value {value} is out of bounds:"
+                f" [{self.lower_bound}, {self.upper_bound}]"
             )
 
     def __repr__(self) -> str:
         """
-        Representation of Bounded variable
+        Representation of OptVariable
         """
-        lower_bound, upper_bound, fixed = self.lower_bound, self.upper_bound, self.fixed
-        return f"{self.__class__.__name__}({self.name}, {self.value}, {lower_bound=}, {upper_bound=}, {fixed=})"
+        lower_bound, upper_bound, fixed = (
+            self.lower_bound,
+            self.upper_bound,
+            self.fixed,
+        )
+        return (
+            f"{self.__class__.__name__}({self.name}, {self.value}, {lower_bound=},"
+            f" {upper_bound=}, {fixed=})"
+        )
 
     def __str__(self) -> str:
         """
-        Pretty representation of Bounded variable
+        Pretty representation of OptVariable
         """
         bound = (
             f" Bounds: ({self.lower_bound}, {self.upper_bound})"
@@ -265,117 +285,165 @@ class BoundedVariable:
 
         return f"{self.name} = {self.value}{bound}{descr}"
 
+    def __add__(self, other: OptVariable):
+        """The sum of two OptVariables is the sum of their values"""
+        if isinstance(other, OptVariable):
+            return self.value + other.value
+        if isinstance(other, (int, float, np.floating)):
+            return self.value + other
+        raise TypeError(f"Cannot add OptVariable with {type(other)}")
 
-class OptVariables:
-    """
-    A set of ordered variables to facilitate optimisation using normalised values.
+    def __sub__(self, other: OptVariable):
+        """The subtraction of two OptVariables is the subtraction of their values"""
+        if isinstance(other, OptVariable):
+            return self.value - other.value
+        if isinstance(other, (int, float, np.floating)):
+            return self.value - other
+        raise TypeError(f"Cannot subtract OptVariable with {type(other)}")
 
-    Parameters
-    ----------
-    variables: List[BoundedVariable]
-        Set of variables to use
-    frozen: bool
-        Whether or not the OptVariables set is to be frozen upon instantiation. This
-        prevents any adding or removal of variables after instantiation.
-    """
-
-    def __init__(self, variables, frozen=False):
-        self._var_dict = {v.name: v for v in variables}
-        self.frozen = frozen
-
-    def add_variable(self, variable):
+    def __mul__(self, other: OptVariable):
         """
-        Add a variable to the set.
+        The multiplication of two OptVariables is
+        the multiplication of their values
+        """
+        if isinstance(other, OptVariable):
+            return self.value * other.value
+        if isinstance(other, (int, float, np.floating)):
+            return self.value * other
+        raise TypeError(f"Cannot multiply OptVariable with {type(other)}")
+
+
+def ov(
+    name: str,
+    value: float,
+    lower_bound: float,
+    upper_bound: float,
+    fixed: bool = False,
+    description: Optional[str] = None,
+):
+    """Field factory for OptVariable"""
+    return field(
+        default_factory=lambda: OptVariable(
+            name, value, lower_bound, upper_bound, fixed, description
+        )
+    )
+
+
+class OptVariablesFrame:
+    """
+    Class to model the variables for an optimisation
+    """
+
+    def __new__(cls, *_args, **_kwargs):
+        """
+        Prevent instantiation of this class.
+        """
+        if cls == OptVariablesFrame:
+            raise TypeError(
+                "Cannot instantiate an OptVariablesFrame directly. It must be"
+                " subclassed."
+            )
+        if not hasattr(cls, "__dataclass_fields__"):
+            raise TypeError(f"{cls} must be annotated with '@dataclass'")
+        for field_name in cls.__dataclass_fields__:  # type: ignore[attr-defined]
+            dcf: Field = cls.__dataclass_fields__[field_name]  # type: ignore[attr-defined]  # noqa: E501
+            fact_inst = dcf.default_factory() if dcf.default_factory != MISSING else None
+            if fact_inst is None:
+                raise TypeError(
+                    f"{field_name} must be wrapped in with 'ov' field factory"
+                )
+            if not isinstance(fact_inst, OptVariable):
+                raise TypeError(
+                    f"OptVariablesFrame contains non-OptVariable object '{field_name}:"
+                    f" {type(fact_inst)}'"
+                )
+            if field_name != fact_inst.name:
+                raise TypeError(
+                    "OptVariablesFrame contains OptVariable with incorrect name"
+                    f" '{fact_inst.name}', defined as '{field_name}'"
+                )
+
+        return super().__new__(cls)
+
+    def __iter__(self) -> Generator[OptVariable, None, None]:
+        """
+        Iterate over this frame's parameters.
+
+        The order is based on the order in which the parameters were
+        declared.
+        """
+        for field_name in self.__dataclass_fields__:  # type: ignore[attr-defined]
+            yield getattr(self, field_name)
+
+    def __getitem__(self, name: str) -> OptVariable:
+        """
+        Dictionary-like access to variables.
 
         Parameters
         ----------
-        variable: BoundedVariable
-            Variable to add to the set.
+        name:
+            Name of the variable to get
         """
-        if self.frozen:
-            raise OptVariablesError(
-                "This OptVariables instance is frozen, no variables can be added or removed."
-            )
-        if variable.name in self._var_dict:
-            raise OptVariablesError(f"Variable {variable.name} already in OptVariables.")
-
-        self._var_dict[variable.name] = variable
-
-    def remove_variable(self, name):
-        """
-        Remove a variable from the set.
-
-        Parameters
-        ----------
-        name: str
-            Name of the variable to remove
-        """
-        if self.frozen:
-            raise OptVariablesError(
-                "This OptVariables instance is frozen, no variables can be added or removed."
-            )
-        self._check_presence(name)
-
-        del self._var_dict[name]
+        return getattr(self, name)
 
     def adjust_variable(
         self,
-        name,
-        value=None,
-        lower_bound=None,
-        upper_bound=None,
-        fixed=False,
-        *,
-        strict_bounds=True,
+        name: str,
+        value: Optional[float] = None,
+        lower_bound: Optional[float] = None,
+        upper_bound: Optional[float] = None,
+        fixed: bool = False,
+        strict_bounds: bool = True,
     ):
         """
-        Adjust a variable in the set.
+        Adjust a variable in the frame.
 
         Parameters
         ----------
-        name: str
+        name:
             Name of the variable to adjust
-        value: Optional[float]
+        value:
             Value of the variable to set
-        lower_bound: Optional[float]
+        lower_bound:
             Value of the lower bound to set
-        upper_bound: Optional[float]
+        upper_bound:
             Value of the upper to set
-        fixed: bool
+        fixed:
             Whether or not the variable is to be held constant
         strict_bounds: bool
             If True, will raise errors if values are outside the bounds. If False, the
             bounds are dynamically adjusted to match the value.
         """
-        self._check_presence(name)
-
+        opt_var = self[name]
         if fixed:
-            self._var_dict[name].adjust(
+            # sets the bounds and fixes the var ignoring them
+            opt_var.adjust(
                 lower_bound=lower_bound,
                 upper_bound=upper_bound,
                 strict_bounds=strict_bounds,
             )
-            self.fix_variable(name, value)
-
+            opt_var.fix(value)
         else:
-            self._var_dict[name].adjust(
-                value, lower_bound, upper_bound, strict_bounds=strict_bounds
-            )
+            opt_var.adjust(value, lower_bound, upper_bound, strict_bounds)
 
-    def adjust_variables(self, var_dict=None, *, strict_bounds=True):
+    def adjust_variables(
+        self,
+        var_dict: Optional[VarDictT] = None,
+        strict_bounds=True,
+    ):
         """
-        Adjust multiple variables in the set.
+        Adjust multiple variables in the frame.
 
         Parameters
         ----------
-        var_dict: Optional[dict]
+        var_dict:
             Dictionary with which to update the set, of the form
             {"var_name": {"value": v, "lower_bound": lb, "upper_bound": ub}, ...}
         strict_bounds: bool
             If True, will raise errors if values are outside the bounds. If False, the
             bounds are dynamically adjusted to match the value.
         """
-        if var_dict:
+        if var_dict is not None:
             for k, v in var_dict.items():
                 args = [
                     v.get("value", None),
@@ -383,29 +451,27 @@ class OptVariables:
                     v.get("upper_bound", None),
                     v.get("fixed", None),
                 ]
-                if all([i is None for i in args]):
+                if all(i is None for i in args):
                     raise OptVariablesError(
-                        "When adjusting variables in a OptVariables instance, the dictionary"
-                        " must be of the form: {'var_name': {'value': v, 'lower_bound': lb, 'upper_bound': ub}, ...}"
+                        "When adjusting variables in an OptVariableFrame instance, the"
+                        " dictionary must be of the form: {'var_name': {'value': v,"
+                        " 'lower_bound': lb, 'upper_bound': ub}, ...}"
                     )
-
                 self.adjust_variable(k, *args, strict_bounds=strict_bounds)
 
-    def fix_variable(self, name, value=None):
+    def fix_variable(self, name: str, value: Optional[float] = None):
         """
-        Fix a variable in the set, removing it from optimisation but preserving a
+        Fix a variable in the frame, removing it from optimisation but preserving a
         constant value.
 
         Parameters
         ----------
-        name: str
+        name:
             Name of the variable to fix
-        value: Optional[float]
+        value:
             Value at which to fix the variable (will default to present value)
         """
-        self._check_presence(name)
-
-        self._var_dict[name].fix(value=value)
+        self[name].fix(value)
 
     def get_normalised_values(self):
         """
@@ -416,9 +482,7 @@ class OptVariables:
         x_norm: np.ndarray
             Array of normalised values
         """
-        return np.array(
-            [v.normalised_value for v in self._var_dict.values() if not v.fixed]
-        )
+        return np.array([opv.normalised_value for opv in self._opt_vars])
 
     def set_values_from_norm(self, x_norm):
         """
@@ -430,9 +494,8 @@ class OptVariables:
             Array of normalised values
         """
         true_values = self.get_values_from_norm(x_norm)
-        for name, value in zip(self._opt_vars, true_values):
-            variable = self._var_dict[name]
-            variable.value = value
+        for opv, value in zip(self._opt_vars, true_values):
+            opv.value = value
 
     def get_values_from_norm(self, x_norm):
         """
@@ -450,29 +513,26 @@ class OptVariables:
         """
         if len(x_norm) != self.n_free_variables:
             raise OptVariablesError(
-                f"Number of normalised variables {len(x_norm)} != {self.n_free_variables}."
+                f"Number of normalised variables {len(x_norm)} !="
+                f" {self.n_free_variables}."
             )
-
-        true_values = []
-        for name, v_norm in zip(self._opt_vars, x_norm):
-            variable = self._var_dict[name]
-            value = denormalise_value(v_norm, variable.lower_bound, variable.upper_bound)
-            true_values.append(value)
-        return true_values
+        return [
+            opv.from_normalised(v_norm) for opv, v_norm in zip(self._opt_vars, x_norm)
+        ]
 
     @property
     def names(self):
         """
         All variable names of the variable set.
         """
-        return [v for v in self._var_dict.keys()]
+        return [opv.name for opv in self]
 
     @property
     def values(self):
         """
         All un-normalised values of the variable set (including fixed variable values).
         """
-        return np.array([v.value for v in self._var_dict.values()])
+        return np.array([v.value for v in self])
 
     @property
     def n_free_variables(self) -> int:
@@ -482,83 +542,68 @@ class OptVariables:
         return len(self._opt_vars)
 
     @property
+    def _opt_vars(self):
+        return [v for v in self if not v.fixed]
+
+    @property
+    def _fixed_vars(self):
+        return [v for v in self if v.fixed]
+
+    @property
     def _fixed_variable_indices(self) -> list:
         """
         Indices of fixed variables in the set.
         """
-        indices = []
-        for i, v in enumerate(self._var_dict.values()):
-            if v.fixed:
-                indices.append(i)
-        return indices
+        # specfically not useing self._fixed_vars here
+        # as you need the correct index for the variable
+        return [i for i, v in enumerate(self) if v.fixed]
 
-    @property
-    def _opt_vars(self):
-        return [v.name for v in self._var_dict.values() if not v.fixed]
-
-    def _check_presence(self, name):
-        if name not in self._var_dict.keys():
-            raise OptVariablesError(f"Variable {name} not in OptVariables instance.")
-
-    def __getitem__(self, name) -> BoundedVariable:
+    def as_dict(self) -> Dict[str, OptVarDictT]:
         """
-        Dictionary-like access to variables.
+        Dictionary Representation of the frame
+        """
+        return {opv.name: opv.as_dict() for opv in self}
+
+    def as_serializable(self) -> Dict[str, OptVarSerializedT]:
+        """
+        Dictionary Representation of the frame
+        """
+        return {opv.name: opv.as_serializable() for opv in self}
+
+    def to_json(self, file: str, **kwargs):
+        """
+        Save the OptVariablesFrame to a json file.
 
         Parameters
         ----------
-        name: str
-            Name of the variable to get
-
-        Returns
-        -------
-        variable: BoundedVariable
-            Variable with the name
+        path: str
+            Path to save the json file to.
         """
-        self._check_presence(name)
-        return self._var_dict[name]
+        json_writer(self.as_serializable(), file, **kwargs)
 
-    def __getattribute__(self, attr):
+    @classmethod
+    def from_json(cls, file: Union[Path, str, TextIO]):
         """
-        Attribute access for variable values
+        Create an OptVariablesFrame instance from a json file.
 
         Parameters
         ----------
-        attr: str
-            attribute to access
-
-        Returns
-        -------
-        attribute value
-
+        file: Union[str, TextIO]
+            The path to the file, or an open file handle that supports reading.
         """
-        try:
-            return super().__getattribute__(attr)
-        except AttributeError:
-            try:
-                return self[attr].value
-            except KeyError:
-                raise AttributeError(
-                    f"'{self.__class__.__name__}' object has no attribute '{attr}'"
-                ) from None
+        if isinstance(file, (Path, str)):
+            with open(file) as fh:
+                return cls.from_json(fh)
 
-    def as_dict(self) -> Dict:
-        """
-        Dictionary Representation of OptVariables
-        """
-        return {
-            key: {
-                k: v
-                for k, v in zip(
-                    BoundedVariable.__slots__,
-                    attrgetter(*BoundedVariable.__slots__)(self._var_dict[key]),
-                )
-            }
-            for key in self._var_dict.keys()
+        d = json.load(file)
+        opt_vars = {
+            name: OptVariable.from_serialized(name, val) for name, val in d.items()
         }
+        return cls(**opt_vars)
 
-    def tabulate(self, keys: Optional[List] = None, tablefmt: str = "fancy_grid") -> str:
+    def tabulate(self, tablefmt: str = "fancy_grid") -> str:
         """
-        Tabulate OptVariables
+        Tabulate OptVariablesFrame
 
         Parameters
         ----------
@@ -573,22 +618,11 @@ class OptVariables:
         tabulated: str
             The tabulated data
         """
-        columns = [
-            "Name",
-            "Value",
-            "Lower Bound",
-            "Upper Bound",
-            "Fixed",
-            "Description",
-        ]
-        if keys is not None:
-            columns = keys
+        records = sorted([val.as_dict() for val in self], key=lambda x: x["name"])
 
-        records = sorted([tuple(val.values()) for val in self.as_dict().values()])
-
-        return tabulate(
+        return f"{self.__class__.__name__}\n" + tabulate(
             records,
-            headers=columns,
+            headers="keys",
             tablefmt=tablefmt,
             showindex=False,
             numalign="right",
@@ -596,84 +630,16 @@ class OptVariables:
 
     def __str__(self) -> str:
         """
-        Pretty prints a representation of the OptVariables inside the console
+        Pretty prints a representation of the OptVariablesFrame inside the console
         """
         return self.tabulate()
 
     def __repr__(self) -> str:
         """
-        Prints a representation of the OptVariables inside the console
+        Prints a representation of the OptVariablesFrame inside the console
         """
         return (
             f"{self.__class__.__name__}(\n    "
-            + "\n    ".join([repr(var) for var in self._var_dict.values()])
+            + "\n    ".join([repr(var) for var in self])
             + "\n)"
         )
-
-    def to_json(self, file: str, **kwargs):
-        """
-        Write the json representation of these OptVariables to a file.
-
-        Parameters
-        ----------
-        file: str
-            The path to the file.
-        """
-        cls = kwargs.pop("cls", None)
-        if cls is None:
-            cls = BoundedVariableEncoder
-        json_writer(self._var_dict, file, cls=cls, **kwargs)
-
-    @classmethod
-    def from_json(cls, file: Union[str, TextIO], frozen=False) -> OptVariables:
-        """
-        Create an OptVariables instance from a json file.
-
-        Parameters
-        ----------
-        file: Union[str, TextIO]
-            The path to the file, or an open file handle that supports reading.
-        """
-        if isinstance(file, str):
-            with open(file, "r") as fh:
-                return cls.from_json(fh)
-
-        var_dict: Dict = json.load(file)
-        new_vars = [BoundedVariable(key, **val) for key, val in var_dict.items()]
-        return cls(new_vars, frozen=frozen)
-
-    def plot(self):
-        """
-        Plot the OptVariables.
-        """
-        _, ax = plt.subplots()
-        left_labels = [
-            f"{v.name}: {v.lower_bound:.2f} " for v in self._var_dict.values()
-        ]
-        right_labels = [f"{v.upper_bound:.2f}" for v in self._var_dict.values()]
-        y_pos = np.arange(len(left_labels))
-
-        x_norm = [
-            v.normalised_value if not v.fixed else 0.5 for v in self._var_dict.values()
-        ]
-        colors = [
-            BLUEMIRA_PALETTE["red"] if v.fixed else BLUEMIRA_PALETTE["blue"]
-            for v in self._var_dict.values()
-        ]
-
-        values = [f"{v:.2f}" for v in self.values]
-        ax2 = ax.twinx()
-        ax.barh(y_pos, x_norm, color="w")
-        ax2.barh(y_pos, x_norm, color=colors)
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(left_labels)
-        ax.invert_yaxis()
-
-        ax2.set_yticks(y_pos)
-        ax2.set_yticklabels(right_labels)
-        ax2.invert_yaxis()
-        ax.set_xlim([-0.1, 1.1])
-        ax.set_xlabel("$x_{norm}$")
-
-        for xi, yi, vi in zip(x_norm, y_pos, values):
-            ax.text(xi, yi, vi)

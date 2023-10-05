@@ -19,7 +19,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 import copy
-import os
+from pathlib import Path
+from typing import ClassVar
 from unittest import mock
 
 import numpy as np
@@ -34,7 +35,7 @@ from tests.codes.process import utilities as utils
 
 class TestTeardown:
     MODULE_REF = "bluemira.codes.process._teardown"
-    IS_FILE_REF = f"{MODULE_REF}.os.path.isfile"
+    IS_FILE_REF = f"{MODULE_REF}.Path.is_file"
 
     @classmethod
     def setup_class(cls):
@@ -53,7 +54,7 @@ class TestTeardown:
     def test_run_func_updates_bluemira_params_from_mfile(self, run_func):
         teardown = Teardown(self.default_pf, utils.RUN_DIR, None)
 
-        with file_exists(os.path.join(utils.RUN_DIR, "MFILE.DAT"), self.IS_FILE_REF):
+        with file_exists(Path(utils.RUN_DIR, "MFILE.DAT"), self.IS_FILE_REF):
             getattr(teardown, run_func)()
 
         # Expected value comes from ./test_data/mfile_data.json
@@ -63,7 +64,7 @@ class TestTeardown:
     def test_read_func_updates_bluemira_params_from_mfile(self, run_func):
         teardown = Teardown(self.default_pf, None, utils.READ_DIR)
 
-        with file_exists(os.path.join(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF):
+        with file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF):
             getattr(teardown, run_func)()
 
         # Expected value comes from ./test_data/mfile_data.json
@@ -79,16 +80,16 @@ class TestTeardown:
         """
 
         class MFile:
-            data = {"enbeam": {"var_mod": "some info", "scan01": 1234}}
+            data: ClassVar = {"enbeam": {"var_mod": "some info", "scan01": 1234}}
 
         class MFW(_MFileWrapper):
             # Overwrite some methods because data doesnt exist in 'mfile'
 
-            def __init__(self, path, name):
+            def __init__(self, path, name):  # noqa: ARG002
                 self.mfile = MFile()
                 self._name = name
 
-            def _derive_radial_build_params(self, data):
+            def _derive_radial_build_params(self, data):  # noqa: ARG002
                 return {}
 
         teardown = Teardown(self.default_pf, None, utils.READ_DIR)
@@ -100,29 +101,26 @@ class TestTeardown:
         teardown.params.mappings["e_nbi"].recv = True
 
         # Test
-        with mock.patch(f"{self.MODULE_REF}._MFileWrapper", new=MFW):
-            with file_exists(
-                os.path.join(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF
-            ):
-                with mock.patch(
-                    "bluemira.codes.process.api.OBS_VARS", new={"enbeam": None}
-                ):
-                    teardown.read()
+        with mock.patch(f"{self.MODULE_REF}._MFileWrapper", new=MFW), file_exists(
+            Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF
+        ), mock.patch("bluemira.codes.process.api.OBS_VARS", new={"enbeam": None}):
+            teardown.read()
 
         assert np.isnan(teardown.params.e_nbi.value)
 
     def test_CodesError_on_bad_output(self):
         class MFile:
-            def __init__(self, file):
+            def __init__(self, file):  # noqa: ARG002
                 self.data = {"ifail": {"scan01": 2}}
 
-        with pytest.raises(CodesError):
-            with mock.patch("bluemira.codes.process._teardown.os.path.isfile"):
-                with mock.patch("bluemira.codes.process._teardown.MFile", new=MFile):
-                    _MFileWrapper(None)
+        with pytest.raises(CodesError), mock.patch(
+            "bluemira.codes.process._teardown.Path"
+        ), mock.patch("bluemira.codes.process._teardown.MFile", new=MFile):
+            _MFileWrapper(None)
 
     @pytest.mark.parametrize(
-        "run_func, data_dir", [("runinput", utils.RUN_DIR), ("readall", utils.READ_DIR)]
+        ("run_func", "data_dir"),
+        [("runinput", utils.RUN_DIR), ("readall", utils.READ_DIR)],
     )
     def test_run_mode_updates_params_from_mfile_given_recv_False(
         self, run_func, data_dir
@@ -132,14 +130,14 @@ class TestTeardown:
         teardown = Teardown(self.default_pf, utils.RUN_DIR, utils.READ_DIR)
         teardown.params.update_mappings({"r_tf_in_centre": {"recv": False}})
 
-        with file_exists(os.path.join(data_dir, "MFILE.DAT"), self.IS_FILE_REF):
+        with file_exists(Path(data_dir, "MFILE.DAT"), self.IS_FILE_REF):
             getattr(teardown, run_func)()
 
         # Expected value comes from ./test_data/mfile_data.json
         assert teardown.params.r_tf_in_centre.value == pytest.approx(2.6354)
 
     @pytest.mark.parametrize(
-        "run_func, data_dir", [("run", utils.RUN_DIR), ("read", utils.READ_DIR)]
+        ("run_func", "data_dir"), [("run", utils.RUN_DIR), ("read", utils.READ_DIR)]
     )
     def test_run_mode_does_not_update_params_from_mfile_given_recv_False(
         self, run_func, data_dir
@@ -147,7 +145,7 @@ class TestTeardown:
         teardown = Teardown(self.default_pf, utils.RUN_DIR, utils.READ_DIR)
         teardown.params.update_mappings({"r_tf_in_centre": {"recv": False}})
 
-        with file_exists(os.path.join(data_dir, "MFILE.DAT"), self.IS_FILE_REF):
+        with file_exists(Path(data_dir, "MFILE.DAT"), self.IS_FILE_REF):
             getattr(teardown, run_func)()
 
         # Non-expected value comes from ./test_data/mfile_data.json
@@ -174,7 +172,7 @@ class TestTeardown:
     def test_run_func_raises_CodesError_given_mfile_does_not_exist(self, run_func):
         teardown = Teardown(self.default_pf, "./not/a/dir", "./not/a/dir")
 
-        assert not os.path.isfile("./not/a/dir/MFILE.DAT")
+        assert not Path("./not/a/dir/MFILE.DAT").is_file()
         with pytest.raises(CodesError) as codes_err:
             getattr(teardown, run_func)()
         assert "is not a file" in str(codes_err)
@@ -199,11 +197,10 @@ class TestTeardown:
             return param
 
         teardown = Teardown(self.default_pf, None, utils.READ_DIR)
-        with mock.patch(f"{self.MODULE_REF}.update_obsolete_vars", new=fake_uov):
-            with file_exists(
-                os.path.join(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF
-            ):
-                teardown.read()
+        with mock.patch(
+            f"{self.MODULE_REF}.update_obsolete_vars", new=fake_uov
+        ), file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF):
+            teardown.read()
 
         outputs = teardown.get_raw_outputs(["thshield_ib", "thshield_ob", "thshield_vb"])
         # value from the 'thshield' param in ./test_data/mfile_data.json
@@ -213,8 +210,9 @@ class TestTeardown:
         teardown = Teardown(self.default_pf, None, utils.READ_DIR)
         del self.mfile_mock.data["bore"]
 
-        with file_exists(os.path.join(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF):
-            with pytest.raises(CodesError) as exc:
-                teardown.read()
+        with file_exists(
+            Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF
+        ), pytest.raises(CodesError) as exc:
+            teardown.read()
 
         assert "bore" in str(exc)

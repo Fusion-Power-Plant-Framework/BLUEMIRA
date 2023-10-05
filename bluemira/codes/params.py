@@ -106,7 +106,7 @@ class MappedParameterFrame(ParameterFrame):
                 raise CodesError(
                     "Cannot update parameter mapping. "
                     f"No parameter with name '{param_name}' in '{type(self).__name__}'."
-                )
+                ) from None
             if (send_mapping := send_recv_mapping.get("send", None)) is not None:
                 param_mapping.send = send_mapping
             if (recv_mapping := send_recv_mapping.get("recv", None)) is not None:
@@ -154,7 +154,7 @@ class ParameterMapping:
         }
 
     @classmethod
-    def from_dict(cls, the_dict: Dict) -> "ParameterMapping":
+    def from_dict(cls, the_dict: Dict) -> ParameterMapping:
         """
         Create a ParameterMapping using a dictionary with attributes as values.
         """
@@ -170,6 +170,7 @@ class ParameterMapping:
     def __setattr__(self, attr: str, value: Union[bool, str]):
         """
         Protect against additional attributes
+
         Parameters
         ----------
         attr:
@@ -182,7 +183,6 @@ class ParameterMapping:
             or attr in self._frozen
         ):
             raise KeyError(f"{attr} cannot be set for a {self.__class__.__name__}")
-        elif attr in ["send", "recv"] and not isinstance(value, bool):
+        if attr in ["send", "recv"] and not isinstance(value, bool):
             raise ValueError(f"{attr} must be a bool")
-        else:
-            super().__setattr__(attr, value)
+        super().__setattr__(attr, value)

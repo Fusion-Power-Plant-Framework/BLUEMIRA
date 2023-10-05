@@ -70,7 +70,7 @@ def edit_files(files: List[str], copyright_line: str):
 
 def main():
     """Run the copyright updater"""
-    edited = list(edit_files(arguments(), r"2021-{}".format(date.today().year)))
+    edited = list(edit_files(arguments(), rf"2021-{date.today().year}"))  # noqa: DTZ011
 
     if edited != []:
         for file in edited:

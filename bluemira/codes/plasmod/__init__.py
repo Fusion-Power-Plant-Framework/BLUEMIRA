@@ -28,11 +28,11 @@ from bluemira.codes.plasmod.constants import BINARY, NAME
 from bluemira.codes.plasmod.mapping import (
     EquilibriumModel,
     ImpurityModel,
-    PedestalModel,
     PLHModel,
+    PedestalModel,
     Profiles,
-    SafetyProfileModel,
     SOLModel,
+    SafetyProfileModel,
     TransportModel,
 )
 

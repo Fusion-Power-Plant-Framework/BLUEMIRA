@@ -52,12 +52,12 @@ class InDat:
         self.filename = filename
 
 
-OBS_VARS = dict()
-PROCESS_DICT = dict()
+OBS_VARS = {}
+PROCESS_DICT = {}
 imp_data = None  # placeholder for PROCESS module
 
 try:
-    import process.data.impuritydata as imp_data  # noqa: F401, F811
+    import process.data.impuritydata as imp_data
     from process.io.in_dat import InDat  # noqa: F401, F811
     from process.io.mfile import MFile  # noqa: F401, F811
     from process.io.python_fortran_dicts import get_dicts
@@ -111,8 +111,7 @@ class _INVariable:
         """
         if not isinstance(self._value, (List, Dict)):
             return f"{self._value}"
-        else:
-            return self._value
+        return self._value
 
     @value.setter
     def value(self, new_value):
@@ -149,9 +148,9 @@ class Impurities(Enum):
         try:
             return Path(Path(imp_data.__file__).parent, f"{self.name:_<2}Lzdata.dat")
         except NameError:
-            raise CodesError("PROCESS impurity data directory not found")
+            raise CodesError("PROCESS impurity data directory not found") from None
 
-    def id(self):
+    def id(self):  # noqa: A003
         """
         Get variable string for impurity fraction
         """

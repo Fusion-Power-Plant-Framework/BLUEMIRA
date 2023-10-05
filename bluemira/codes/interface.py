@@ -31,7 +31,7 @@ from bluemira.codes.params import MappedParameterFrame
 from bluemira.codes.utilities import run_subprocess
 
 
-class RunMode(enum.Enum):
+class BaseRunMode(enum.Enum):
     """
     Base enum class for defining run modes within a solver.
 
@@ -74,7 +74,6 @@ class CodesTask(abc.ABC):
     @abc.abstractmethod
     def run(self):
         """Run the task."""
-        pass
 
     def _run_subprocess(self, command: List[str], **kwargs):
         """
@@ -97,7 +96,8 @@ class NoOpTask(CodesTask):
     teardown stages.
     """
 
-    def run(self) -> None:
+    @staticmethod
+    def run() -> None:
         """Do nothing."""
         return
 
@@ -155,7 +155,8 @@ class CodesSetup(CodesTask):
                 _inputs[external_name] = self._convert_units(bm_param, target_unit)
         return _inputs
 
-    def _convert_units(self, param, target_unit: Union[str, None]):
+    @staticmethod
+    def _convert_units(param, target_unit: Union[str, None]):
         value = (
             param.value
             if target_unit is None or param.value is None
@@ -163,7 +164,8 @@ class CodesSetup(CodesTask):
         )
         if value is None:
             bluemira_warn(
-                f"{param.name} is set to None or unset, consider setting mapping.send=False"
+                f"{param.name} is set to None or unset, consider setting"
+                " mapping.send=False"
             )
         return value
 
@@ -280,7 +282,6 @@ class CodesSolver(abc.ABC):
         In the base class, this is used to find mappings and specialise
         error messages for the concrete solver.
         """
-        pass
 
     @abc.abstractproperty
     def setup_cls(self) -> Type[CodesTask]:
@@ -291,7 +292,6 @@ class CodesSolver(abc.ABC):
         external code, or derives dependent parameters. But it can also
         define any required non-computational set up.
         """
-        pass
 
     @abc.abstractproperty
     def run_cls(self) -> Type[CodesTask]:
@@ -303,7 +303,6 @@ class CodesSolver(abc.ABC):
         something like calling a Bluemira problem, or executing some
         external code or process.
         """
-        pass
 
     @abc.abstractproperty
     def teardown_cls(self) -> Type[CodesTask]:
@@ -316,18 +315,16 @@ class CodesSolver(abc.ABC):
         involve mapping parameters from some external code to Bluemira
         parameters.
         """
-        pass
 
     @abc.abstractproperty
-    def run_mode_cls(self) -> Type[RunMode]:
+    def run_mode_cls(self) -> Type[BaseRunMode]:
         """
         Class enumerating the run modes for this solver.
 
         Common run modes are RUN, MOCK, READ, etc,.
         """
-        pass
 
-    def execute(self, run_mode: Union[str, RunMode]) -> Any:
+    def execute(self, run_mode: Union[str, BaseRunMode]) -> Any:
         """Execute the setup, run, and teardown tasks, in order."""
         if isinstance(run_mode, str):
             run_mode = self.run_mode_cls.from_string(run_mode)
@@ -368,14 +365,15 @@ class CodesSolver(abc.ABC):
         for key, val in send_recv.items():
             try:
                 p_map = param_mappings[key]
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 bluemira_warn(f"No mapping known for '{key}' in '{self.name}'.")
             else:
                 for sr_key, sr_val in val.items():
                     setattr(p_map, sr_key, sr_val)
 
+    @staticmethod
     def _get_execution_method(
-        self, task: CodesTask, run_mode: RunMode
+        task: CodesTask, run_mode: BaseRunMode
     ) -> Optional[Callable]:
         """
         Return the method on the task corresponding to this solver's run

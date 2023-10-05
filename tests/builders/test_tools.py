@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-from typing import Callable
+from typing import Callable, ClassVar
 
 import numpy as np
 import pytest
@@ -50,7 +50,7 @@ from bluemira.geometry.wire import BluemiraWire
 
 
 class TestGetNSectors:
-    sector_degree = [
+    sector_degree = (
         360.0,
         180.0,
         120.0,
@@ -66,30 +66,32 @@ class TestGetNSectors:
         27.692307692307693,
         25.714285714285715,
         24.0,
-    ]
+    )
 
-    n_sectors = {
+    n_sectors: ClassVar = {
         1: [1, 1, 1, 1, 1, 1, 1],
         5: [1, 1, 1, 2, 3, 4, 5],
         7: [1, 1, 2, 3, 4, 5, 7],
         9: [1, 1, 3, 4, 6, 7, 9],
     }
 
-    @pytest.mark.parametrize("ttl, sector_degree", zip(np.arange(1, 16), sector_degree))
+    @pytest.mark.parametrize(
+        ("ttl", "sector_degree"), zip(np.arange(1, 16), sector_degree)
+    )
     @pytest.mark.parametrize("degree", np.arange(0, 361, step=60))
     def test_get_n_sectors_degree(self, degree, ttl, sector_degree):
         s_deg, _ = get_n_sectors(ttl, degree)
         assert np.isclose(s_deg, sector_degree)
 
     @pytest.mark.parametrize("ttl", n_sectors.keys())
-    @pytest.mark.parametrize("ind, degree", enumerate(np.arange(0, 361, step=60)))
+    @pytest.mark.parametrize(("ind", "degree"), enumerate(np.arange(0, 361, step=60)))
     def test_get_n_sectors_amount(self, ind, degree, ttl):
         _, n_sec = get_n_sectors(ttl, degree)
         assert np.isclose(n_sec, self.n_sectors[ttl][ind])
 
 
 class TestVariedOffsetFunction:
-    fixtures = [
+    fixtures = (
         {
             "wire": PictureFrame(
                 {
@@ -113,7 +115,7 @@ class TestVariedOffsetFunction:
             "inboard_offset_degree": 90,  # degrees
             "outboard_offset_degree": 140,  # degrees
         },
-    ]
+    )
 
     @pytest.mark.parametrize("kwargs", fixtures)
     def test_offset_wire_is_closed(self, kwargs):
@@ -179,11 +181,11 @@ class TestVariedOffsetFunction:
         kwargs = self.fixtures[0].copy()
         kwargs.update({angle: angle_degree})
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             varied_offset(**kwargs)
 
     def test_ValueError_given_inboard_degree_gt_outboard_degree(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             varied_offset(
                 make_circle(axis=(0, 1, 0)),
                 1,
@@ -239,14 +241,14 @@ class TestVariedOffsetFunction:
 
 
 class TestPatterning:
-    fixture = [
+    fixture = (
         (3, 16, 0.0),
         (3, 16, 0.1),
         (10, 20, 0.05),
         (2, 1, 1),
-    ]
+    )
 
-    @pytest.mark.parametrize("n_segments, n_sectors, gap", fixture)
+    @pytest.mark.parametrize(("n_segments", "n_sectors", "gap"), fixture)
     def test_revolved_silhouette(self, n_segments, n_sectors, gap):
         p = make_polygon({"x": [4, 5, 5, 4], "y": 0, "z": [-1, -1, 1, 1]}, closed=True)
         face = BluemiraFace(p)
@@ -271,7 +273,7 @@ class TestPatterning:
 
         np.testing.assert_allclose(sum(volumes), theory_volume, rtol=5e-6)
 
-    @pytest.mark.parametrize("n_segments, n_sectors, gap", fixture[:-1])
+    @pytest.mark.parametrize(("n_segments", "n_sectors", "gap"), fixture[:-1])
     def test_lofted_silhouette(self, n_segments, n_sectors, gap):
         p = make_polygon({"x": [4, 5, 5, 4], "y": 0, "z": [-1, -1, 1, 1]}, closed=True)
         face = BluemiraFace(p)
@@ -287,26 +289,23 @@ class TestPatterning:
 
     @staticmethod
     def _distances_between_shapes(shapes):
-        distances = []
-        for i in range(len(shapes) - 1):
-            distances.append(distance_to(shapes[i], shapes[i + 1])[0])
-        return distances
+        return [distance_to(shapes[i], shapes[i + 1])[0] for i in range(len(shapes) - 1)]
 
 
 class TestMakeCircularRing:
-    fixture = [
+    fixture = (
         (0.002, 0.003),
         (3, 4),
         (3.15, 3.16),
         (1e5, 1e6),
-    ]
+    )
 
-    @pytest.mark.parametrize("r_in, r_out", fixture)
+    @pytest.mark.parametrize(("r_in", "r_out"), fixture)
     def test_annulus_area(self, r_in, r_out):
         face = make_circular_xy_ring(r_in, r_out)
         np.testing.assert_almost_equal(face.area, np.pi * (r_out**2 - r_in**2))
 
-    @pytest.mark.parametrize("r_in, r_out", fixture)
+    @pytest.mark.parametrize(("r_in", "r_out"), fixture)
     def test_annulus_area_reversed_radii(self, r_in, r_out):
         r_out, r_in = r_in, r_out
         face = make_circular_xy_ring(r_in, r_out)
@@ -325,12 +324,12 @@ class TestBuildSectioned:
     sq_arr_2 = np.array([[2, 2, -0.5], [3, 2, -0.5], [3, 2, 0.5], [2, 2, 0.5]]).T
     circ1 = make_circle(10, center=(15, 0, 0), axis=(0.0, 1.0, 0.0))
 
-    enable_sectioning = [True, True, True, False, False, False]
+    enable_sectioning = (True, True, True, False, False, False)
 
-    faces = []
+    faces = []  # noqa: RUF012
     for sec in [sq_arr, sq_arr_2, circ1]:
         if not isinstance(sec, BluemiraWire):
-            sec = make_polygon(sec, closed=True)
+            sec = make_polygon(sec, closed=True)  # noqa: PLW2901
         offset = offset_wire(
             sec,
             1,
@@ -341,7 +340,7 @@ class TestBuildSectioned:
         faces.append(BluemiraFace([offset, sec]))
 
     # failing test mark
-    face_sec = list(map(list, zip(*[faces + faces, enable_sectioning])))
+    face_sec = list(map(list, zip(*[faces + faces, enable_sectioning])))  # noqa: RUF012
     face_sec[2] = pytest.param(
         faces[2],
         enable_sectioning[2],
@@ -353,10 +352,10 @@ class TestBuildSectioned:
         sec = build_sectioned_xy(face, self.plot_colour)
 
         assert len(sec) == 2
-        assert all([isinstance(s, PhysicalComponent) for s in sec])
+        assert all(isinstance(s, PhysicalComponent) for s in sec)
         assert [s.plot_options.face_options["color"] == self.plot_colour for s in sec]
 
-    @pytest.mark.parametrize("face, section_bool", face_sec)
+    @pytest.mark.parametrize(("face", "section_bool"), face_sec)
     def test_build_sectioned_xyz(self, face, section_bool):
         sec = build_sectioned_xyz(
             face, "test", 12, self.plot_colour, enable_sectioning=section_bool
@@ -364,9 +363,6 @@ class TestBuildSectioned:
 
         assert len(sec) == 12 if section_bool else len(sec) == 1
         assert all(
-            [
-                isinstance(s, Component if section_bool else PhysicalComponent)
-                for s in sec
-            ]
+            isinstance(s, Component if section_bool else PhysicalComponent) for s in sec
         )
         assert [s.plot_options.face_options["color"] == self.plot_colour for s in sec]

@@ -35,6 +35,7 @@ The documentation is divided into the following sections:
     Magnetostatics <magnetostatics/magnetostatics>
     Magnets <magnets/magnets>
     Materials <materials/materials>
+    Optimisation <optimisation/optimisation>
     Radiation transport solvers <radiation_transport/radiation_transport>
     Structural module <structural/structural>
     Utilities <utilities/utilities>

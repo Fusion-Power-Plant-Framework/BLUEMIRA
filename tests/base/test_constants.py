@@ -43,12 +43,12 @@ class TestTemperatureConverters:
 
     @pytest.mark.parametrize(*params)
     def test_to_kelvin_rasies_error(self, unit):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             to_kelvin(-1000, unit)
 
     @pytest.mark.parametrize(*params)
     def test_to_celsius_raises_error(self, unit):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             to_celsius(-1000, unit)
 
 

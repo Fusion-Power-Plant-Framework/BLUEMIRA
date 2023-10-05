@@ -187,7 +187,7 @@ class Node:
                 nfv += node_load(load["Q"], load["sub_type"])
             else:
                 raise StructuralError(
-                    f'Cannot apply load type "{load["type"]}" to' " a Node."
+                    f'Cannot apply load type "{load["type"]}" to a Node.'
                 )
         return nfv
 

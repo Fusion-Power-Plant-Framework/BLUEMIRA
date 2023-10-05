@@ -22,7 +22,7 @@
 """
 Fuel cycle model fundamental building blocks
 """
-from typing import Iterable, Optional
+from typing import List, Optional
 
 import numpy as np
 
@@ -57,7 +57,7 @@ class FuelCycleFlow:
         else:
             self.out_flow = delay_decay(t, in_flow, t_duration)
 
-    def split(self, number: int, fractions: Iterable[float]) -> np.ndarray:
+    def split(self, number: int, fractions: List[float]) -> np.ndarray:
         """
         Divides a flux into number of divisions
 
@@ -75,10 +75,7 @@ class FuelCycleFlow:
             bluemira_warn("Need fractions for every flow but one.")
 
         fractions.append(1 - sum(fractions))
-        flows = []
-        for fraction in fractions:
-            flows.append(fraction * self.out_flow)
-        return np.array(flows)
+        return np.array([fraction * self.out_flow for fraction in fractions])
 
 
 class FuelCycleComponent:

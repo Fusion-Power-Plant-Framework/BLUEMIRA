@@ -22,12 +22,18 @@
 import numpy as np
 import pytest
 
-from bluemira.plasma_physics.rules_of_thumb import estimate_Le, estimate_M
+from bluemira.plasma_physics.rules_of_thumb import (
+    calc_cyl_safety_factor,
+    calc_qstar_freidberg,
+    calc_qstar_uckan,
+    estimate_Le,
+    estimate_M,
+)
 
 
 class TestHirshmanInductanceRules:
     # Table I of
-    # https://pubs.aip.org/aip/pfl/article/29/3/790/944223/External-inductance-of-an-axisymmetric-plasma  # noqa: W505
+    # https://pubs.aip.org/aip/pfl/article/29/3/790/944223/External-inductance-of-an-axisymmetric-plasma  # noqa: W505,E501
     eps = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
     a = np.array([2.975, 2.285, 1.848, 1.507, 1.217, 0.957, 0.716, 0.487, 0.272])
     b = np.array([0.228, 0.325, 0.403, 0.465, 0.512, 0.542, 0.553, 0.538, 0.508])
@@ -47,3 +53,17 @@ class TestHirshmanInductanceRules:
         )
         m = estimate_M(1 / self.eps, kappa=kappa)
         np.testing.assert_allclose(m_table, m, rtol=1.1e-2)
+
+
+class TestSafetyFactors:
+    def test_uckan_is_cylindrical(self):
+        R_0, A, B_0, I_p = 9, 3, 6, 20e6
+        qstar_uckan = calc_qstar_uckan(R_0, A, B_0, I_p, 1.0, 0.0)
+        qstar_cyl = calc_cyl_safety_factor(R_0, A, B_0, I_p)
+        np.testing.assert_almost_equal(qstar_uckan, qstar_cyl)
+
+    def test_freidberg_is_cylindrical(self):
+        R_0, A, B_0, I_p = 9, 3, 6, 20e6
+        qstar_uckan = calc_qstar_freidberg(R_0, A, B_0, I_p, 1.0)
+        qstar_cyl = calc_cyl_safety_factor(R_0, A, B_0, I_p)
+        np.testing.assert_almost_equal(qstar_uckan, qstar_cyl)

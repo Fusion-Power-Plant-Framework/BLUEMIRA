@@ -21,7 +21,7 @@
 """Designer for wall panelling."""
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, ClassVar, Dict, Optional, Tuple, Union
 
 import numpy as np
 
@@ -30,7 +30,6 @@ from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.base.parameter_frame import Parameter, ParameterFrame
 from bluemira.geometry.wire import BluemiraWire
 from bluemira.utilities.error import ExternalOptError
-from bluemira.utilities.optimiser import Optimiser
 from eudemo.blanket.panelling._opt_problem import PanellingOptProblem
 from eudemo.blanket.panelling._paneller import Paneller
 
@@ -94,7 +93,7 @@ class PanellingDesigner(Designer[np.ndarray]):
 
     param_cls = PanellingDesignerParams
     params: PanellingDesignerParams
-    _defaults = {
+    _defaults: ClassVar = {
         "algorithm": "SLSQP",
         "opt_conditions": {"max_eval": 500, "ftol_rel": 1e-8},
         "n_panel_increment_attempts": 3,
@@ -112,6 +111,8 @@ class PanellingDesigner(Designer[np.ndarray]):
         self._n_boundary_discr = int(
             self._get_config_or_default("boundary_discretisation")
         )
+        self.opt_algorithm = str(self._get_config_or_default("algorithm"))
+        self.opt_conditions = dict(self._get_config_or_default("opt_conditions"))
 
     def run(self) -> np.ndarray:
         """
@@ -134,7 +135,7 @@ class PanellingDesigner(Designer[np.ndarray]):
 
         # Make sure we warn about broken tolerances this time.
         if num_retries == max_retries and (
-            x_opt is None or not opt_problem.opt.check_constraints(x_opt, warn=True)
+            x_opt is None or not opt_problem.check_constraints(x_opt, warn=True)
         ):
             bluemira_warn(
                 "Could not solve panelling optimisation problem: no feasible "
@@ -179,7 +180,12 @@ class PanellingDesigner(Designer[np.ndarray]):
         error (which it often does given an infeasible problem).
         """
         try:
-            x_opt = opt_problem.optimise()
+            x_opt = opt_problem.optimise(
+                opt_problem.paneller.x0,
+                check_constraints=False,
+                algorithm=self.opt_algorithm,
+                opt_conditions=self.opt_conditions,
+            ).x
         except ExternalOptError:
             # Avoid 'more than iter SQP iterations' errors stopping the
             # design.
@@ -189,7 +195,7 @@ class PanellingDesigner(Designer[np.ndarray]):
             x_opt = None
         iter_num = 0
         while (
-            x_opt is None or not opt_problem.opt.check_constraints(x_opt, warn=False)
+            x_opt is None or not opt_problem.check_constraints(x_opt, warn=False)
         ) and iter_num < max_retries:
             # We couldn't satisfy the constraints on our last attempt,
             # so try increasing the number of panels.
@@ -199,7 +205,12 @@ class PanellingDesigner(Designer[np.ndarray]):
             n_panels = opt_problem.n_opts + 3
             opt_problem = self._set_up_opt_problem(boundary, n_panels)
             try:
-                x_opt = opt_problem.optimise(check_constraints=False)
+                x_opt = opt_problem.optimise(
+                    opt_problem.paneller.x0,
+                    check_constraints=False,
+                    algorithm=self.opt_algorithm,
+                    opt_conditions=self.opt_conditions,
+                ).x
             except ExternalOptError:
                 x_opt = None
             iter_num += 1
@@ -215,11 +226,7 @@ class PanellingDesigner(Designer[np.ndarray]):
             self.params.fw_dL_min.value,
             fix_num_panels=fix_num_panels,
         )
-        optimiser = Optimiser(
-            self._get_config_or_default("algorithm"),
-            opt_conditions=self._get_config_or_default("opt_conditions"),
-        )
-        return PanellingOptProblem(paneller, optimiser)
+        return PanellingOptProblem(paneller)
 
-    def _get_config_or_default(self, config_key: str) -> Union[str, int]:
+    def _get_config_or_default(self, config_key: str) -> Any:
         return self.build_config.get(config_key, self._defaults[config_key])

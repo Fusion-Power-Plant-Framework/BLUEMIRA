@@ -28,8 +28,8 @@ import operator
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple, Union
 
 if TYPE_CHECKING:
-    from bluemira.equilibria.limiter import Limiter
     from bluemira.equilibria.equilibrium import Equilibrium
+    from bluemira.equilibria.limiter import Limiter
 
 import numba as nb
 import numpy as np
@@ -147,14 +147,12 @@ def find_local_minima(f: np.ndarray) -> np.ndarray.np.ndarray:
     For our use case, neither limitation is relevant.
     """
     return np.where(
-        (
-            (f < np.roll(f, 1, 0))
-            & (f < np.roll(f, -1, 0))
-            & (f <= np.roll(f, 0, 1))
-            & (f <= np.roll(f, 0, -1))
-            & (f < np.roll(f, 1, 1))
-            & (f < np.roll(f, -1, 1))
-        )
+        (f < np.roll(f, 1, 0))
+        & (f < np.roll(f, -1, 0))
+        & (f <= np.roll(f, 0, 1))
+        & (f <= np.roll(f, 0, -1))
+        & (f < np.roll(f, 1, 1))
+        & (f < np.roll(f, -1, 1))
     )
 
 
@@ -168,7 +166,7 @@ def inv_2x2_matrix(a: float, b: float, c: float, d: float) -> np.ndarray:
 
 def find_local_Bp_minima_cg(
     f_psi: RectBivariateSpline, x0: float, z0: float, radius: float
-) -> Union[None, Tuple[float, float]]:
+) -> Union[None, List[float]]:
     """
     Find local Bp minima on a grid (precisely) using a local Newton/Powell
     conjugate gradient search.
@@ -192,24 +190,22 @@ def find_local_Bp_minima_cg(
         The z coordinate of the minimum
     """
     xi, zi = x0, z0
-    count = 0
-    while True:
+    for _ in range(50):
         Bx = -f_psi(xi, zi, dy=1, grid=False) / xi
         Bz = f_psi(xi, zi, dx=1, grid=False) / xi
         if np.hypot(Bx, Bz) < B_TOLERANCE:
             return [xi, zi]
-        else:
-            a = -Bx / xi - f_psi(xi, zi, dy=1, dx=1)[0][0] / xi
-            b = -f_psi(xi, zi, dy=2)[0][0] / xi
-            c = -Bz / xi + f_psi(xi, zi, dx=2) / xi
-            d = f_psi(xi, zi, dx=1, dy=1)[0][0] / xi
-            inv_jac = inv_2x2_matrix(float(a), float(b), float(c), float(d))
-            delta = np.dot(inv_jac, [Bx, Bz])
-            xi -= delta[0]
-            zi -= delta[1]
-            count += 1
-            if ((xi - x0) ** 2 + (zi - z0) ** 2 > radius) or (count > 50):
-                return None
+        a = -Bx / xi - f_psi(xi, zi, dy=1, dx=1)[0][0] / xi
+        b = -f_psi(xi, zi, dy=2)[0][0] / xi
+        c = -Bz / xi + f_psi(xi, zi, dx=2) / xi
+        d = f_psi(xi, zi, dx=1, dy=1)[0][0] / xi
+        inv_jac = inv_2x2_matrix(float(a), float(b), float(c), float(d))
+        delta = np.dot(inv_jac, [Bx, Bz])
+        xi -= delta[0]
+        zi -= delta[1]
+        if (xi - x0) ** 2 + (zi - z0) ** 2 > radius:
+            return None
+    return None
 
 
 def drop_space_duplicates(
@@ -282,7 +278,7 @@ def find_OX_points(
     limiter: Optional[Limiter] = None,
     *,
     field_cut_off: float = 1.0,
-) -> Tuple[List[Opoint], List[Union[Xpoint, Lpoint]]]:  # noqa :N802
+) -> Tuple[List[Opoint], List[Union[Xpoint, Lpoint]]]:
     """
     Finds O-points and X-points by minimising the poloidal field.
 
@@ -341,7 +337,7 @@ def find_OX_points(
 
     points = []
     for i, j in zip(i_local, j_local):
-        if i > nx - 3 or i < 3 or j > nz - 3 or j < 3:
+        if i > nx - 3 or i < 3 or j > nz - 3 or j < 3:  # noqa: PLR2004
             continue  # Edge points uninteresting and mess up S calculation.
 
         if f_Bp(x[i, j], z[i, j]) > field_cut_off:
@@ -359,7 +355,8 @@ def find_OX_points(
     if len(o_points) == 0:
         print("")  # stdout flusher
         bluemira_warn(
-            "EQUILIBRIA::find_OX: No O-points found during an iteration. Defaulting to grid centre."
+            "EQUILIBRIA::find_OX: No O-points found during an iteration. Defaulting to"
+            " grid centre."
         )
         o_points = [Opoint(x_m, z_m, f_psi(x_m, z_m))]
         return o_points, x_points
@@ -376,7 +373,8 @@ def find_OX_points(
         # as a boundary
         print("")  # stdout flusher
         bluemira_warn(
-            "EQUILIBRIA::find_OX: No X-points found during an iteration, using grid boundary to limit the plasma."
+            "EQUILIBRIA::find_OX: No X-points found during an iteration, using grid"
+            " boundary to limit the plasma."
         )
         x_grid_edge = np.concatenate([x[0, :], x[:, 0], x[-1, :], x[:, -1]])
         z_grid_edge = np.concatenate([z[0, :], z[:, 0], z[-1, :], z[:, -1]])
@@ -392,16 +390,15 @@ def find_OX_points(
         d_l = np.hypot(x_xp - x_op, z_xp - z_op)
         n_line = max(2, int(d_l // radius) + 1)
         xx, zz = np.linspace(x_op, x_xp, n_line), np.linspace(z_op, z_xp, n_line)
-        if psix < psio:
-            psi_ox = -f_psi(xx, zz, grid=False)
-        else:
-            psi_ox = f_psi(xx, zz, grid=False)
+        psi_ox = -f_psi(xx, zz, grid=False) if psix < psio else f_psi(xx, zz, grid=False)
 
         if np.argmin(psi_ox) > 1:
             useless_x.append(xp)
             continue  # Check O-point is within 1 gridpoint on line
 
-        if (max(psi_ox) - psi_ox[-1]) / (max(psi_ox) - psi_ox[0]) > 0.025:
+        if (max(psi_ox) - psi_ox[-1]) / (
+            max(psi_ox) - psi_ox[0]
+        ) > 0.025:  # noqa: PLR2004
             useless_x.append(xp)
             continue  # Not monotonic
 
@@ -413,7 +410,7 @@ def find_OX_points(
     return o_points, useful_x
 
 
-def _parse_OXp(x, z, psi, o_points, x_points):  # noqa :N802
+def _parse_OXp(x, z, psi, o_points, x_points):  # noqa: N802
     """
     Handles Op and Xp retrieval, depending on combinations of None/not None
     """
@@ -428,7 +425,8 @@ def _parse_OXp(x, z, psi, o_points, x_points):  # noqa :N802
     if o_points is not None and x_points is None:
         # A circular plasma which is neither divertor nor limited?
         raise EquilibriaError(
-            "There are no X-points and the plasma is not limited. Something strange is going on."
+            "There are no X-points and the plasma is not limited. Something strange is"
+            " going on."
         )
 
     if not isinstance(o_points, list):
@@ -565,11 +563,8 @@ def find_flux_surf(
     if not psi_surfs:
         raise EquilibriaError(f"No flux surface found for psi_norm = {psinorm:.4f}")
 
-    err = []
-
-    for group in psi_surfs:  # Choose the most logical flux surface
-        err.append(f_min(*group.T))
-
+    # Choose the most logical flux surface
+    err = [f_min(*group.T) for group in psi_surfs]
     return psi_surfs[np.argmin(err)].T
 
 
@@ -618,9 +613,8 @@ def find_field_surf(
             )
         return surfaces[np.argmin(err)].T
 
-    else:
-        bluemira_warn(f"No field surfaces at {field:.4f} T found.")
-        return None
+    bluemira_warn(f"No field surfaces at {field:.4f} T found.")
+    return None
 
 
 def find_flux_surface_through_point(
@@ -781,7 +775,7 @@ def _extract_leg(flux_line, x_cut, z_cut, delta_x, o_point_z):
     # Lower null vs upper null
     func = operator.lt if z_cut < o_point_z else operator.gt
 
-    if len(arg_inters) > 2:
+    if len(arg_inters) > 2:  # noqa: PLR2004
         EquilibriaError(
             "Unexpected number of intersections with the separatrix around the X-point."
         )
@@ -794,7 +788,7 @@ def _extract_leg(flux_line, x_cut, z_cut, delta_x, o_point_z):
             leg = Coordinates(flux_line[:, : arg + 1])
 
         # Make the leg flow away from the plasma core
-        if leg.argmin((x_cut, 0, z_cut)) > 3:
+        if leg.argmin((x_cut, 0, z_cut)) > 3:  # noqa: PLR2004
             leg.reverse()
 
         flux_legs.append(leg)
@@ -857,10 +851,7 @@ def get_legs(
     x_points = x_points[:2]
     separatrix = equilibrium.get_separatrix()
     delta = equilibrium.grid.dx
-    if n_layers == 1:
-        dx_offsets = None
-    else:
-        dx_offsets = np.linspace(0, dx_off, n_layers)[1:]
+    dx_offsets = None if n_layers == 1 else np.linspace(0, dx_off, n_layers)[1:]
 
     if isinstance(separatrix, list):
         # Double null (sort in/out bottom/top)

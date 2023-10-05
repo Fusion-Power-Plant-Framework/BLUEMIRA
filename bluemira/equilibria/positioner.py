@@ -153,15 +153,9 @@ class CoilPositioner:
 
         arg_upper = join_intersect(track, line, get_arg=True)
 
-        if arg_lower:
-            arg_lower = arg_lower[0]
-        else:
-            arg_lower = 0
+        arg_lower = arg_lower[0] if arg_lower else 0
 
-        if arg_upper:
-            arg_upper = arg_upper[0]
-        else:
-            arg_upper = len(track) - 1
+        arg_upper = arg_upper[0] if arg_upper else len(track) - 1
 
         tf_loop = Coordinates(track[:, arg_lower : arg_upper + 1])
         l_norm = vector_lengthnorm(tf_loop.x, tf_loop.z)
@@ -344,7 +338,7 @@ class XZLMapper:
             coords["z"](l_values) - point[1]
         ) ** 2
 
-    def xz_to_L(self, x: float, z: float) -> float:  # noqa :N802
+    def xz_to_L(self, x: float, z: float) -> float:  # noqa: N802
         """
         Translation of (x-z) coordinates to linear normalised coordinates (L) for the PF
         coils.
@@ -355,14 +349,14 @@ class XZLMapper:
 
     def L_to_xz(
         self, l_values: Union[float, np.ndarray]
-    ) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray]]:  # noqa :N802
+    ) -> Tuple[Union[float, np.ndarray], Union[float, np.ndarray]]:  # noqa: N802
         """
         Translation of linear normalised coordinates (L) to (x-z) coordinates for the PF
         coils.
         """
         return self.pftrack["x"](l_values), self.pftrack["z"](l_values)
 
-    def z_to_L(self, zc_vec):  # noqa :N802
+    def z_to_L(self, zc_vec):  # noqa: N802
         """
         Convert z values for the CS in L values of the CS track.
         """
@@ -395,7 +389,7 @@ class XZLMapper:
 
     def get_Lmap(
         self, coilset: CoilSet, mapping: List[str]
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:  # noqa :N802
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:  # noqa: N802
         """
         Calculates initial L vector and lb and ub constraints on L vector.
 
@@ -533,9 +527,7 @@ class XZLMapper:
             BluemiraFace(make_polygon(zone.xyz, closed=True)) for zone in self.excl_zones
         ]
 
-        joiner = boolean_fuse([joiner] + zones)
-
-        return joiner
+        return boolean_fuse([joiner, *zones])
 
     def add_exclusion_zones(self, zones: List[Coordinates]):
         """
@@ -565,7 +557,7 @@ class XZLMapper:
 
         # Calculate exclusion sections in parametric space
         exclusions = []
-        for i, excl in enumerate(self.excl_loops):
+        for _i, excl in enumerate(self.excl_loops):
             # Check if the start point lies in the exclusion
             if np.allclose(p0, excl.xz.T[0]) or np.allclose(p0, excl.xz.T[-1]):
                 start = 0
@@ -657,7 +649,7 @@ class RegionMapper:
 
         """
         self.pfregions = {**self.pfregions, **pfregion}
-        name, region = list(pfregion.items())[0]
+        name, region = next(iter(pfregion.items()))
         self.no_regions += 1
         self.l_values = np.zeros((self.no_regions, 2))
         self.max_currents = np.zeros(self.no_regions)

@@ -31,15 +31,11 @@ class UtilitiesError(BluemiraError):
     The base class for utilities errors.
     """
 
-    pass
-
 
 class PositionerError(UtilitiesError):
     """
     Error for positioner utilities.
     """
-
-    pass
 
 
 class OptUtilitiesError(UtilitiesError):
@@ -47,15 +43,11 @@ class OptUtilitiesError(UtilitiesError):
     Error for optimisation utilities.
     """
 
-    pass
-
 
 class OptVariablesError(OptUtilitiesError):
     """
     Error for optimisation utilities.
     """
-
-    pass
 
 
 class InternalOptError(OptUtilitiesError):
@@ -63,13 +55,9 @@ class InternalOptError(OptUtilitiesError):
     Error class for errors inside the optimisation algorithms.
     """
 
-    pass
-
 
 class ExternalOptError(OptUtilitiesError):
     """
     Error class for errors relating to the optimisation, but not originating
     inside the optimisers.
     """
-
-    pass

@@ -23,10 +23,22 @@
 Optimisation utilities
 """
 
+import warnings
+
 import numpy as np
 
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.utilities.error import InternalOptError
+
+warnings.warn(
+    f"The module '{__name__}' is deprecated and will be removed in v2.0.0.\n"
+    "See "
+    "https://bluemira.readthedocs.io/en/latest/optimisation/optimisation.html "
+    "for documentation of the new optimisation module.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 
 # =============================================================================
 # Analytical objective functions
@@ -95,7 +107,7 @@ def regularised_lsq_fom(x, A, b, gamma):
         Residual vector (Ax - b)
     """
     residual = np.dot(A, x) - b
-    number_of_targets = np.float(len(residual))
+    number_of_targets = float(len(residual))
     fom = residual.T @ residual / number_of_targets + gamma * gamma * x.T @ x
 
     if fom <= 0:
@@ -152,24 +164,22 @@ def process_scipy_result(res):
 
     if not hasattr(res, "status"):
         bluemira_warn("Scipy optimisation was not succesful. Failed without status.")
-        raise InternalOptError("\n".join([res.message, res.__str__()]))
+        raise InternalOptError(f"{res.message}\n{res.__str__()}")
 
     elif res.status == 8:
         # This can happen when scipy is not convinced that it has found a minimum.
         bluemira_warn(
-            "\nOptimiser (scipy) found a positive directional derivative,\n"
-            "returning suboptimal result. \n"
-            "\n".join([res.message, res.__str__()])
+            f"{res.message}\nOptimiser (scipy) found a positive directional"
+            f" derivative,\nreturning suboptimal result. \n\n{res.__str__()}"
         )
         return res.x
 
     elif res.status == 9:
         bluemira_warn(
-            "\nOptimiser (scipy) exceeded number of iterations, returning "
-            "suboptimal result. \n"
-            "\n".join([res.message, res.__str__()])
+            f"{res.message}\nOptimiser (scipy) exceeded number of iterations, returning"
+            f" suboptimal result. \n\n{res.__str__()}"
         )
         return res.x
 
     else:
-        raise InternalOptError("\n".join([res.message, res.__str__()]))
+        raise InternalOptError(f"{res.message}\n{res.__str__()}")

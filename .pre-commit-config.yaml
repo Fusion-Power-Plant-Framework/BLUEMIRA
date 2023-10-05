@@ -11,24 +11,17 @@ repos:
       args: [--fix=lf]
       exclude: test_data
 
--   repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-    - id: isort
-
 -   repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
     - id: black
       language_version: python3.8
 
--   repo: https://github.com/pycqa/flake8
-    rev: 6.0.0
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.290
     hooks:
-    - id: flake8
-      verbose: True
-      additional_dependencies: [flake8-docstrings,  pep8-naming, flake8-bandit]
-      args: [--exit-zero]
+      - id: ruff
+        args: [ --fix, --exit-non-zero-on-fix ]
 
 -   repo: local
     hooks:

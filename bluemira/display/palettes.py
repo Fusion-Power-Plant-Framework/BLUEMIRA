@@ -23,12 +23,12 @@
 Colour palettes
 """
 
-from itertools import cycle
-from typing import Union
+from itertools import cycle, zip_longest
+from typing import List, Tuple, Union
 
-import matplotlib.colors as colors
 import numpy as np
 import seaborn as sns
+from matplotlib import colors
 
 
 class ColorPalette:
@@ -43,9 +43,18 @@ class ColorPalette:
 
     def __init__(self, palette_map):
         self._dict = palette_map
-        color_list = list(palette_map.values())
+        color_list = []
+        for v in palette_map.values():
+            if isinstance(v, (str, tuple)):
+                color_list.append(v)
+            else:
+                color_list.extend(v._palette)
         self._palette = sns.color_palette(color_list)
         self._cycle = cycle(color_list)
+
+    def keys(self):
+        """Keys of ColorPalette"""
+        return self._dict.keys()
 
     def __next__(self):
         """
@@ -70,9 +79,9 @@ class ColorPalette:
             self._dict[key] = value
 
         elif isinstance(idx_or_key, str):
-            self._dict[idx_or_key] = value
+            self._dict[idx_or_key] = type(self)({idx_or_key: value})
             idx = list(self._dict).index(idx_or_key)
-            self._palette[idx] = value
+            self._palette[idx] = type(self)({idx_or_key: value})
 
     def __getitem__(self, idx_or_key: Union[int, str]):
         """
@@ -90,87 +99,137 @@ class ColorPalette:
         """
         if isinstance(idx_or_key, int):
             return self._palette[idx_or_key]
-        elif isinstance(idx_or_key, str):
-            return self._dict[idx_or_key]
-
-    def _repr_html(self):
-        def html_rect(x, y, size, fill):
+        if isinstance(idx_or_key, str):
+            item = self._dict[idx_or_key]
             return (
-                f'<rect x="{x}" y="{y}" width="{size}" height="{size}" style="fill:{fill};'
-                'stroke-width:2;stroke:rgb(255,255,255)"/>'
+                item
+                if isinstance(item, type(self))
+                else type(self)({idx_or_key: self._dict[idx_or_key]})
             )
+        return None
+
+    def _hex_horizontal(self) -> Union[List[str], List[List[str]]]:
+        _hex = self.as_hex()
+        if isinstance(_hex, str):
+            _hex = [_hex]
+        elif any(isinstance(h, list) for h in _hex):
+            for i, h in enumerate(_hex):
+                if isinstance(h, str):
+                    _hex[i] = [h]
+            _hex = list(map(list, zip_longest(*_hex, fillvalue="  ")))
+        return _hex
+
+    def _repr_html(self) -> str:
+        def html_str(_hex: Union[List[str], List[List[str]]], y: int = 0) -> str:
+            string = ""
+            x = 0
+            for col in _hex:
+                if isinstance(col, list):
+                    string += html_str(_hex=col, y=y)
+                    y += 1
+                else:
+                    if col != "  ":
+                        string += (
+                            f'<rect x="{x*s}" y="{y*s}"'
+                            f' width="{s}" height="{s}" style="fill:{col};'
+                            'stroke-width:2;stroke:rgb(255,255,255)"/>'
+                        )
+                    x += 1
+
+            return string
 
         s = 55
-        n = len(self)
+        hex_str = self._hex_horizontal()
+        m = len(hex_str) if any(isinstance(h, list) for h in hex_str) else 1
+        colours = html_str(hex_str)
+        return f'<svg  width="{(len(self))* s}" height="{m * s}">{colours}</svg>'
 
-        sub_pals = []
-        for k, v in self._dict.items():
-            if isinstance(v, ColorPalette):
-                sub_pals.append(v)
-
-        if sub_pals:
-            m = max([len(sp) for sp in sub_pals])
-        else:
-            m = 1
-
-        html = f'<svg  width="{n * s}" height="{m * s}">'
-
-        for i, c in enumerate(self._palette):
-            if isinstance(c, ColorPalette):
-                for j, sc in enumerate(c):
-                    sc = colors.to_hex(sc)
-                    html += html_rect(i * s, j * s, s, sc)
+    def _repr_colour_str(self, _hex: Union[List[str], List[List[str]]]) -> str:
+        """Create colourful representation in terminal"""
+        string = ""
+        for col in _hex:
+            if isinstance(col, list):
+                string += self._repr_colour_str(_hex=col)
+            elif col != "  ":
+                string += background_colour_string(col, sqlen=2)
             else:
-                c = colors.to_hex(c)
-                html += html_rect(i * s, 0, s, c)
+                string += col
+        return f"{string}\n"
 
-        html += "</svg>"
-        return html
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Create a representation of the ColorPalette
         """
-        from IPython.core.interactiveshell import InteractiveShell
-
-        if not InteractiveShell.initialized():
-            return self._palette.__repr__()
+        try:
+            g_ipy = get_ipython()
+            if "terminal" in str(type(g_ipy)) or g_ipy is None:
+                return self._repr_colour_str(self._hex_horizontal()).strip(" \n")
+        except NameError:
+            return self._repr_colour_str(self._hex_horizontal()).strip(" \n")
 
         from IPython.core.display import HTML, display
 
         display(HTML(self._repr_html()))
         return ""
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Get the length of the ColorPalette"""
+        return len(self._palette)
+
+    def as_hex(self) -> Union[List[str], List[List[str]], str]:
         """
-        Get the length of  the ColorPalette
+        Get the hex representation of the palette
         """
-        return len(self._dict)
+        hex_list = []
+        if isinstance(self._palette, list):
+            for pp in self._palette:
+                if isinstance(pp, tuple):
+                    hex_list.append(colors.to_hex(pp))
+                elif isinstance(pp, type(self)):
+                    hex_list.append(pp.as_hex())
+        elif isinstance(self._palette, tuple):
+            hex_list.append(colors.to_hex(self._palette))
+        else:
+            hex_list.append(self._palette)
+        return hex_list[0] if len(hex_list) == 1 else hex_list
 
 
-def make_rgb_alpha(rgb, alpha, background_rgb=(1, 1, 1)):
+def background_colour_string(hexstring: str, sqlen=2) -> str:
+    """Create ANSI background colour string for hex colour"""
+    hexstring = hexstring.strip("#")
+    a, b, c = (1, 2, 3) if len(hexstring) == 3 else (2, 4, 6)  # noqa: PLR2004
+    return (
+        f"\033[48:2::{int(hexstring[:a], 16)}:"
+        f"{int(hexstring[a:b], 16)}:"
+        f"{int(hexstring[b:c], 16)}m{' '*sqlen}\033[49m"
+    )
+
+
+def make_rgb_alpha(
+    rgb: Tuple[float, ...],
+    alpha: float,
+    background_rgb: Tuple[float, ...] = (1.0, 1.0, 1.0),
+) -> Tuple[float, ...]:
     """
     Adds a transparency to a RGB color tuple
 
     Parameters
     ----------
-    rgb: tuple(float, float, float) 0<=float<=1
-        Tuple of RGB floats
-    alpha: 0<=float<=1
-        Transparency as a fraction
-    background_rgb: tuple(float, float, float) 0<=float<=1
-        Background colour (default = white)
+    rgb:
+        Tuple of 3 RGB floats  (0<=float<=1)
+    alpha:
+        Transparency as a fraction  (0<=float<=1)
+    background_rgb:
+        3 RGB floats (0<=float<=1), background colour (default = white)
 
     Returns
     -------
-    rgba: tuple(float, float, float) 0<=float<=1
-        The RGB tuple accounting for transparency
+    The RGB tuple accounting for transparency
     """
-    rgb = colors.to_rgb(rgb)
-    return [alpha * c1 + (1 - alpha) * c2 for (c1, c2) in zip(rgb, background_rgb)]
+    return tuple(alpha * c1 + (1 - alpha) * c2 for (c1, c2) in zip(rgb, background_rgb))
 
 
-def make_alpha_palette(color, n_colors, background_rgb="white"):
+def make_alpha_palette(color, n_colors: int, background_rgb="white") -> ColorPalette:
     """
     Make a palette from a color by varying alpha.
 
@@ -178,22 +237,29 @@ def make_alpha_palette(color, n_colors, background_rgb="white"):
     ----------
     color: Any
         Palette base color. Anything matplotlib will recognise as a color
-    n_colors: int
+    n_colors:
         Numer of colors to make in the palette
     background_rgb: Any
         Background color. Anything matplotlib will recognise as a color
 
     Returns
     -------
-    palette: ColorPalette
-        Colour palette from the base color. The first color is the base color
+    Colour palette from the base color. The first color is the base color
     """
+    if isinstance(color, ColorPalette):
+        color = color._palette[0]
+
     color_name = colors.to_hex(color)
-    alphas = np.linspace(0, 1, n_colors + 1)[1:-1][::-1]
+    color_rgb = colors.to_rgb(color)
     background_rgb = colors.to_rgb(background_rgb)
-    color_values = [color] + [make_rgb_alpha(color, a, background_rgb) for a in alphas]
-    palette_map = {f"{color_name}_{i}": color for i, color in enumerate(color_values)}
-    return ColorPalette(palette_map)
+
+    color_values = [color_rgb] + [
+        make_rgb_alpha(color_rgb, alpha, background_rgb)
+        for alpha in np.linspace(0, 1, n_colors + 1)[1:-1][::-1]
+    ]
+    return ColorPalette(
+        {f"{color_name}_{i}": col_val for i, col_val in enumerate(color_values)}
+    )
 
 
 # This is specifically NOT the MATLAB color palette.

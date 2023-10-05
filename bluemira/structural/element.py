@@ -27,15 +27,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Optional
 
 if TYPE_CHECKING:
-    from bluemira.structural.node import Node
     from bluemira.structural.crosssection import CrossSection
     from bluemira.structural.material import StructuralMaterial
+    from bluemira.structural.node import Node
 
 import numpy as np
 
 from bluemira.base.constants import GRAVITY
 from bluemira.base.look_and_feel import bluemira_warn
-from bluemira.structural.constants import N_INTERP, NU, SD_LIMIT
+from bluemira.structural.constants import NU, N_INTERP, SD_LIMIT
 from bluemira.structural.error import StructuralError
 from bluemira.structural.loads import distributed_load, point_load
 from bluemira.structural.node import get_midpoint
@@ -100,7 +100,7 @@ def local_k_shear(
     rz: float,
     L: float,  # noqa: N803
     GJ: float,  # noqa: N803
-    A: float,  # noqa: N803
+    A: float,
     A_sy: float,  # noqa: N803
     A_sz: float,  # noqa: N803
     nu: float = NU,
@@ -148,7 +148,7 @@ def local_k_shear(
 
 # @nb.jit(nopython=True, cache=True)
 def local_k(
-    EA: float, EIyy: float, EIzz: float, L: float, GJ: float  # noqa (N803)
+    EA: float, EIyy: float, EIzz: float, L: float, GJ: float  # noqa: N803
 ) -> np.ndarray:
     """
     3-D stiffness local member stiffness matrix, including shear deformation
@@ -382,7 +382,8 @@ class Element:
 
             if (p["ry"] / self.length > SD_LIMIT) or (p["rz"] / self.length < SD_LIMIT):
                 bluemira_warn(
-                    "Thick cross-section detected. Slender beam approximation being used, so be careful."
+                    "Thick cross-section detected. Slender beam approximation being"
+                    " used, so be careful."
                 )
 
             self._k_matrix = k
@@ -589,7 +590,7 @@ class Element:
         self.max_stress = stresses[part_index].flatten()[max_index]
         self.safety_factor = min(np.abs(safety_factors))
 
-    def calculate_shape(self, u, d, m, v, scale):
+    def calculate_shape(self, u, d, _m, _v, scale):
         """
         Calculates the interpolated shape of the Element
         """

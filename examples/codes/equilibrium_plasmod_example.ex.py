@@ -56,8 +56,8 @@ An example that shows how to set up a fixed boundary equilibrium problem.
 # Import necessary module definitions.
 
 # %%
-import os
 import shutil
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -118,10 +118,10 @@ johner_parameterisation = JohnerLCFS(
 
 # %%
 if plasmod_binary := shutil.which("plasmod"):
-    PLASMOD_PATH = os.path.dirname(plasmod_binary)
+    PLASMOD_PATH = Path(plasmod_binary).parent
 else:
-    PLASMOD_PATH = os.path.join(os.path.dirname(get_bluemira_root()), "plasmod/bin")
-binary = os.path.join(PLASMOD_PATH, "plasmod")
+    PLASMOD_PATH = Path(Path(get_bluemira_root()).parent, "plasmod/bin")
+binary = Path(PLASMOD_PATH, "plasmod").as_posix()
 
 
 source = "Plasmod Example"
@@ -229,14 +229,14 @@ equilibrium = solve_transport_fixed_boundary(
 
 # %%
 data = save_fixed_boundary_to_file(
-    os.sep.join(
-        [get_bluemira_path("", subfolder="generated_data"), "fixed_boundary_data.json"]
-    ),
+    Path(
+        get_bluemira_path("", subfolder="generated_data"), "fixed_boundary_data.json"
+    ).as_posix(),
     "equilibrium_example",
     equilibrium,
     100,
     110,
-    formatt="json",
+    file_format="json",
 )
 
 # %% [markdown]

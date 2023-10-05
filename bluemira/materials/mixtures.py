@@ -50,26 +50,26 @@ class HomogenisedMixture(SerialisedMaterial, nmm.MultiMaterial):
     """
 
     materials: Dict[str, float]
-    temperature_in_K: float  # noqa :N815
+    temperature_in_K: float  # noqa: N815
     enrichment: float
 
     default_temperature = T_DEFAULT
-    _material_classes = []
+    _material_classes = ()
 
     def __init__(
         self,
         name: str,
         materials: Dict[str, float],
-        temperature_in_K: Optional[float] = None,  # noqa :N803
+        temperature_in_K: Optional[float] = None,  # noqa: N803
         enrichment: Optional[float] = None,
         zaid_suffix: Optional[str] = None,
         material_id: Optional[str] = None,
     ):
         if temperature_in_K is None:
-            temperature_in_K = self.default_temperature  # noqa :N803
+            temperature_in_K = self.default_temperature  # noqa: N806
 
         mats = []
-        for mat in materials.keys():
+        for mat in materials:
             mat.temperature = temperature_in_K
             if "enrichment" in mat.__class__.__annotations__:
                 mat.enrichment = enrichment
@@ -106,7 +106,11 @@ class HomogenisedMixture(SerialisedMaterial, nmm.MultiMaterial):
                 v = getattr(mat, prop)(temperature)
                 values.append(v)
                 fractions.append(vf)
-            except (NotImplementedError, AttributeError, MaterialsError):
+            except (  # noqa: PERF203
+                NotImplementedError,
+                AttributeError,
+                MaterialsError,
+            ):
                 warn.append([mat, prop])
 
         f = np.array(fractions) / sum(fractions)  # Normalised
@@ -115,7 +119,7 @@ class HomogenisedMixture(SerialisedMaterial, nmm.MultiMaterial):
         if warn:
             txt = (
                 f"Materials::{self.__class__.__name__}: The following "
-                + "mat.prop calls failed:\n"
+                "mat.prop calls failed:\n"
             )
             for w in warn:
                 txt += f"{w[0]}: {w[1]}" + "\n"
@@ -123,7 +127,7 @@ class HomogenisedMixture(SerialisedMaterial, nmm.MultiMaterial):
 
         return value
 
-    def E(self, temperature: float) -> float:  # noqa :N802
+    def E(self, temperature: float) -> float:  # noqa: N802
         """
         Young's modulus.
 
@@ -153,7 +157,7 @@ class HomogenisedMixture(SerialisedMaterial, nmm.MultiMaterial):
         """
         return self._calc_homogenised_property("mu", temperature)
 
-    def CTE(self, temperature: float) -> float:  # noqa :N802
+    def CTE(self, temperature: float) -> float:  # noqa: N802
         """
         Mean coefficient of thermal expansion in 10**-6/T
 
@@ -183,7 +187,7 @@ class HomogenisedMixture(SerialisedMaterial, nmm.MultiMaterial):
         """
         return self._calc_homogenised_property("rho", temperature)
 
-    def Sy(self, temperature: float) -> float:  # noqa :N802
+    def Sy(self, temperature: float) -> float:  # noqa: N802
         """
         Minimum yield stress in MPa
 
@@ -219,7 +223,7 @@ class HomogenisedMixture(SerialisedMaterial, nmm.MultiMaterial):
         The mixture
         """
         mat_dict = copy.deepcopy(material_dict[name])
-        if "materials" not in material_dict[name].keys():
+        if "materials" not in material_dict[name]:
             raise MaterialsError("Mixture must define constituent materials.")
 
         for mat in material_dict[name]["materials"]:

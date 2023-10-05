@@ -30,10 +30,10 @@ from bluemira.base.parameter_frame import make_parameter_frame
 from bluemira.geometry.face import BluemiraFace
 from bluemira.geometry.tools import make_circle, make_polygon
 from bluemira.geometry.wire import BluemiraWire
-from eudemo.maintenance.lower_port.builder import LowerPortBuilder
+from eudemo.maintenance.lower_port.builder import TSLowerPortDuctBuilder
 from eudemo.maintenance.lower_port.duct_designer import (
-    LowerPortDuctDesigner,
-    LowerPortDuctDesignerParams,
+    LowerPortKOZDesigner,
+    LowerPortKOZDesignerParams,
 )
 
 
@@ -76,39 +76,42 @@ class TestLowerPort:
             {
                 "n_TF": {"value": 10, "unit": "dimensionless"},
                 "n_div_cassettes": {"value": 3, "unit": "dimensionless"},
-                "tf_coil_thickness": {"value": 0.65, "unit": "m"},
-                "lp_duct_tf_offset": {"value": 3, "unit": "m"},
+                "lower_port_angle": {"value": -30, "unit": "degrees"},
+                "g_ts_tf": {"value": 0.05, "unit": "m"},
+                "tk_ts": {"value": 0.05, "unit": "m"},
+                "g_vv_ts": {"value": 0.05, "unit": "m"},
+                "tk_vv_single_wall": {"value": 0.06, "unit": "m"},
+                "tf_wp_depth": {"value": 0.5, "unit": "m"},
                 "lp_duct_div_pad_ob": {"value": 0.3, "unit": "m"},
                 "lp_duct_div_pad_ib": {"value": 0.1, "unit": "m"},
-                "lp_height": {"value": 3, "unit": "m"},
+                "lp_height": {"value": 4.5, "unit": "m"},
                 "lp_width": {"value": 3, "unit": "m"},
-                "lp_duct_angle": {"value": -30, "unit": "degrees"},
-                "lp_duct_wall_tk": {"value": 0.02, "unit": "m"},
             },
-            LowerPortDuctDesignerParams,
+            LowerPortKOZDesignerParams,
         )
 
     @pytest.mark.parametrize("duct_angle", [0, -30, -45, -60, -90])
     def test_duct_angle(self, duct_angle):
-        self.duct_des_params.lp_duct_angle.value = duct_angle
+        self.duct_des_params.lower_port_angle.value = duct_angle
 
         (
             lp_duct_xz_void_space,
             lp_duct_xz_koz,
             lp_duct_angled_nowall_extrude_boundary,
             lp_duct_straight_nowall_extrude_boundary,
-        ) = LowerPortDuctDesigner(
+        ) = LowerPortKOZDesigner(
             self.duct_des_params,
             {},
             self.divertor_xz_silhouette,
             self.tf_coils_outer_boundary,
         ).execute()
-        builder = LowerPortBuilder(
+
+        builder = TSLowerPortDuctBuilder(
             self.duct_des_params,
             {},
-            lp_duct_xz_koz,
             lp_duct_angled_nowall_extrude_boundary,
             lp_duct_straight_nowall_extrude_boundary,
+            15,
         )
         lp_duct = builder.build()
 
@@ -135,16 +138,10 @@ class TestLowerPort:
             base=(x_angled_start, 0, z_angled_start),
             direction=(0, -1, 0),
         )
-        pl.rotate(degree=np.rad2deg(np.pi / self.duct_des_params.n_TF.value))
+        pl.rotate(degree=180 / self.duct_des_params.n_TF.value)
 
-        duct_xyz_cad = (
-            lp_duct.get_component("xyz").get_component(LowerPortBuilder.DUCT).shape
-        )
-        angled_face = (
-            duct_xyz_cad.faces[0] if duct_angle != -90 else duct_xyz_cad.faces[4]
-        )  # this was an angled face when I tested it
+        duct_xyz_cad = lp_duct.get_component("xyz").get_component(builder.name).shape
 
-        assert np.allclose(
-            angled_face.normal_at() if duct_angle != -90 else -angled_face.normal_at(),
-            pl.normal_at(),
-        )
+        angled_face = duct_xyz_cad.faces[0]  # this was an angled face when I tested it
+
+        np.testing.assert_allclose(angled_face.normal_at(), pl.normal_at(), atol=1e-8)

@@ -21,7 +21,7 @@
 
 import copy
 import json
-import os
+from pathlib import Path
 from unittest import mock
 
 import fortranformat as ff
@@ -39,17 +39,17 @@ OPEN = "builtins.open"
 
 class TestEQDSKInterface:
     path = get_bluemira_path("equilibria/test_data", subfolder="tests")
-    testfiles = [
-        os.path.join(get_bluemira_path("eqdsk", subfolder="data"), "jetto.eqdsk_out"),
-        os.path.join(path, "DN-DEMO_eqref.json"),
-        os.path.join(path, "eqref_OOB.json"),
-    ]
+    testfiles = (
+        Path(get_bluemira_path("eqdsk", subfolder="data"), "jetto.eqdsk_out"),
+        Path(path, "DN-DEMO_eqref.json"),
+        Path(path, "eqref_OOB.json"),
+    )
 
     @classmethod
     def setup_class(cls):
         data_dir = get_bluemira_path("equilibria", subfolder="data")
-        data_file = os.path.join(data_dir, "DN-DEMO_eqref.json")
-        with open(data_file, "r") as f:
+        data_file = Path(data_dir, "DN-DEMO_eqref.json")
+        with open(data_file) as f:
             cls.eudemo_sof_data = json.load(f)
 
     def read_strict_geqdsk(self, file_path):
@@ -112,11 +112,11 @@ class TestEQDSKInterface:
             return array
 
         # Open file.
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             # Read in data. Variable names are for readability;
             # strict format is as defined at
             # https://w3.pppl.gov/ntcc/TORAY/G_EQDSK.pdf
-            id, _, nx, nz = f2000.read(file.readline())
+            _id, _, nx, nz = f2000.read(file.readline())
             xdim, zdim, xcentre, xgrid1, zmid = f2020.read(file.readline())
             xmag, zmag, psimag, psibdry, bcentre = f2020.read(file.readline())
             cplasma, psimag, _, xmag, _ = f2020.read(file.readline())
@@ -144,9 +144,9 @@ class TestEQDSKInterface:
 
         # Write data read in from test file into a new EQDSK
         # file, with the suffix "_temp"
-        name = os.path.splitext(os.path.basename(file))[0] + "_temp"
-        fname = os.path.join(self.path, name) + ".eqdsk"
-        eqdsk.write(fname, format="eqdsk")
+        name = Path(file).stem + "_temp"
+        fname = Path(self.path, f"{name}.eqdsk")
+        eqdsk.write(fname, file_format="eqdsk")
         d2 = eqdsk.to_dict()
 
         # Check eqdsk is readable by Fortran readers.
@@ -156,13 +156,13 @@ class TestEQDSKInterface:
 
         # Write data read in from test file into a new JSON
         # file, with the suffix "_temp"
-        jname = os.path.splitext(fname)[0] + ".json"
-        eqdsk.write(jname, format="json")
+        jname = fname.with_suffix("").with_suffix(".json")
+        eqdsk.write(jname, file_format="json")
         d3 = EQDSKInterface.from_file(jname).to_dict()
 
         # Clean up temporary files
-        os.remove(fname)
-        os.remove(jname)
+        fname.unlink()
+        jname.unlink()
 
         # Compare dictionaries to check data hasn't
         # been changed.
@@ -202,7 +202,7 @@ class TestEQDSKInterface:
         eq = EQDSKInterface.from_file(self.testfiles[0])
 
         with mock.patch(OPEN, new_callable=mock.mock_open) as open_mock:
-            eq.write("some/path.json", format="json")
+            eq.write("some/path.json", file_format="json")
         written = combine_text_mock_write_calls(open_mock)
 
         with mock.patch(

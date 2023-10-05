@@ -14,7 +14,7 @@ To run the reactor build,
 
 ```bash
 cd <path/to/bluemira>/eudemo
-python eudemo/eudemo/reactor.py
+python eudemo/reactor.py
 ```
 
 The `cd` is required, as the paths in the build config are

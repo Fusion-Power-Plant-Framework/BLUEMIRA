@@ -24,6 +24,7 @@ Equilibrium optimisation constraint classes
 """
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
@@ -44,6 +45,15 @@ from bluemira.equilibria.plotting import ConstraintPlotter
 from bluemira.geometry.coordinates import interpolate_points
 from bluemira.utilities.opt_problems import OptimisationConstraint
 from bluemira.utilities.tools import abs_rel_difference, is_num
+
+warnings.warn(
+    f"The module '{__name__}' is deprecated and will be removed in v2.0.0.\n"
+    "See "
+    "https://bluemira.readthedocs.io/en/latest/optimisation/optimisation.html "
+    "for documentation of the new optimisation module.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 def _get_dummy_equilibrium(equilibrium: Equilibrium):
@@ -76,21 +86,18 @@ class UpdateableConstraint(ABC):
         """
         Prepare the constraint for use in an equilibrium optimisation problem.
         """
-        pass
 
     @abstractmethod
     def control_response(self, coilset: CoilSet):
         """
         Calculate control response of a CoilSet to the constraint.
         """
-        pass
 
     @abstractmethod
     def evaluate(self, equilibrium: Equilibrium):
         """
         Calculate the value of the constraint in an Equilibrium.
         """
-        pass
 
 
 class FieldConstraints(UpdateableConstraint, OptimisationConstraint):
@@ -394,7 +401,7 @@ class MagneticConstraint(UpdateableConstraint, OptimisationConstraint):
 
     def prepare(
         self, equilibrium: Equilibrium, I_not_dI: bool = False, fixed_coils: bool = False
-    ):  # noqa :N803
+    ):  # noqa: N803
         """
         Prepare the constraint for use in an equilibrium optimisation problem.
         """
@@ -412,14 +419,12 @@ class MagneticConstraint(UpdateableConstraint, OptimisationConstraint):
         """
         Update the target value of the magnetic constraint.
         """
-        pass
 
     @abstractmethod
     def plot(self, ax):
         """
         Plot the constraint onto an Axes.
         """
-        pass
 
     def __len__(self) -> int:
         """
@@ -495,7 +500,6 @@ class RelativeMagneticConstraint(MagneticConstraint):
         """
         Update the target value of the magnetic constraint.
         """
-        pass
 
 
 class FieldNullConstraint(AbsoluteMagneticConstraint):
@@ -744,7 +748,7 @@ class MagneticConstraintSet(ABC):
 
     def __call__(
         self, equilibrium: Equilibrium, I_not_dI: bool = False, fixed_coils: bool = False
-    ):  # noqa :N803
+    ):  # noqa: N803
         """
         Update the MagneticConstraintSet
         """

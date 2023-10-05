@@ -20,14 +20,15 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 from bluemira.base.parameter_frame import Parameter
 from bluemira.codes import interface
-from bluemira.codes.interface import NoOpTask, RunMode
+from bluemira.codes.interface import BaseRunMode, NoOpTask
 from bluemira.codes.params import MappedParameterFrame, ParameterMapping
 
 
-class NoOpRunMode(RunMode):
+class NoOpRunMode(BaseRunMode):
     RUN = 0
 
 
@@ -44,7 +45,7 @@ class Params(MappedParameterFrame):
     param1: Parameter[float]
     param2: Parameter[int]
 
-    _mappings = {
+    _mappings: ClassVar = {
         "param1": ParameterMapping("ext1", send=True, recv=True, unit="MW"),
         "param2": ParameterMapping("ext2", send=False, recv=False),
     }

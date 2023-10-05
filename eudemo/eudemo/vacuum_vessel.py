@@ -36,12 +36,18 @@ from bluemira.builders.tools import (
 )
 from bluemira.display.palettes import BLUE_PALETTE
 from bluemira.geometry.face import BluemiraFace
-from bluemira.geometry.tools import _offset_wire_discretised
+from bluemira.geometry.tools import (
+    _offset_wire_discretised,
+    boolean_fuse,
+    force_wire_to_spline,
+)
 from bluemira.geometry.wire import BluemiraWire
 from bluemira.materials.cache import Void
+from eudemo.comp_managers import PortManagerMixin
+from eudemo.maintenance.duct_connection import pipe_pipe_join
 
 
-class VacuumVessel(ComponentManager):
+class VacuumVessel(PortManagerMixin, ComponentManager):
     """
     Wrapper around a Vacuum Vessel component tree.
     """
@@ -53,6 +59,64 @@ class VacuumVessel(ComponentManager):
             .get_component("xz")
             .get_component(VacuumVesselBuilder.BODY)
             .shape.boundary[0]
+        )
+
+    def add_ports(self, ports: Union[Component, List[Component]], n_TF: int):
+        """
+        Add a series of ports to the vacuum vessel component tree.
+        """
+        component = self.component()
+        xyz = component.get_component("xyz")
+        vv_xyz = xyz.get_component("Sector 1")
+        target_void = vv_xyz.get_component("Vessel voidspace 1").shape
+        target_shape = vv_xyz.get_component("Body 1").shape
+
+        if isinstance(ports, Component):
+            ports = [ports]
+
+        tool_voids = []
+        new_shape_pieces = []
+        for i, port in enumerate(ports):
+            if i > 0:
+                target_shape = boolean_fuse(new_shape_pieces)
+
+            port_xyz = port.get_component("xyz")
+            tool_shape = port_xyz.get_component(port.name).shape
+            tool_void = port_xyz.get_component(port.name + " voidspace").shape
+            tool_voids.append(tool_void)
+            new_shape_pieces = pipe_pipe_join(
+                target_shape, target_void, tool_shape, tool_void
+            )
+
+        final_shape = boolean_fuse(new_shape_pieces)
+        final_void = boolean_fuse([target_void, *tool_voids])
+
+        sector_body = PhysicalComponent(VacuumVesselBuilder.BODY, final_shape)
+        sector_void = PhysicalComponent(
+            VacuumVesselBuilder.VOID, final_void, material=Void("vacuum")
+        )
+
+        self._orphan_old_components(component)
+        self._create_new_components(sector_body, sector_void, n_TF)
+
+    def _create_new_components(self, sector_body, sector_void, n_TF: int):
+        angle = 180 / n_TF
+        component = self.component()
+        apply_component_display_options(sector_body, color=BLUE_PALETTE["VV"][0])
+        apply_component_display_options(sector_void, color=(0, 0, 0))
+        Component(
+            "xyz",
+            children=[Component("Sector 1", children=[sector_body, sector_void])],
+            parent=component,
+        )
+
+        self._make_2d_views(
+            component,
+            sector_body,
+            sector_void,
+            angle,
+            BLUE_PALETTE["TS"][0],
+            void_color=(0, 0, 0),
         )
 
 
@@ -127,6 +191,8 @@ class VacuumVesselBuilder(Builder):
             self.params.vv_out_off_deg.value,
             num_points=300,
         )
+        inner_vv = force_wire_to_spline(inner_vv, n_edges_max=100)
+        outer_vv = force_wire_to_spline(outer_vv, n_edges_max=100)
         face = BluemiraFace([outer_vv, inner_vv])
 
         body = PhysicalComponent(self.BODY, face)

@@ -56,6 +56,9 @@ def test_biot_savart_loop():
     circle = make_circle(radius=x_coil, center=(0, z_coil, 0), axis=(0, 0, 1))
     filament = circle.discretize(ndiscr=2000)
     bsf = BiotSavartFilament(filament, radius)
+    bsf.plot()
+    plt.show()
+    plt.close()
 
     Bx2, _, Bz2 = bsf.field(x_2d, np.zeros_like(x_2d), z_2d)
 

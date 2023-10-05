@@ -76,7 +76,7 @@ class TestSetup:
             setup = Setup(self.default_pf, "", template_in_dat="template/path/in.dat")
             indat_cls_mock.return_value.data = {"input": 0.0}
 
-            with file_exists("template/path/in.dat", f"{MODULE_REF}.os.path.isfile"):
+            with file_exists("template/path/in.dat", f"{MODULE_REF}.Path.is_file"):
                 setup.run()
 
         indat_cls_mock.assert_called_once_with(filename="template/path/in.dat")
@@ -104,14 +104,14 @@ class TestSetup:
 
         writer_cls_mock.return_value.add_parameter.assert_not_called()
 
-    @pytest.mark.parametrize("model_name, model_cls", Setup.MODELS.items())
+    @pytest.mark.parametrize(("model_name", "model_cls"), Setup.MODELS.items())
     def test_models_are_converted_to_Model_classes_given_str_value(
         self, model_name, model_cls
     ):
         with self._writer_patch as writer_cls_mock:
             setup = Setup(self.default_pf, "")
             # Just use the first member of the enum's name for testing
-            field_str = list(model_cls.__members__)[0]
+            field_str = next(iter(model_cls.__members__))
             writer_cls_mock.return_value.data = {
                 model_name: mock.Mock(get_value=field_str)
             }

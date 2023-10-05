@@ -6,13 +6,10 @@
 """Configuration file for the Sphinx documentation builder."""
 import os
 import sys
+from importlib.metadata import version as get_version
 
 from docutils import nodes, statemachine
 from docutils.parsers.rst import Directive
-
-sys.path.insert(0, os.path.abspath("../../"))  # noqa :E402
-
-from bluemira._version import get_versions  # noqa :E402
 
 
 def setup(app):
@@ -35,9 +32,12 @@ project = "bluemira"
 copyright = "2021-2023, M. Coleman, J. Cook, F. Franza, I.A. Maione, S. McIntosh, J. Morris, D. Short"
 author = "M. Coleman, J. Cook, F. Franza, I.A. Maione, S. McIntosh, J. Morris, D. Short, UKAEA & contributors"
 
-# The full version, including alpha/beta/rc tags
-release = get_versions()["version"]
+release: str = get_version(project)
+version: str = release.split("+")[0]
 
+if version.startswith("0.1"):
+    release = "develop"
+    version = "develop"
 
 # -- General configuration ---------------------------------------------------
 
@@ -90,7 +90,7 @@ html_theme_options = {
 
 html_css_files = ["css/custom.css"]
 
-_html_version = release.split("+")[0]
+_html_version = version
 
 html_title = f"bluemira {_html_version} documentation"
 

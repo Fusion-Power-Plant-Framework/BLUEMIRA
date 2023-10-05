@@ -48,7 +48,8 @@ def test_xyz_decorator():
     result = tester.func(x, x, x)
     assert result.shape == (3, 4)
 
-    x = np.random.rand(16, 16)
+    rng = np.random.default_rng()
+    x = rng.random((16, 16))
     result = tester.func(x, x, x)
     assert result.shape == (3, 16, 16)
 

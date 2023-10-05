@@ -52,7 +52,7 @@ def make_mutual_inductance_matrix(coilset: CoilSet) -> np.ndarray:
     Single-filament coil formulation; serves as a useful approximation.
     """
     n_coils = coilset.n_coils()
-    M = np.zeros((n_coils, n_coils))  # noqa
+    M = np.zeros((n_coils, n_coils))  # noqa: N806
     xcoord = coilset.x
     zcoord = coilset.z
     dx = coilset.dx
@@ -114,7 +114,7 @@ def check_coilset_symmetric(coilset: CoilSet) -> bool:
     """
     sym_stack = _get_symmetric_coils(coilset)
     for coil, count in sym_stack:
-        if count != 2 and not np.isclose(coil[1], 0.0):
+        if count != 2 and not np.isclose(coil[1], 0.0):  # noqa: PLR2004
             # therefore z = 0
             return False
     return True

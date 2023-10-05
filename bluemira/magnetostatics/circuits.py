@@ -128,7 +128,7 @@ class ArbitraryPlanarRectangularXSCircuit(SourceGroup):
         )
         alphas = []
 
-        for i, (midpoint, d_l) in enumerate(zip(midpoints, d_l)):
+        for i, (midpoint, _d_l) in enumerate(zip(midpoints, d_l)):
             if i != len(midpoints) - 1:
                 alpha = self._get_half_angle(
                     midpoint, shape.points[i + 1], midpoints[i + 1]
@@ -141,11 +141,12 @@ class ArbitraryPlanarRectangularXSCircuit(SourceGroup):
             beta = alpha
             betas.append(beta)
 
-        return betas, alphas
+        return np.rad2deg(betas), np.rad2deg(alphas)
 
-    def _transform_to_xz(self, shape):
+    @staticmethod
+    def _transform_to_xz(shape):
         normal_vector = shape.normal_vector
-        if abs(normal_vector[1]) == 1.0:
+        if abs(normal_vector[1]) == 1.0:  # noqa: PLR2004
             return shape
         shape.translate(-np.array(shape.center_of_mass))
 
@@ -187,7 +188,8 @@ class ArbitraryPlanarRectangularXSCircuit(SourceGroup):
             # If this is the case, two consecutive sources will have sharp corners that
             # will overlap
             bluemira_warn(
-                f"{self.__class__.__name__} cannot handle acute angles, as there will be overlaps in the sources."
+                f"{self.__class__.__name__} cannot handle acute angles, as there will be"
+                " overlaps in the sources."
             )
         return angle
 

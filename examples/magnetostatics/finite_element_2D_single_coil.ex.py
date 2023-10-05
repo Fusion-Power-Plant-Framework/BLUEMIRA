@@ -52,17 +52,17 @@ Application of the dolfin fem 2D magnetostatic to a single coil problem
 # Import necessary module definitions.
 
 # %%
-import os
+from pathlib import Path
 
 import dolfin
 import matplotlib.pyplot as plt
 import numpy as np
 
-import bluemira.geometry.tools as tools
-import bluemira.magnetostatics.greens as greens
 from bluemira.base.components import Component, PhysicalComponent
 from bluemira.base.file import get_bluemira_path
+from bluemira.geometry import tools
 from bluemira.geometry.face import BluemiraFace
+from bluemira.magnetostatics import greens
 from bluemira.magnetostatics.finite_element_2d import (
     Bz_coil_axis,
     FemMagnetostatic2d,
@@ -132,7 +132,7 @@ c_coil = PhysicalComponent(name="coil", shape=coil, parent=c_universe)
 
 # %%
 directory = get_bluemira_path("", subfolder="generated_data")
-meshfiles = [os.path.join(directory, p) for p in ["Mesh.geo_unrolled", "Mesh.msh"]]
+meshfiles = [Path(directory, p).as_posix() for p in ["Mesh.geo_unrolled", "Mesh.msh"]]
 
 meshing.Mesh(meshfile=meshfiles)(c_universe, dim=2)
 
@@ -175,6 +175,7 @@ jtot = ScalarSubFunc(functions, markers, subdomains)
 # %% [markdown]
 #
 # plot the source term
+#
 # Note: depending on the geometric dimension of the coil, enclosure, and mesh
 # characteristic length, the plot could be not so "explanatory".
 

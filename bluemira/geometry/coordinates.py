@@ -25,11 +25,9 @@ Utility for sets of coordinates
 from __future__ import annotations
 
 import json
-import os
+from itertools import starmap
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple, Union
-
-if TYPE_CHECKING:
-    from bluemira.geometry.plane import BluemiraPlane
 
 import numba as nb
 import numpy as np
@@ -44,6 +42,10 @@ from bluemira.geometry.constants import CROSS_P_TOL, DOT_P_TOL
 from bluemira.geometry.error import CoordinatesError
 from bluemira.utilities.tools import json_writer
 
+if TYPE_CHECKING:
+    from bluemira.geometry.plane import BluemiraPlane
+
+DIM = 3
 # =============================================================================
 # Pre-processing utilities
 # =============================================================================
@@ -74,12 +76,11 @@ def _validate_coordinates(x, y, z=None):
                 "All coordinates must have the same length but "
                 f"got len(x) = {len(x)}, len(y) = {len(y)}"
             )
-    else:
-        if not len(x) == len(y) == len(z):
-            raise CoordinatesError(
-                "All coordinates must have the same length but "
-                f"got len(x) = {len(x)}, len(y) = {len(y)}, len(z) = {len(z)}"
-            )
+    elif not len(x) == len(y) == len(z):
+        raise CoordinatesError(
+            "All coordinates must have the same length but "
+            f"got len(x) = {len(x)}, len(y) = {len(y)}, len(z) = {len(z)}"
+        )
 
 
 # =============================================================================
@@ -197,7 +198,7 @@ def get_normal_vector(x: np.ndarray, y: np.ndarray, z: np.ndarray) -> np.ndarray
     -------
     The normalised normal vector
     """
-    if len(x) < 3:
+    if len(x) < DIM:
         raise CoordinatesError(
             "Cannot get a normal vector for a set of points with length less than 3."
         )
@@ -251,8 +252,7 @@ def get_perimeter(x: np.ndarray, y: np.ndarray, z: Optional[np.ndarray] = None) 
     """
     if z is None:
         return get_perimeter_2d(x, y)
-    else:
-        return get_perimeter_3d(x, y, z)
+    return get_perimeter_3d(x, y, z)
 
 
 @nb.jit(cache=True, nopython=True)
@@ -321,8 +321,7 @@ def get_area(x: np.ndarray, y: np.ndarray, z: Optional[np.ndarray] = None) -> fl
     """
     if z is None:
         return get_area_2d(x, y)
-    else:
-        return get_area_3d(x, y, z)
+    return get_area_3d(x, y, z)
 
 
 @nb.jit(cache=True, nopython=True)
@@ -460,8 +459,7 @@ def get_centroid(
     """
     if z is None:
         return get_centroid_2d(x, y)
-    else:
-        return get_centroid_3d(x, y, z)
+    return get_centroid_3d(x, y, z)
 
 
 @nb.jit(cache=True, nopython=True)
@@ -544,18 +542,16 @@ def get_centroid_3d(x: np.ndarray, y: np.ndarray, z: np.ndarray) -> List[float]:
             # Get the first value of the coordinate set which is equal to the
             # offset
             return [x, y, z][i][0]
-        elif len(args) == 1:
+        if len(args) == 1:
             return array[args[0][0]]
-        else:
-            if all(np.isclose(array, 0)):
-                return 0
-            elif any(np.isclose(array, 0)):
-                # Occasionally the two c values are not the same, and one is 0
-                return array[np.argmax(np.abs(array))]
-            else:
-                return array[0]
+        if all(np.isclose(array, 0)):
+            return 0
+        if any(np.isclose(array, 0)):
+            # Occasionally the two c values are not the same, and one is 0
+            return array[np.argmax(np.abs(array))]
+        return array[0]
 
-    return [get_rational(i, c) for i, c in enumerate([cx, cy, cz])]
+    return list(starmap(get_rational, enumerate([cx, cy, cz])))
 
 
 def get_angle_between_points(p0: np.ndarray, p1: np.ndarray, p2: np.ndarray) -> float:
@@ -598,11 +594,8 @@ def get_angle_between_vectors(
     sign = 1
     if signed:
         det = np.linalg.det(np.stack((v1n[-2:], v2n[-2:])))
-        if det == 0:
-            # Vectors parallel
-            sign = 1
-        else:
-            sign = np.sign(det)
+        # Vectors parallel
+        sign = 1 if det == 0 else np.sign(det)
 
     return sign * angle
 
@@ -659,8 +652,7 @@ def rotation_matrix(theta: float, axis: Union[str, np.ndarray] = "z") -> np.ndar
             )
         else:
             raise CoordinatesError(
-                f"Incorrect rotation axis: {axis}\n"
-                "please select from: ['x', 'y', 'z']"
+                f"Incorrect rotation axis: {axis}\nplease select from: ['x', 'y', 'z']"
             )
     else:
         # Cute, but hard to understand!
@@ -686,7 +678,7 @@ def rotation_matrix_v1v2(v1: np.ndarray, v2: np.ndarray) -> np.ndarray:
     sin_angle = np.linalg.norm(d)
 
     if sin_angle == 0:
-        matrix = np.identity(3) if cos_angle > 0.0 else -np.identity(3)
+        matrix = np.identity(3) if cos_angle > 0.0 else -np.identity(3)  # noqa: PLR2004
     else:
         d /= sin_angle
 
@@ -716,7 +708,7 @@ def project_point_axis(point: np.ndarray, axis: np.ndarray) -> np.ndarray:
     Returns
     -------
     The coordinates of the projected point
-    """  # noqa: W505
+    """  # noqa: W505, E501
     point = np.array(point)
     axis = np.array(axis)
     return axis * np.dot(point, axis) / np.dot(axis, axis)
@@ -776,10 +768,7 @@ def check_linesegment(
     k_ab = np.dot(a_b, a_b)
     if k_ac < 0:
         return False
-    elif k_ac > k_ab:
-        return False
-    else:
-        return True
+    return k_ac <= k_ab
 
 
 @nb.jit(cache=True, nopython=True)
@@ -877,7 +866,7 @@ def on_polygon(x: float, z: float, poly: np.ndarray) -> bool:
     Whether or not the point is on the perimeter of the polygon
     """
     on_edge = False
-    for i, (point_a, point_b) in enumerate(zip(poly[:-1], poly[1:])):
+    for _i, (point_a, point_b) in enumerate(zip(poly[:-1], poly[1:])):
         c = check_linesegment(np.array(point_a), np.array(point_b), np.array([x, z]))
 
         if c is True:
@@ -968,23 +957,23 @@ def _parse_to_xyz_array(xyz_array):
 def _parse_array(xyz_array):
     try:
         xyz_array = np.array(np.atleast_2d(np.squeeze(xyz_array)), dtype=np.float64)
-    except ValueError:
+    except ValueError as ve:
         raise CoordinatesError(
             "Cannot instantiate Coordinates with a ragged (3, N | M) array."
-        )
+        ) from ve
 
     shape = xyz_array.shape
-    if len(shape) > 2:
+    if len(shape) > 2:  # noqa: PLR2004
         raise NotImplementedError
 
     n, m = shape
-    if n == 3:
-        if m == 3:
+    if n == DIM:
+        if m == DIM:
             bluemira_warn(
                 "You are creating Coordinates with a (3, 3) array, defaulting to (3, N)."
             )
 
-    elif m == 3:
+    elif m == DIM:
         xyz_array = xyz_array.T
 
     else:
@@ -1009,7 +998,8 @@ def _parse_dict(xyz_dict):
 
     if np.any(shape_lengths > 1):
         raise CoordinatesError(
-            "Cannot instantiate Coordinates from dict with coordinate vectors that are not 1-D."
+            "Cannot instantiate Coordinates from dict with coordinate vectors that are"
+            " not 1-D."
         )
 
     lengths = [len(c) for c in [x, y, z]]
@@ -1017,10 +1007,7 @@ def _parse_dict(xyz_dict):
         # Vertex detected
         return np.array([x, y, z])
 
-    usable_lengths = []
-    for length in lengths:
-        if length != 1:
-            usable_lengths.append(length)
+    usable_lengths = [length for length in lengths if length != 1]
 
     if not np.allclose(usable_lengths, usable_lengths[0]):
         raise CoordinatesError(
@@ -1074,13 +1061,12 @@ class Coordinates:
             Full path file name of the data
         """
         try:
-            with open(filename, "r") as data:
+            with open(filename) as data:
                 xyz_dict = json.load(data)
         except json.JSONDecodeError:
             raise CoordinatesError(
-                f"Could not read the file: {filename}"
-                + "\n Please ensure it is a JSON file."
-            )
+                f"Could not read the file: {filename}\n Please ensure it is a JSON file."
+            ) from None
 
         # NOTE: Stabler than **xyz_dict
         x = xyz_dict.get("x", 0)
@@ -1100,7 +1086,7 @@ class Coordinates:
             self._update_plane_props()
 
     def _update_plane_props(self):
-        if len(self) > 3:
+        if len(self) > DIM:
             eigenvalues, eigenvectors = principal_components(self._array)
 
             if np.isclose(eigenvalues[-1], 0.0):
@@ -1136,14 +1122,14 @@ class Coordinates:
         about a specified axis. If None is specified, the Coordinates normal vector will
         be used.
         """
-        if len(self) < 3:
+        if len(self) < DIM:
             return False
 
         if axis is None:
             axis = self.normal_vector
         else:
             axis = np.array(axis, dtype=float)
-            if axis.size != 3:
+            if axis.size != DIM:
                 raise CoordinatesError("Base vector must be of size 3.")
             axis /= np.linalg.norm(axis)
 
@@ -1154,7 +1140,7 @@ class Coordinates:
         Set the Coordinates to be counter-clockwise about a specified axis. If None is
         specified, the Coordinates normal vector will be used.
         """
-        if len(self) < 3:
+        if len(self) < DIM:
             bluemira_warn("Cannot set Coordinates of length < 3 to CCW.")
             return
 
@@ -1270,10 +1256,9 @@ class Coordinates:
         """
         Save the Coordinates as a JSON file.
         """
-        d = self.as_dict()
-        filename = os.path.splitext(filename)[0]
-        filename += ".json"
-        return json_writer(d, filename, **kwargs)
+        return json_writer(
+            self.as_dict(), Path(filename).with_suffix("").with_suffix(".json"), **kwargs
+        )
 
     # =============================================================================
     # Useful properties
@@ -1284,9 +1269,10 @@ class Coordinates:
         """
         Whether or not this is a closed set of Coordinates.
         """
-        if len(self) > 2:
-            if np.allclose(self[:, 0], self[:, -1], rtol=0, atol=EPS):
-                return True
+        if len(self) > 2 and np.allclose(  # noqa: PLR2004
+            self[:, 0], self[:, -1], rtol=0, atol=EPS
+        ):
+            return True
         return False
 
     @property
@@ -1306,7 +1292,7 @@ class Coordinates:
         if len(self) == 1:
             return self.xyz.T[0]
 
-        elif len(self) == 2:
+        if len(self) == 2:  # noqa: PLR2004
             return np.average(self.xyz.T)
 
         return tuple(get_centroid_3d(*self._array))
@@ -1316,7 +1302,7 @@ class Coordinates:
     # =============================================================================
 
     @property
-    def T(self) -> np.ndarray:  # noqa :N802
+    def T(self) -> np.ndarray:  # noqa: N802
         """
         Transpose of the Coordinates
         """
@@ -1338,11 +1324,11 @@ class Coordinates:
         """
         self._array = self._array[:, ::-1]
 
-    def open(self):
+    def open(self):  # noqa: A003
         """
         Open the Coordinates (if they are closed)
         """
-        if len(self) < 3:
+        if len(self) < DIM:
             bluemira_warn(f"Cannot open Coordinates of length {len(self)}")
             return
 
@@ -1362,7 +1348,8 @@ class Coordinates:
         """
         if index > len(self):
             bluemira_warn(
-                "Inserting a point in Coordinates at an index greater than the number of points."
+                "Inserting a point in Coordinates at an index greater than the number of"
+                " points."
             )
             index = -1
         if not np.isclose(self.xyz.T, point).all(axis=1).any():
@@ -1378,7 +1365,7 @@ class Coordinates:
         """
         Close the Coordinates (if they are open)
         """
-        if len(self) < 3:
+        if len(self) < DIM:
             bluemira_warn(f"Cannot close Coordinates of length {len(self)}")
             return
 
@@ -1403,19 +1390,19 @@ class Coordinates:
         degree:
             rotation angle [degrees]
         """
-        if degree == 0.0:
+        if degree == 0.0:  # noqa: PLR2004
             return
 
         base = np.array(base, dtype=float)
-        if base.size != 3:
+        if base.size != DIM:
             raise CoordinatesError("Base vector must be of size 3.")
 
         direction = np.array(direction, dtype=float)
-        if direction.size != 3:
+        if direction.size != DIM:
             raise CoordinatesError("Direction vector must be of size 3.")
         direction /= np.linalg.norm(direction)
 
-        points = self._array - base.reshape(3, 1)
+        points = self._array - base.reshape(DIM, 1)
         quart = Quaternion(axis=direction, angle=np.deg2rad(degree))
         r_matrix = quart.rotation_matrix
         new_array = points.T @ r_matrix.T + base
@@ -1429,7 +1416,7 @@ class Coordinates:
         object.
         """
         vector = np.array(vector)
-        if vector.size != 3:
+        if vector.size != DIM:
             raise CoordinatesError("Translation vector must be of size 3.")
 
         self._array += vector.reshape(3, 1)
@@ -1460,6 +1447,10 @@ class Coordinates:
         if isinstance(other, self.__class__):
             return np.all(np.allclose(self._array, other._array, rtol=0, atol=EPS))
         return False
+
+    def __hash__(self):
+        """Hash of Coordinates"""
+        return hash((self._array, self._is_planar, self._normal_vector))
 
     def __len__(self) -> int:
         """
@@ -1550,8 +1541,7 @@ def vector_intersect_3d(
     numer = d1343 * d4321 - d1321 * d4343
 
     mua = numer / denom
-    intersection = p_1 + mua * p_21
-    return intersection
+    return p_1 + mua * p_21
 
 
 def coords_plane_intersect(
@@ -1575,8 +1565,7 @@ def coords_plane_intersect(
     out = _coords_plane_intersect(coords.xyz.T[:-1], plane.base, plane.axis)
     if not out:
         return None
-    else:
-        return np.unique(out, axis=0)  # Drop occasional duplicates
+    return np.unique(out, axis=0)  # Drop occasional duplicates
 
 
 @nb.jit(cache=True, nopython=True)
@@ -1618,7 +1607,7 @@ def get_intersect(xy1: np.ndarray, xy2: np.ndarray) -> Tuple[np.ndarray, np.ndar
     Notes
     -----
     D. Schwarz, <https://uk.mathworks.com/matlabcentral/fileexchange/11837-fast-and-robust-curve-intersections>
-    """  # noqa :W505
+    """
     x1, y1 = xy1
     x2, y2 = xy2
 
@@ -1651,7 +1640,7 @@ def get_intersect(xy1: np.ndarray, xy2: np.ndarray) -> Tuple[np.ndarray, np.ndar
     for i in range(n):
         try:
             xz[:, i] = np.linalg.solve(a_m[:, :, i], b_m[:, i])
-        except np.linalg.LinAlgError:
+        except np.linalg.LinAlgError:  # noqa: PERF203
             # Parallel segments. Will raise numpy RuntimeWarnings
             xz[0, i] = np.nan
     in_range = (xz[0, :] >= 0) & (xz[1, :] >= 0) & (xz[0, :] <= 1) & (xz[1, :] <= 1)
@@ -1716,11 +1705,8 @@ def join_intersect(
 
     count = 0
     for i, arg in enumerate(args):
-        if i > 0 and args[i - 1] == arg:
-            # Two intersection points, one after the other
-            bump = 0
-        else:
-            bump = 1
+        # Two intersection points, one after the other
+        bump = 0 if i > 0 and args[i - 1] == arg else 1
         if not np.isclose(coords1.xyz.T, [x_int[i], 0, z_int[i]]).all(axis=1).any():
             # Only increment counter if the intersection isn't already in the Coordinates
             coords1.insert([x_int[i], 0, z_int[i]], index=arg + count + bump)
@@ -1731,3 +1717,4 @@ def join_intersect(
         for x, z in zip(x_inter, z_inter):
             args.append(coords1.argmin([x, 0, z]))
         return list(set(args))
+    return None

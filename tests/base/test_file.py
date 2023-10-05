@@ -21,6 +21,7 @@
 
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -34,12 +35,12 @@ from bluemira.base.file import (
 )
 
 REACTOR_NAME = "TEST_REACTOR"
-FILE_REF_PATH = os.path.join("data")
-FILE_GEN_PATH = os.path.join("tests", "base", "file_manager_gen")
+FILE_REF_PATH = Path("data").as_posix()
+FILE_GEN_PATH = Path("tests", "base", "file_manager_gen").as_posix()
 
 
 @pytest.mark.parametrize(
-    "path,subfolder,allow_missing,expect_none",  # noqa :N802
+    ("path", "subfolder", "allow_missing", "expect_none"),
     [
         ("base", "tests", False, False),
         ("base", "tests", True, False),
@@ -58,14 +59,14 @@ def test_try_get_bluemira_path(path, subfolder, allow_missing, expect_none):
 
 
 @pytest.mark.parametrize(
-    "path,subfolder",  # noqa :N802
+    ("path", "subfolder"),
     [
         ("spam", "tests"),
         ("spam", "ham"),
     ],
 )
 def test_try_get_bluemira_path_raises(path, subfolder):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         try_get_bluemira_path(path, subfolder=subfolder, allow_missing=False)
 
 
@@ -83,7 +84,7 @@ def file_manager_good():
     yield file_manager
 
     # Make sure we clean up the directories after testing that they have been created.
-    if os.path.exists(FILE_GEN_PATH):
+    if Path(FILE_GEN_PATH):
         remove_dir_and_subs(FILE_GEN_PATH)
 
 
@@ -92,13 +93,11 @@ def file_manager_bad():
     """
     Create a FileManager to run some tests on.
     """
-    file_manager = FileManager(
+    return FileManager(
         REACTOR_NAME,
         reference_data_root=FILE_REF_PATH + "bad",
         generated_data_root=FILE_GEN_PATH,
     )
-
-    return file_manager
 
 
 def assert_bluemira_path_exists(path: str):
@@ -117,22 +116,22 @@ def remove_dir_and_subs(path: str):
     """
     for root, dirs, _ in os.walk(get_bluemira_path(path, ""), topdown=False):
         for name in dirs:
-            os.rmdir(os.path.join(root, name))
-    os.rmdir(get_bluemira_path(path, ""))
+            Path(root, name).rmdir()
+    Path(get_bluemira_path(path, "")).rmdir()
 
 
 def get_system_path(root: str, reactor_name: str, system: str) -> str:
     """
     Builds the path for a system given a root directory and a reactor
     """
-    return os.path.join(root, "reactors", reactor_name, system)
+    return Path(root, "reactors", reactor_name, system).as_posix()
 
 
 def get_reactor_path(root: str, reactor_name: str) -> str:
     """
     Builds the path for a reactor given a root directory and a reactor
     """
-    return os.path.join(root, "reactors", reactor_name)
+    return Path(root, "reactors", reactor_name).as_posix()
 
 
 def test_create_generated_data_root(file_manager_good: FileManager):
@@ -159,7 +158,7 @@ def test_reference_data_dirs(file_manager_good: FileManager):
     """
     file_manager_good.set_reference_data_paths()
 
-    target_data_dirs = sorted(SUB_DIRS + ["root"])
+    target_data_dirs = sorted([*SUB_DIRS, "root"])
 
     # Check the keys match the expected list
     assert sorted(file_manager_good.reference_data_dirs.keys()) == target_data_dirs
@@ -181,7 +180,7 @@ def test_reference_data_dirs_error(file_manager_bad: FileManager):
     """
     Tests that a ValueError is raised if the data path does not exist.
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         file_manager_bad.set_reference_data_paths()
 
 
@@ -199,7 +198,7 @@ def test_create_reference_data_dirs():
 
     file_manager.create_reference_data_paths()
 
-    target_data_dirs = sorted(SUB_DIRS + ["root"])
+    target_data_dirs = sorted([*SUB_DIRS, "root"])
 
     # Check the keys match the expected list
     assert sorted(file_manager.reference_data_dirs.keys()) == target_data_dirs
@@ -217,7 +216,7 @@ def test_create_reference_data_dirs():
             )
 
     # Make sure we clean up the directories after testing that they have been created.
-    if os.path.exists(FILE_GEN_PATH):
+    if Path(FILE_GEN_PATH).exists():
         remove_dir_and_subs(FILE_GEN_PATH)
 
 
@@ -227,7 +226,7 @@ def test_generated_data_dirs(file_manager_good: FileManager):
     """
     file_manager_good.create_generated_data_paths()
 
-    target_data_dirs = sorted(SUB_DIRS + ["root"])
+    target_data_dirs = sorted([*SUB_DIRS, "root"])
 
     # Check the keys match the expected list
     assert sorted(file_manager_good.generated_data_dirs.keys()) == target_data_dirs
@@ -254,9 +253,9 @@ def test_force_file_extension():
 
 
 def test_working_dir_context_manager():
-    cwd = os.getcwd()
+    cwd = Path.cwd()
     with working_dir(tempfile.mkdtemp()):
-        changed_cwd = os.getcwd()
-    final_cwd = os.getcwd()
+        changed_cwd = Path.cwd()
+    final_cwd = Path.cwd()
     assert cwd != changed_cwd
     assert cwd == final_cwd

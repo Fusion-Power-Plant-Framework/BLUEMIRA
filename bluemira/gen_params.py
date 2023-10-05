@@ -89,10 +89,8 @@ def create_parameterframe(
 
     """
     param_cls = (
-        (
-            "from dataclasses import dataclass\n\n"
-            "from bluemira.base.parameterframe import Parameter, ParameterFrame\n\n\n"
-        )
+        "from dataclasses import dataclass\n\n"
+        "from bluemira.base.parameterframe import Parameter, ParameterFrame\n\n\n"
         if header
         else ""
     )
@@ -205,7 +203,7 @@ def main():
         param_classes.update(get_param_classes(module))
 
     bluemira_print(
-        "Found ParameterFrames:\n" + "\n".join(sorted(k for k in param_classes.keys()))
+        "Found ParameterFrames:\n" + "\n".join(sorted(k for k in param_classes))
     )
 
     output = {}

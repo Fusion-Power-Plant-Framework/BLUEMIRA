@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 
 from bluemira.base.file import get_bluemira_path
 from bluemira.materials import MaterialCache
@@ -27,8 +27,8 @@ from bluemira.structural.material import make_structural_material
 
 MATERIAL_DATA_PATH = get_bluemira_path("materials", subfolder="data")
 MATERIAL_CACHE = MaterialCache()
-MATERIAL_CACHE.load_from_file(os.sep.join([MATERIAL_DATA_PATH, "materials.json"]))
-MATERIAL_CACHE.load_from_file(os.sep.join([MATERIAL_DATA_PATH, "mixtures.json"]))
+MATERIAL_CACHE.load_from_file(Path(MATERIAL_DATA_PATH, "materials.json"))
+MATERIAL_CACHE.load_from_file(Path(MATERIAL_DATA_PATH, "mixtures.json"))
 
 
 class TestMaterialInterface:
@@ -49,4 +49,4 @@ class TestMaterialInterface:
         for attribute in ["E", "nu", "rho", "alpha", "sigma_y", "G"]:
             value = getattr(material, attribute)
             assert isinstance(value, float)
-        assert material.description != ""
+        assert material.description

@@ -177,14 +177,13 @@ class BluemiraPlacement:
         """Moves the Placement along the given vector"""
         cadapi.move_placement(self._shape, vector)
 
-    def __repr__(self):  # noqa D105
-        new = []
-        new.append(f"([{type(self).__name__}] = Label: {self.label}")
-        new.append(f" base: {self.base}")
-        new.append(f" axis: {self.axis}")
-        new.append(f" angle: {self.angle}")
-        new.append(")")
-        return ", ".join(new)
+    def __repr__(self):  # noqa: D105
+        return (
+            f"([{type(self).__name__}] = Label: {self.label}, "
+            f"base: {self.base}, "
+            f"axis: {self.axis}, "
+            f"angle: {self.angle})"
+        )
 
     def copy(self, label: Optional[str] = None):
         """Make a copy of the BluemiraPlacement"""
@@ -195,7 +194,7 @@ class BluemiraPlacement:
             placement_copy.label = self.label
         return placement_copy
 
-    def deepcopy(self, label: Optional[str] = None):
+    def deepcopy(self, label: Optional[str] = None):  # noqa: ARG002
         """Make a deepcopy of the BluemiraPlacement"""
         return self.copy()
 

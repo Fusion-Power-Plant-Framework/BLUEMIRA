@@ -68,14 +68,13 @@ def estimate_loop_voltage(
     Assumes a circular cross-section on axis
 
     There is no neo-classical resistivity on axis because there are no trapped particles
-    """  # noqa: W505
+    """  # noqa: W505, E501
     ln_lambda = coulomb_logarithm(T_e * EV_TO_J / K_BOLTZMANN, n_e)
     sigma = spitzer_conductivity(Z_eff, T_e, ln_lambda)
 
     # Current density on axis
     j_0 = 2 * B_t / (MU_0 * q_0 * R_0)
-    v_loop = 2 * np.pi * R_0 * j_0 / sigma
-    return v_loop
+    return 2 * np.pi * R_0 * j_0 / sigma
 
 
 def estimate_Le(A: float, kappa: float) -> float:  # noqa: N802
@@ -140,3 +139,161 @@ def estimate_M(A: float, kappa: float) -> float:  # noqa: N802
     c = 1 + 0.98 * eps**2 + 0.49 * eps**4 + 1.47 * eps**6
     d = 0.25 * eps * (1 + 0.84 * eps - 1.44 * eps**2)
     return (1 - eps) ** 2 / ((1 - eps) ** 2 * c + d * np.sqrt(kappa))
+
+
+def calc_cyl_safety_factor(R_0: float, A: float, B_0: float, I_p: float) -> float:
+    """
+    Calculate the cylindrical safety factor.
+
+    Parameters
+    ----------
+    R_0:
+        Plasma major radius [m]
+    A:
+        Plasma aspect ratio
+    B_0:
+        Toroidal field at major radius [T]
+    I_p:
+        Plasma current [A]
+
+    Returns
+    -------
+    Cylindrical safety factor
+
+    Notes
+    -----
+    Sometimes also written with :math:`\\dfrac{2\\pi}{\\mu_{0}} = 5` and I_p in [MA]
+    """
+    a = R_0 / A
+    return 2 * np.pi * a**2 * B_0 / (MU_0 * R_0 * I_p)
+
+
+def calc_qstar_freidberg(
+    R_0: float, A: float, B_0: float, I_p: float, kappa: float
+) -> float:
+    """
+    Calculate the kink safety factor at the plasma edge
+
+    \t:math:`q_{*}=\\dfrac{2\\pi a^2 B_0}{\\mu_0 R_0 I_p}`
+    \t:math:`\\bigg(\\dfrac{1+\\kappa^2}{2}\\bigg)`
+
+    Parameters
+    ----------
+    R_0:
+        Plasma major radius [m]
+    A:
+        Plasma aspect ratio
+    B_0:
+        Toroidal field at major radius [T]
+    I_p:
+        Plasma current [A]
+    kappa:
+        Plasma elongation
+
+    Returns
+    -------
+    Kink safety factor
+
+    Notes
+    -----
+    Freidberg, Ideal MHD, p 131
+    """
+    shape_factor = 0.5 * (1 + kappa**2)
+    q_cyl = calc_cyl_safety_factor(R_0, A, B_0, I_p)
+    return q_cyl * shape_factor
+
+
+def calc_qstar_uckan(
+    R_0: float, A: float, B_0: float, I_p: float, kappa: float, delta: float
+) -> float:
+    """
+    Calculate the cylindrical equivalent safety factor at the plasma edge
+
+    Parameters
+    ----------
+    R_0:
+        Plasma major radius [m]
+    A:
+        Plasma aspect ratio
+    B_0:
+        Toroidal field at major radius [T]
+    I_p:
+        Plasma current [A]
+    kappa:
+        Plasma elongation
+    delta:
+        Plasma triangularity
+
+    Returns
+    -------
+    Cylindrical equivalent safety factor
+
+    Notes
+    -----
+    Uckan et al., ITER Physics Design Guidelines, 1989, sec. 2.3
+    https://inis.iaea.org/search/search.aspx?orig_q=RN:21068960
+    """
+    shape_factor = 0.5 + 0.5 * kappa**2 * (1 + 2 * delta**2 - 1.2 * delta**3)
+    q_cyl = calc_cyl_safety_factor(R_0, A, B_0, I_p)
+    return q_cyl * shape_factor
+
+
+def estimate_q95_uckan(
+    R_0: float, A: float, B_0: float, I_p: float, kappa: float, delta: float
+) -> float:
+    """
+    Estimate safety factor at the 95th percentile flux surface based on an empirical fit.
+
+    Parameters
+    ----------
+    R_0:
+        Plasma major radius [m]
+    A:
+        Plasma aspect ratio
+    B_0:
+        Toroidal field at major radius [T]
+    I_p:
+        Plasma current [A]
+    kappa:
+        Plasma elongation
+    delta:
+        Plasma triangularity
+
+    Notes
+    -----
+    Uckan et al., ITER Physics Design Guidelines, 1989, sec. 2.3
+    https://inis.iaea.org/search/search.aspx?orig_q=RN:21068960
+    Ref [11] in the above does not appear to include the geometry factor
+    """
+    eps = 1 / A
+    geometry_factor = (1.17 - 0.65 * eps) / (1 - eps**2) ** 2
+    q_star = calc_qstar_uckan(R_0, A, B_0, I_p, kappa, delta)
+    return q_star * geometry_factor
+
+
+def estimate_li_wesson(
+    q_star: float,
+    q_0: float = 1.0,
+) -> float:
+    """
+    Estimate the normalised plasma internal inductance based on an empirical fit.
+
+    Parameters
+    ----------
+    q_star:
+        Cylindrical equivalent safety factor
+    q_0:
+        Safety factor on axis
+
+    Returns
+    -------
+    Normalised lasma internal inductance
+
+    Notes
+    -----
+    Wesson, Tokamaks 3rd edition, page 120
+
+    This appears to give high values for li, even when using q* at rho=0.95
+    """
+    nu = q_star / q_0 - 1.0
+    return np.log(1.65 + 0.89 * nu)

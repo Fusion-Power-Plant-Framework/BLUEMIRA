@@ -24,9 +24,10 @@ A collection of general helper functions for tests.
 """
 
 import contextlib
-import os
 from pathlib import Path
 from unittest import mock
+
+import pytest
 
 
 def combine_text_mock_write_calls(open_mock: mock.MagicMock) -> str:
@@ -70,7 +71,26 @@ def file_exists(good_file_path: str, isfile_ref: str):
     def new_isfile(path: str) -> bool:
         if Path(good_file_path).resolve() == Path(path).resolve():
             return True
-        return os.path.exists(path) and not os.path.isdir(path)
+        return Path(path).exists and not Path(path).is_dir()
 
     with mock.patch(isfile_ref, new=new_isfile) as is_file_mock:
         yield is_file_mock
+
+
+def skipif_import_error(*module_name: str) -> pytest.MarkDecorator:
+    """Create skipif marker for unimportable modules"""
+    skip = []
+    for m in module_name:
+        try:
+            __import__(m)
+            skip.append(False)
+        except ImportError:  # noqa: PERF203
+            skip.append(True)
+
+    if len(module_name) == 1:
+        reason = f"dependency {module_name[0]} not found"
+    else:
+        modules = ", ".join(module_name[no] for no, i in enumerate(skip) if i)
+        reason = f"dependencies {modules} not found"
+
+    return pytest.mark.skipif(any(skip), reason=reason)

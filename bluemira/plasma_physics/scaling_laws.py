@@ -46,7 +46,7 @@ class PowerLawScaling:
         The ordered list of exponents
     exp_errs: Union[np.ndarray, List, None]
         The ordered list of errors of the exponents
-    """  # noqa: W505
+    """
 
     def __init__(
         self,
@@ -96,7 +96,7 @@ class PowerLawScaling:
         max_value:
             Maximum value of the power law according to the specified errors
         """
-        if self.constant_err == 0.0 and self.errors is None:
+        if self.constant_err == 0.0 and self.errors is None:  # noqa: PLR2004
             raise ValueError(
                 "No errors provided on PowerLawScaling, cannot calculate range."
             )
@@ -152,7 +152,7 @@ def lambda_q(
         <https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.107.215001>
 
     \t:math:`\\lambda_q=(0.73\\pm0.38)B_t^{-0.78\\pm0.25}q_{95}^{1.2\\pm0.27}P_{SOL}^{0.1\\pm0.11}R_{0}^{0.02\\pm0.2}`
-    """  # noqa: W505
+    """
     law = PowerLawScaling(
         constant=0.73e-3,
         constant_err=0.38e-3,
@@ -164,8 +164,7 @@ def lambda_q(
     if error:
         min_value, max_value = law.calculate_range(B_t, q_cyl, p_sol, R_0)
         return value, min_value, max_value
-    else:
-        return value
+    return value
 
 
 def P_LH(  # noqa: N802
@@ -199,7 +198,7 @@ def P_LH(  # noqa: N802
 
     \t:math:`P_{LH}=2.15e^{\\pm 0.107}n_{e20}^{0.782 \\pm 0.037}`
     \t:math:`B_{T}^{0.772 \\pm 0.031}a^{0.975 \\pm 0.08}R_{0}^{0.999 \\pm 0.101}`
-    """  # noqa :W505
+    """
     law = PowerLawScaling(
         constant=2.15e6,
         constant_err=0.0,
@@ -214,8 +213,7 @@ def P_LH(  # noqa: N802
     if error:
         min_value, max_value = law.calculate_range(leading_term, n_e20, B_t, a, R_0)
         return value, min_value, max_value
-    else:
-        return value
+    return value
 
 
 def IPB98y2(  # noqa: N802
@@ -261,7 +259,7 @@ def IPB98y2(  # noqa: N802
     equation (20)
 
     \t:math:`\\tau_{E}=0.0562I_p^{0.93}B_t^{0.15}P_{sep}^{-0.69}n^{0.41}M^{0.19}R_0^{1.97}A^{-0.58}\\kappa^{0.78}`
-    """  # noqa :W505
+    """
     I_p = raw_uc(I_p, "A", "MA")
     p_sep = raw_uc(p_sep, "W", "MW")
     n = raw_uc(n, "1/m^3", "1e19/m^3")

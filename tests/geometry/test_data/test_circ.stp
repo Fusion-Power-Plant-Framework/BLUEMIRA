@@ -1,7 +1,7 @@
 ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('FreeCAD Model'),'2;1');
-FILE_NAME('Open CASCADE Shape Model','2023-05-24T10:31:51',('Bluemira'),
+FILE_NAME('Open CASCADE Shape Model','2023-09-04T10:11:59',('Bluemira'),
   ('Bluemira'),'Open CASCADE STEP processor 7.6','FreeCAD','Unknown');
 FILE_SCHEMA((
 'AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF. {1 0 10303 442 1 1 4 
@@ -15,7 +15,7 @@ DATA;
 #4 = PRODUCT_DEFINITION_SHAPE('','',#5);
 #5 = PRODUCT_DEFINITION('design','',#6,#9);
 #6 = PRODUCT_DEFINITION_FORMATION('','',#7);
-#7 = PRODUCT('Part__Feature','Part__Feature','',(#8));
+#7 = PRODUCT('Part__FeaturePython','Part__FeaturePython','',(#8));
 #8 = PRODUCT_CONTEXT('',#2,'mechanical');
 #9 = PRODUCT_DEFINITION_CONTEXT('part definition',#2,'design');
 #10 = GEOMETRICALLY_BOUNDED_WIREFRAME_SHAPE_REPRESENTATION('',(#11,#15),

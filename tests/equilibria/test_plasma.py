@@ -28,14 +28,14 @@ from bluemira.equilibria.plasma import NoPlasmaCoil, PlasmaCoil
 
 
 class TestPlasmaCoil:
-    points = [
+    points = (
         [6, 0],
         [6.0, 0.0],
         [np.array([6, 7]), np.array([0, 0])],
         [np.array([6.0, 7.0]), np.array([0.0, 0.0])],
         [[16, 17], [16, 17]],
         [np.array([[16, 17], [5, 6]]), np.array([[16, 17], [0, 0]])],
-    ]
+    )
 
     @classmethod
     def setup_class(cls):
@@ -46,22 +46,22 @@ class TestPlasmaCoil:
         j_tor[25, 25] = 1.0
         cls.plasma_coil = PlasmaCoil(plasma_psi, j_tor, grid=grid)
 
-    @pytest.mark.parametrize("x, z", points)
+    @pytest.mark.parametrize(("x", "z"), points)
     def test_psi(self, x, z):
         result = self.plasma_coil.psi(x, z)
         assert result.shape == np.array(x).shape
 
-    @pytest.mark.parametrize("x, z", points)
+    @pytest.mark.parametrize(("x", "z"), points)
     def test_Bx(self, x, z):
         result = self.plasma_coil.Bx(x, z)
         assert result.shape == np.array(x).shape
 
-    @pytest.mark.parametrize("x, z", points)
+    @pytest.mark.parametrize(("x", "z"), points)
     def test_Bz(self, x, z):
         result = self.plasma_coil.Bx(x, z)
         assert result.shape == np.array(x).shape
 
-    @pytest.mark.parametrize("x, z", points)
+    @pytest.mark.parametrize(("x", "z"), points)
     def test_Bp(self, x, z):
         result = self.plasma_coil.Bp(x, z)
         assert result.shape == np.array(x).shape

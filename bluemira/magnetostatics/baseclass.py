@@ -81,7 +81,6 @@ class CurrentSource(ABC):
         -------
         The magnetic field vector {Bx, By, Bz} in [T]
         """
-        pass
 
     @abstractmethod
     def plot(self, ax: Optional[Axes], **kwargs):
@@ -93,7 +92,6 @@ class CurrentSource(ABC):
         ax:
             The matplotlib axes to plot on
         """
-        pass
 
     @abstractmethod
     def rotate(self, angle: float, axis: Union[np.ndarray, str]):
@@ -107,7 +105,6 @@ class CurrentSource(ABC):
         axis:
             The axis of rotation
         """
-        pass
 
     def copy(self):
         """

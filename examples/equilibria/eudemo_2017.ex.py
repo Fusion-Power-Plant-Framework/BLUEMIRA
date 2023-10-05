@@ -44,9 +44,10 @@ Attempt at recreating the EU-DEMO 2017 reference equilibria from a known coilset
 # # EU-DEMO 2017 reference breakdown and equilibrium benchmark
 
 # %%
+import contextlib
 import json
-import os
 from copy import deepcopy
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,7 +59,7 @@ from bluemira.display import plot_defaults
 from bluemira.equilibria.coils import Coil, CoilSet
 from bluemira.equilibria.equilibrium import Breakdown, Equilibrium
 from bluemira.equilibria.grid import Grid
-from bluemira.equilibria.opt_constraints import (
+from bluemira.equilibria.optimisation.constraints import (
     CoilFieldConstraints,
     CoilForceConstraints,
     FieldNullConstraint,
@@ -66,7 +67,7 @@ from bluemira.equilibria.opt_constraints import (
     MagneticConstraintSet,
     PsiBoundaryConstraint,
 )
-from bluemira.equilibria.opt_problems import (
+from bluemira.equilibria.optimisation.problem import (
     BreakdownCOP,
     MinimalCurrentCOP,
     OutboardBreakdownZoneStrategy,
@@ -80,7 +81,6 @@ from bluemira.equilibria.profiles import (
     DoublePowerFunc,
 )
 from bluemira.equilibria.solve import PicardIterator
-from bluemira.utilities.optimiser import Optimiser
 
 # %% [markdown]
 #
@@ -89,15 +89,13 @@ from bluemira.utilities.optimiser import Optimiser
 # %%
 plot_defaults()
 
-try:
+with contextlib.suppress(AttributeError):
     get_ipython().run_line_magic("matplotlib", "qt")
-except AttributeError:
-    pass
+
 
 path = get_bluemira_path("equilibria", subfolder="examples")
 name = "EUDEMO_2017_CREATE_SOF_separatrix.json"
-filename = os.sep.join([path, name])
-with open(filename, "r") as file:
+with open(Path(path, name)) as file:
     data = json.load(file)
 
 sof_xbdry = data["xbdry"]
@@ -116,9 +114,9 @@ dz = [0.6, 0.7, 0.5, 0.5, 0.7, 1.0, 2.99 / 2, 2.99 / 2, 5.97 / 2, 2.99 / 2, 2.99
 coils = []
 j = 1
 for i, (xi, zi, dxi, dzi) in enumerate(zip(x, z, dx, dz)):
-    if j > 6:
+    if j > 6:  # noqa: PLR2004
         j = 1
-    ctype = "PF" if i < 6 else "CS"
+    ctype = "PF" if i < 6 else "CS"  # noqa: PLR2004
     coil = Coil(
         xi,
         zi,
@@ -198,7 +196,8 @@ bd_opt_problem = BreakdownCOP(
     breakdown.coilset,
     breakdown,
     OutboardBreakdownZoneStrategy(R_0, A, 0.225),
-    optimiser=Optimiser("COBYLA", opt_conditions={"max_eval": 3000, "ftol_rel": 1e-6}),
+    opt_algorithm="COBYLA",
+    opt_conditions={"max_eval": 3000, "ftol_rel": 1e-6},
     max_currents=max_currents,
     B_stray_max=1e-3,
     B_stray_con_tol=1e-6,
@@ -206,10 +205,9 @@ bd_opt_problem = BreakdownCOP(
     constraints=[field_constraints, force_constraints],
 )
 
-coilset = bd_opt_problem.optimise(x0=max_currents)
+coilset = bd_opt_problem.optimise(x0=max_currents).coilset
 
 bluemira_print(f"Breakdown psi: {breakdown.breakdown_psi*2*np.pi:.2f} V.s")
-
 # %% [markdown]
 #
 # Calculate SOF and EOF plasma boundary fluxes
@@ -305,13 +303,13 @@ sof_psi_boundary = PsiBoundaryConstraint(
     tolerance=0.5,
 )
 
-optimiser = Optimiser("SLSQP", opt_conditions={"max_eval": 1000, "ftol_rel": 1e-6})
 sof = deepcopy(reference_eq)
 
 sof_opt_problem = MinimalCurrentCOP(
     sof.coilset,
     sof,
-    optimiser=optimiser,
+    opt_algorithm="SLSQP",
+    opt_conditions={"max_eval": 1000, "ftol_rel": 1e-6},
     max_currents=max_currents,
     constraints=[sof_psi_boundary, x_point],
 )
@@ -333,7 +331,8 @@ eof = deepcopy(reference_eq)
 eof_opt_problem = MinimalCurrentCOP(
     eof.coilset,
     eof,
-    optimiser=optimiser,
+    opt_algorithm="SLSQP",
+    opt_conditions={"max_eval": 1000, "ftol_rel": 1e-6},
     max_currents=max_currents,
     constraints=[eof_psi_boundary, x_point],
 )

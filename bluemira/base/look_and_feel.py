@@ -27,8 +27,9 @@ import logging
 import os
 import platform
 import shutil
-import subprocess  # noqa :S404
+import subprocess
 from getpass import getuser
+from pathlib import Path
 from textwrap import dedent, wrap
 from typing import Callable, Dict, List, Optional
 
@@ -42,8 +43,7 @@ LOGGER = logger_setup()
 # Calculate the number of lines in this file
 try:
     with open(
-        os.sep.join([get_bluemira_path("base"), "look_and_feel.py"]),
-        "r",
+        Path(get_bluemira_path("base"), "look_and_feel.py"),
         encoding="utf-8",
     ) as f:
         LOCAL_LINES = len(f.read().splitlines())
@@ -69,8 +69,8 @@ def get_git_version(directory: str) -> str:
     -------
     The git version bytestring
     """
-    return subprocess.check_output(  # noqa :S603, S607
-        ["git", "describe", "--tags", "--always"], cwd=directory
+    return subprocess.check_output(
+        ["git", "describe", "--tags", "--always"], cwd=directory  # noqa: S603, S607
     ).strip()
 
 
@@ -87,10 +87,14 @@ def get_git_branch(directory: str) -> str:
     -------
     The git branch string
     """
-    out = subprocess.check_output(  # noqa :S603, S607
-        ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=directory
+    return (
+        subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],  # noqa: S603, S607
+            cwd=directory,
+        )
+        .strip()
+        .decode("utf-8")
     )
-    return out.strip().decode("utf-8")
 
 
 def get_git_files(directory: str, branch: str) -> List[str]:
@@ -109,8 +113,9 @@ def get_git_files(directory: str, branch: str) -> List[str]:
     The list of git-controlled path strings
     """
     return (
-        subprocess.check_output(  # noqa :S603, S607
-            ["git", "ls-tree", "-r", branch, "--name-only"], cwd=directory
+        subprocess.check_output(
+            ["git", "ls-tree", "-r", branch, "--name-only"],  # noqa: S603, S607
+            cwd=directory,
         )
         .decode("utf-8")
         .splitlines()
@@ -164,12 +169,12 @@ def count_slocs(
         lines[k] = 0
     files = get_git_files(directory, branch)
     for name in files:
-        if name.split(os.sep)[-1] not in ignore and name not in ignore:
+        if Path(name).parts[-1] not in ignore and name not in ignore:
             for e in exts:
                 if name.endswith(e):
-                    path = os.sep.join([directory, name])
+                    path = Path(directory, name)
                     try:
-                        with open(path, "r", encoding="utf-8") as file:
+                        with open(path, encoding="utf-8") as file:
                             lines[e] += len(file.read().splitlines())
 
                     except FileNotFoundError:
@@ -179,7 +184,7 @@ def count_slocs(
                         continue
 
     lines[".py"] += LOCAL_LINES
-    lines["total"] = sum([lines[k] for k in lines.keys()])
+    lines["total"] = sum([lines[k] for k in lines])
     return lines
 
 
@@ -233,7 +238,7 @@ def _bm_print(string: str, width: int = 73):
 
     s = [dedent(item) for sublist in t for item in sublist]
     lines = ["".join(["| "] + [i] + [" "] * (width - 2 - len(i)) + [" |"]) for i in s]
-    h = "".join(["+"] + ["-" * width] + ["+"])
+    h = "".join(["+", "-" * width, "+"])
     return h + "\n" + "\n".join(lines) + "\n" + h
 
 
@@ -252,8 +257,7 @@ def colourise(string: str, width: int = 73, color: str = "blue") -> str:
         The color to print the text in from `bluemira.base.constants.ANSI_COLOR`
     """
     text = _bm_print(string, width=width)
-    color_text = _print_color(text, color)
-    return color_text
+    return _print_color(text, color)
 
 
 def bluemira_critical(string: str):
@@ -417,7 +421,7 @@ BLUEMIRA_ASCII = r"""+----------------------------------------------------------
 | | '_ \| | | | |/ _ \ '_ ` _ \| | '__/ _| |_ \                           |
 | | |_) | | |_| |  __/ | | | | | | | | (_| |_) |                          |
 | |_.__/|_|\__,_|\___|_| |_| |_|_|_|  \__|_|__/                           |
-+-------------------------------------------------------------------------+"""  # noqa
++-------------------------------------------------------------------------+"""  # noqa: E501
 
 
 def print_banner():
@@ -442,7 +446,7 @@ def version_banner() -> List[str]:
         "SLOC": "total",
     }
     root = get_bluemira_root()
-    if not os.path.isdir(f"{root}/.git") or shutil.which("git") is None:
+    if not Path(f"{root}/.git").is_dir() or shutil.which("git") is None:
         return [
             f"Version    : {__version__}",
             "git branch : docker",

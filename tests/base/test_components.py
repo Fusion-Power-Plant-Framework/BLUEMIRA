@@ -335,10 +335,10 @@ class TestPhysicalComponent:
         assert material == "A material"
 
     @pytest.mark.parametrize(
-        "first, result",
+        ("first", "result"),
         [
-            [True, ("A shape", "A material")],
-            [False, (["A shape"] * 2, ["A material"] * 2)],
+            (True, ("A shape", "A material")),
+            (False, (["A shape"] * 2, ["A material"] * 2)),
         ],
     )
     def test_get_components_properties(self, first, result):

@@ -22,11 +22,14 @@
 Test divertor silhouette designer.
 """
 import copy
-import os
+from pathlib import Path
+from typing import ClassVar
 from unittest import mock
 
 import numpy as np
+import pytest
 
+from bluemira.base.constants import EPS
 from bluemira.base.file import get_bluemira_path
 from bluemira.equilibria import Equilibrium
 from bluemira.equilibria.find import find_OX_points
@@ -43,7 +46,7 @@ def get_turning_point_idxs(z: np.ndarray):
 
 
 class TestDivertorSilhouetteDesigner:
-    _default_params = {
+    _default_params: ClassVar = {
         "div_type": {"value": "SN", "unit": ""},
         "div_L2D_ib": {"value": 1.1, "unit": "m"},
         "div_L2D_ob": {"value": 1.45, "unit": "m"},
@@ -53,7 +56,7 @@ class TestDivertorSilhouetteDesigner:
 
     @classmethod
     def setup_class(cls):
-        cls.eq = Equilibrium.from_eqdsk(os.path.join(DATA, "eqref_OOB.json"))
+        cls.eq = Equilibrium.from_eqdsk(Path(DATA, "eqref_OOB.json"))
         cls.separatrix = make_polygon(cls.eq.get_separatrix().xyz.T)
         _, cls.x_points = find_OX_points(cls.eq.x, cls.eq.z, cls.eq.psi())
 
@@ -83,13 +86,14 @@ class TestDivertorSilhouetteDesigner:
             assert signed_distance(target, self.separatrix) == 0
 
     def test_target_length_set_by_parameter(self):
-        self.params["div_Ltarg"]["value"] = 1.5
+        val = 1.5
+        self.params["div_Ltarg"]["value"] = val
         designer = DivertorSilhouetteDesigner(self.params, self.eq, self.wall)
 
         divertor = designer.execute()
 
         for target in [divertor[1], divertor[3]]:
-            assert target.length == 1.5
+            assert target.length == pytest.approx(val, rel=0, abs=EPS)
 
     def test_dome_added_to_divertor(self):
         designer = DivertorSilhouetteDesigner(self.params, self.eq, self.wall)

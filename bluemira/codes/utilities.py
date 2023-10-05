@@ -25,7 +25,7 @@ Utility functions for interacting with external codes
 
 import json
 import os
-import subprocess  # noqa: S404
+import subprocess
 import threading
 from enum import Enum
 from types import ModuleType
@@ -61,7 +61,7 @@ def read_mock_json_or_raise(file_path: str, name: str) -> Dict[str, float]:
     Read json file or raise CodesError
     """
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             return json.load(f)
     except OSError as os_error:
         raise CodesError(
@@ -195,8 +195,8 @@ def run_subprocess(command: List[str], run_directory: str = ".", **kwargs) -> in
     kwargs["cwd"] = run_directory
     kwargs.pop("shell", None)  # Protect against user input
 
-    with subprocess.Popen(  # noqa :S603
-        command, stdout=stdout, stderr=stderr, shell=False, **kwargs  # noqa :S603
+    with subprocess.Popen(
+        command, stdout=stdout, stderr=stderr, shell=False, **kwargs  # noqa: S603
     ) as s:
         stdout.close()
         stderr.close()

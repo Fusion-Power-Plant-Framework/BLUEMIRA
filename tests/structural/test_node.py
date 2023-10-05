@@ -28,16 +28,16 @@ from bluemira.structural.node import Node
 class TestNode:
     def test_distances(self):
         n1 = Node(0, 0, 0, 0)
+        rng = np.random.default_rng()
         for _ in range(100):
-            v = 1000 * np.random.rand(3) - 1000
+            v = 1000 * rng.random(3) - 1000
             dx, dy, dz = v
             n2 = Node(dx, dy, dz, 1)
             assert np.isclose(n1.distance_to_other(n2), np.sqrt(np.sum(v**2)))
 
     def test_assignment(self):
         with pytest.raises(AttributeError):
-            node = Node(0, 0, 0, 0)
-            node.dummy = 4
+            Node(0, 0, 0, 0).dummy = 4
 
     def test_defaultsupports(self):
         node = Node(0, 0, 0, 0)

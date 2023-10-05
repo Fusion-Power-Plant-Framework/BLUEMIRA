@@ -108,13 +108,15 @@ default_params = [
 ```
 
 On top of ``black``, which only handles formatting,
-code in bluemira is also checked for quality using [flake8](https://flake8.pycqa.org/en/latest/) and various extensions to it.
+code in bluemira is also checked for quality using [ruff](https://beta.ruff.rs/docs/) which
+implements [flake8](https://flake8.pycqa.org/en/latest/) rules and various extensions to it.
 This is more a question of code style, which black doesn't cover in full.
 
 Code that is committed to a branch is automatically checked for quality using pre-commit.
-Violations detected by ``flake8`` are printed to the console for information.
-It does not prevent you from pushing code, but it will fail in the continuous integration.
-Please address issues raised by ``flake8`` prior to pushing your code.
+Violations detected by our code quality checks are printed to the console for information.
+To avoid checks for a single commit you can use the `--no-verify` flag when committing.
+The checks do not prevent you from pushing code, but the continuous integration checks will fail.
+Please address issues raised by the checks prior to pushing your code.
 
 When writing code for ``bluemira``, please adhere to the following Python naming
 conventions:
@@ -164,7 +166,7 @@ This is not a hard rule, and there are some notable exceptions:
    import matplotlib.pyplot as plt
     ```
     If only a few methods are used from these types of modules directly importing the method is preferred.
-* Formatting of imports is automatically organised by `isort` and `black`. `isort` organises imports into three sections; builtin modules, external modules and internal modules.
+* Formatting of imports is automatically organised by the rules provided by `isort` and `black`. `isort` organises imports into three sections; builtin modules, external modules and internal modules.
 
 All of the above means that this is bad:
 

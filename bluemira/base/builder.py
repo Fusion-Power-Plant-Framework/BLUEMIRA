@@ -26,14 +26,16 @@ Interfaces for builder classes.
 from __future__ import annotations
 
 import abc
-from typing import Dict, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Type, Union
 
 from bluemira.base.components import Component
 from bluemira.base.parameter_frame import ParameterFrame, make_parameter_frame
 from bluemira.base.reactor import ComponentManager  # noqa: F401 for compatibility
-from bluemira.base.reactor_config import ConfigParams
 from bluemira.base.tools import _timing
 from bluemira.utilities.plot_tools import set_component_view
+
+if TYPE_CHECKING:
+    from bluemira.base.reactor_config import ConfigParams
 
 BuildConfig = Dict[str, Union[int, float, str, "BuildConfig"]]
 """
@@ -87,12 +89,10 @@ class Builder(abc.ABC):
     @abc.abstractproperty
     def param_cls(self) -> Union[Type[ParameterFrame], None]:
         """The class to hold this Builders's parameters."""
-        pass
 
     @abc.abstractmethod
     def build(self) -> Component:
         """Build the component."""
-        pass
 
     def component_tree(
         self, xz: List[Component], xy: List[Component], xyz: List[Component]

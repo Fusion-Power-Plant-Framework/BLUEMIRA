@@ -158,7 +158,8 @@ class Mesh:
         )
         self.logfile = logfile
 
-    def _check_meshfile(self, meshfile: Union[str, list]) -> List[str]:
+    @staticmethod
+    def _check_meshfile(meshfile: Union[str, list]) -> List[str]:
         """
         Check the mesh file input.
         """
@@ -170,7 +171,7 @@ class Mesh:
             if len(meshfile) < 1:
                 raise ValueError("meshfile is an empty list")
         else:
-            raise ValueError("meshfile must be a string or a list of strings")
+            raise TypeError("meshfile must be a string or a list of strings")
         return meshfile
 
     @property
@@ -222,7 +223,7 @@ class Mesh:
             # close gmsh
             _FreeCADGmsh._finalize_mesh(self.logfile)
         else:
-            raise ValueError("Only Meshable objects can be meshed")
+            raise TypeError("Only Meshable objects can be meshed")
 
         bluemira_print("Mesh process completed.")
 
@@ -253,7 +254,7 @@ class Mesh:
         return buffer
 
     def __convert_item_to_gmsh(self, buffer: dict, dim: int):
-        for k, v in buffer.items():
+        for k in buffer:
             if k == "BluemiraWire":
                 self.__convert_wire_to_gmsh(buffer, dim)
             if k == "BluemiraFace":
@@ -275,8 +276,8 @@ class Mesh:
         }
         other_dict = {0: "points_tag", 1: "curve_tag", 2: "surface_tag"}
         for k, v in buffer.items():
-            if k in dict_dim.keys():
-                if "physical_group" in v.keys():
+            if k in dict_dim:
+                if "physical_group" in v:
                     _FreeCADGmsh.add_physical_group(
                         dict_dim[k],
                         self.get_gmsh_dict(buffer, "default")[other_dict[dict_dim[k]]],
@@ -312,26 +313,24 @@ class Mesh:
         other_dict = {0: "points_tag", 1: "curve_tag", 2: "surface_tag"}
         points_lcar = []
         for k, v in buffer.items():
-            if k in dict_dim.keys():
-                if "lcar" in v.keys():
-                    if v["lcar"] is not None:
-                        points_tags = self.get_gmsh_dict(buffer, "gmsh")[other_dict[0]]
-                        if len(points_tags) > 0:
-                            points_lcar += [(p[1], v["lcar"]) for p in points_tags]
+            if k in dict_dim:
+                if "lcar" in v and v["lcar"] is not None:
+                    points_tags = self.get_gmsh_dict(buffer, "gmsh")[other_dict[0]]
+                    if len(points_tags) > 0:
+                        points_lcar += [(p[1], v["lcar"]) for p in points_tags]
                 for o in v["boundary"]:
                     points_lcar += self.__create_dict_for_mesh_size(o)
         points_lcar = sorted(points_lcar, key=lambda element: (element[0], element[1]))
         points_lcar.reverse()
         points_lcar = dict(points_lcar)
-        points_lcar = [(k, v) for k, v in points_lcar.items()]
-        return points_lcar
+        return list(points_lcar.items())
 
+    @staticmethod
     def __apply_fragment(
-        self,
         buffer: dict,
-        dim: List[int] = [2, 1, 0],
+        dim: Iterable[int] = (2, 1, 0),
         all_ent=None,
-        tools=[],
+        tools: Optional[list] = None,
         remove_object: bool = True,
         remove_tool: bool = True,
     ):
@@ -339,7 +338,7 @@ class Mesh:
         Apply the boolean fragment operation.
         """
         all_ent, oo, oov = _FreeCADGmsh._fragment(
-            dim, all_ent, tools, remove_object, remove_tool
+            dim, all_ent, [] if tools is None else tools, remove_object, remove_tool
         )
         Mesh.__iterate_gmsh_dict(buffer, _FreeCADGmsh._map_mesh_dict, all_ent, oov)
 
@@ -351,7 +350,7 @@ class Mesh:
         if len(gmsh_dict["curve_tag"]) > 0:
             gmsh_curve_tag = [(1, tag) for tag in gmsh_dict["curve_tag"]]
             new_points = _FreeCADGmsh._get_boundary(gmsh_curve_tag)
-            new_points = list(set([tag[1] for tag in new_points]))
+            new_points = list({tag[1] for tag in new_points})
             gmsh_dict["points_tag"] = new_points
 
     @staticmethod
@@ -364,7 +363,7 @@ class Mesh:
             if "gmsh" in buffer["BluemiraWire"]:
                 function(buffer["BluemiraWire"]["gmsh"], *args)
             for item in boundary:
-                for k, v1 in item.items():
+                for k in item:
                     if k == "BluemiraWire":
                         Mesh.__iterate_gmsh_dict(item, function, *args)
 
@@ -443,7 +442,7 @@ class Mesh:
                 if dim == 1:
                     value["gmsh"] = {}
                     for item in boundary:
-                        for btype_, bvalue in item.items():
+                        for btype_ in item:
                             if btype_ == "BluemiraWire":
                                 self.__convert_wire_to_gmsh(item, dim)
 
@@ -454,7 +453,7 @@ class Mesh:
                     # fragment points_tag and curves
                     all_ent = dict_gmsh["points_tag"] + dict_gmsh["curve_tag"]
                     self.__apply_fragment(buffer, all_ent=all_ent)
-                elif dim == 2:
+                elif dim == 2:  # noqa: PLR2004
                     value["gmsh"]["curveloop_tag"] = []
                     for item in boundary:
                         dict_curve = self.get_gmsh_dict(item)
@@ -485,7 +484,7 @@ class Mesh:
                         # fragment points_tag and curves
                         all_ent = dict_gmsh["points_tag"] + dict_gmsh["curve_tag"]
                         self.__apply_fragment(buffer, all_ent=all_ent)
-                elif dim == 2:
+                elif dim == 2:  # noqa: PLR2004
                     for item in boundary:
                         self.__convert_face_to_gmsh(item, dim)
 
@@ -507,11 +506,11 @@ class Mesh:
                         # fragment points_tag and curves
                         all_ent = dict_gmsh["points_tag"] + dict_gmsh["curve_tag"]
                         self.__apply_fragment(buffer, all_ent=all_ent)
-                elif dim == 2:
+                elif dim == 2:  # noqa: PLR2004
                     for item in boundary:
                         self.__convert_item_to_gmsh(item, dim)
 
-    def get_gmsh_dict(self, buffer: dict, format: str = "default"):
+    def get_gmsh_dict(self, buffer: dict, file_format: str = "default"):
         """
         Returns the gmsh dict in a default (only tags) or gmsh (tuple(dim,
         tag)) format.
@@ -551,9 +550,9 @@ class Mesh:
         for d in MESH_DATA:
             gmsh_dict[d] = list(dict.fromkeys(gmsh_dict[d]))
 
-        if format == "default":
+        if file_format == "default":
             output = gmsh_dict
-        elif format == "gmsh":
+        elif file_format == "gmsh":
             output = {}
             for d in MESH_DATA:
                 output[d] = [(MESH_DATA[d], tag) for tag in gmsh_dict[d]]
@@ -676,9 +675,9 @@ class _FreeCADGmsh:
 
     @staticmethod
     def _fragment(
-        dim: List[int] = [2, 1, 0],
+        dim: Iterable[int] = (2, 1, 0),
         all_ent: Optional[List[int]] = None,
-        tools=[],
+        tools: Optional[list] = None,
         remove_object: bool = True,
         remove_tool: bool = True,
     ):
@@ -693,7 +692,7 @@ class _FreeCADGmsh:
         if len(all_ent) > 1:
             oo, oov = gmsh.model.occ.fragment(
                 objectDimTags=all_ent,
-                toolDimTags=tools,
+                toolDimTags=[] if tools is None else tools,
                 removeObject=remove_object,
                 removeTool=remove_tool,
             )
@@ -702,7 +701,9 @@ class _FreeCADGmsh:
         return all_ent, oo, oov
 
     @staticmethod
-    def _map_mesh_dict(mesh_dict: dict, all_ent, oov: list = []):
+    def _map_mesh_dict(mesh_dict: dict, all_ent, oov: Optional[list] = None):
+        if oov is None:
+            oov = []
         dim_dict = {
             "points_tag": 0,
             "cntrpoints_tag": 0,
@@ -720,8 +721,9 @@ class _FreeCADGmsh:
                     dim = dim_dict[type_]
                     if (dim, v) in all_ent:
                         if len(oov) > 0:
-                            for o in oov[all_ent.index((dim, v))]:
-                                new_gmsh_dict[type_].append(o[1])
+                            new_gmsh_dict[type_].extend(
+                                [o[1] for o in oov[all_ent.index((dim, v))]]
+                            )
                     else:
                         new_gmsh_dict[type_].append(v)
 
@@ -754,7 +756,4 @@ def _add_points(*point: Iterable) -> List:
     """
     Add gmsh model points
     """
-    tags = []
-    for p in point:
-        tags.append(gmsh.model.occ.addPoint(p[0], p[1], p[2]))
-    return tags
+    return [gmsh.model.occ.addPoint(p[0], p[1], p[2]) for p in point]

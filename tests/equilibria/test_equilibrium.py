@@ -19,8 +19,8 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
 from copy import deepcopy
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -28,7 +28,7 @@ import pytest
 from matplotlib import pyplot as plt
 
 from bluemira.base.file import get_bluemira_path, try_get_bluemira_private_data_root
-from bluemira.equilibria.equilibrium import Equilibrium
+from bluemira.equilibria.equilibrium import Equilibrium, FixedPlasmaEquilibrium
 from bluemira.equilibria.file import EQDSKInterface
 from bluemira.equilibria.grid import Grid
 from bluemira.equilibria.opt_constraints import (
@@ -110,13 +110,13 @@ class TestFields:
 
         assert np.allclose(b_values, b1)
 
-    def test_Bx(self):  # noqa :N802
+    def test_Bx(self):
         self.callable_tester(self.eq.Bx)
 
-    def test_Bz(self):  # noqa :N802
+    def test_Bz(self):
         self.callable_tester(self.eq.Bz)
 
-    def test_Bp(self):  # noqa :N802
+    def test_Bp(self):
         self.callable_tester(self.eq.Bp)
 
     def test_psi(self):
@@ -240,7 +240,7 @@ class TestSolveEquilibrium:
             FieldNullConstraint(lcfs.x[x_arg], lcfs.z[x_arg]),
         ]
     )
-    shape_funcs = [DoublePowerFunc([2, 1]), LaoPolynomialFunc([3, 1, 0.5])]
+    shape_funcs = (DoublePowerFunc([2, 1]), LaoPolynomialFunc([3, 1, 0.5]))
 
     @classmethod
     def setup_class(cls):
@@ -351,17 +351,14 @@ class TestSolveEquilibrium:
 class TestEquilibrium:
     def test_double_null(self):
         path = get_bluemira_path("equilibria/test_data", subfolder="tests")
-        fn = os.sep.join([path, "DN-DEMO_eqref.json"])
-        dn = Equilibrium.from_eqdsk(fn)
+        dn = Equilibrium.from_eqdsk(Path(path, "DN-DEMO_eqref.json"))
         assert dn.is_double_null
-        fn = os.sep.join([path, "eqref_OOB.json"])
-        sn = Equilibrium.from_eqdsk(fn)
+        sn = Equilibrium.from_eqdsk(Path(path, "eqref_OOB.json"))
         assert not sn.is_double_null
 
     def test_qpsi_calculation_modes(self):
         path = get_bluemira_path("equilibria/test_data", subfolder="tests")
-        fn = os.sep.join([path, "DN-DEMO_eqref.json"])
-        dn = Equilibrium.from_eqdsk(fn)
+        dn = Equilibrium.from_eqdsk(Path(path, "DN-DEMO_eqref.json"))
         with patch.object(dn, "q") as eq_q:
             res = dn.to_dict(qpsi_calcmode=0)
             assert eq_q.call_count == 0
@@ -382,17 +379,16 @@ class TestEqReadWrite:
     def test_read_write(self, qpsi_calcmode):
         data_path = get_bluemira_path("equilibria/test_data", subfolder="tests")
         file_name = "eqref_OOB.json"
-        file_path = os.sep.join([data_path, file_name])
-
         new_file_name = "eqref_OOB_temp1.json"
-        new_file_path = os.sep.join([data_path, new_file_name])
-        eq = Equilibrium.from_eqdsk(file_path)
+        new_file_path = Path(data_path, new_file_name)
+
+        eq = Equilibrium.from_eqdsk(Path(data_path, file_name))
         eq.to_eqdsk(directory=data_path, filename=new_file_name)
         d1 = eq.to_dict(qpsi_calcmode=qpsi_calcmode)
 
         eq2 = Equilibrium.from_eqdsk(new_file_path)
         d2 = eq2.to_dict(qpsi_calcmode=qpsi_calcmode)
-        os.remove(new_file_path)
+        new_file_path.unlink()
         assert compare_dicts(d1, d2, almost_equal=True)
 
 
@@ -401,14 +397,12 @@ class TestQBenchmark:
     @classmethod
     def setup_class(cls):
         root = try_get_bluemira_private_data_root()
-        path = os.path.join(root, "equilibria", "STEP_SPR_08")
+        path = Path(root, "equilibria", "STEP_SPR_08")
         jetto_file = "SPR-008_3_Inputs_jetto.eqdsk_out"
-        jetto_file = os.path.join(path, jetto_file)
-        jetto = EQDSKInterface.from_file(jetto_file)
+        jetto = EQDSKInterface.from_file(Path(path, jetto_file))
         cls.q_ref = jetto.qpsi
         eq_file = "SPR-008_3_Outputs_STEP_eqref.eqdsk"
-        eq_file = os.path.join(path, eq_file)
-        cls.eq = Equilibrium.from_eqdsk(eq_file)
+        cls.eq = Equilibrium.from_eqdsk(Path(path, eq_file))
 
     def test_q_benchmark(self):
         n = len(self.q_ref)
@@ -417,3 +411,18 @@ class TestQBenchmark:
 
         assert 100 * np.median(abs_rel_difference(q, self.q_ref)) < 3.5
         assert 100 * np.mean(abs_rel_difference(q, self.q_ref)) < 4.0
+
+
+@pytest.mark.private
+class TestFixedPlasmaEquilibrium:
+    @classmethod
+    def setup_class(cls):
+        root = try_get_bluemira_private_data_root()
+        path = Path(root, "equilibria", "STEP_SPR_08", "jetto.eqdsk_out")
+        cls.eq = FixedPlasmaEquilibrium.from_eqdsk(path)
+
+    @pytest.mark.parametrize("field", [False, True])
+    def test_plotting(self, field):
+        self.eq.plot(field=field)
+        plt.show()
+        plt.close()

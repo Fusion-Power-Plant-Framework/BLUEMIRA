@@ -22,7 +22,7 @@
 PROCESS teardown functions
 """
 
-import os
+from pathlib import Path
 from typing import Dict, Iterable, List, Union
 
 import numpy as np
@@ -71,7 +71,7 @@ class Teardown(CodesTeardown):
         This loads the MFile in the run directory and maps its outputs
         to bluemira parameters.
         """
-        self._load_mfile(os.path.join(self.run_directory, "MFILE.DAT"), recv_all=False)
+        self._load_mfile(Path(self.run_directory, "MFILE.DAT"), recv_all=False)
 
     def runinput(self):
         """
@@ -80,7 +80,7 @@ class Teardown(CodesTeardown):
         This loads the MFile in the run directory and maps its outputs
         to bluemira parameters.
         """
-        self._load_mfile(os.path.join(self.run_directory, "MFILE.DAT"), recv_all=True)
+        self._load_mfile(Path(self.run_directory, "MFILE.DAT"), recv_all=True)
 
     def read(self):
         """
@@ -89,7 +89,7 @@ class Teardown(CodesTeardown):
         This loads the MFile in the run directory and maps its outputs
         to bluemira parameters.
         """
-        self._load_mfile(os.path.join(self.read_directory, "MFILE.DAT"), recv_all=False)
+        self._load_mfile(Path(self.read_directory, "MFILE.DAT"), recv_all=False)
 
     def readall(self):
         """
@@ -98,7 +98,7 @@ class Teardown(CodesTeardown):
         This loads the MFile in the run directory and maps its outputs
         to bluemira parameters.
         """
-        self._load_mfile(os.path.join(self.read_directory, "MFILE.DAT"), recv_all=True)
+        self._load_mfile(Path(self.read_directory, "MFILE.DAT"), recv_all=True)
 
     def mock(self):
         """
@@ -108,7 +108,7 @@ class Teardown(CodesTeardown):
         loads the values into this task's params.
         """
         bluemira_print("Mocking PROCESS systems code run")
-        mock_file_path = os.path.join(self.read_directory, self.MOCK_JSON_NAME)
+        mock_file_path = Path(self.read_directory, self.MOCK_JSON_NAME)
         outputs = read_mock_json_or_raise(mock_file_path, self._name)
         self.params.update_values(outputs, source=self._name)
 
@@ -145,9 +145,9 @@ class Teardown(CodesTeardown):
                 value = data[process_name]
             except KeyError:
                 raise CodesError(
-                    f"No {self._name} output, or bluemira parameter mapped to a {self._name} "
-                    f"output, with name '{param_name}'."
-                )
+                    f"No {self._name} output, or bluemira parameter mapped to a"
+                    f" {self._name} output, with name '{param_name}'."
+                ) from None
             outputs.append(value)
         return outputs
 
@@ -186,7 +186,7 @@ class _MFileWrapper:
     """
 
     def __init__(self, file_path: str, name: str = "PROCESS"):
-        if not os.path.isfile(file_path):
+        if not Path(file_path).is_file():
             raise CodesError(f"Path '{file_path}' is not a file.")
         self._name = name
         self.file_path = file_path
@@ -205,8 +205,8 @@ class _MFileWrapper:
             param_name = update_obsolete_vars(process_param_name)
             if param_name is None:
                 bluemira_warn(
-                    f"{self._name} parameter '{process_param_name}' is obsolete and has no "
-                    " alternative. Setting value to NaN"
+                    f"{self._name} parameter '{process_param_name}' is obsolete and has"
+                    " no alternative. Setting value to NaN"
                 )
                 self.data[process_param_name] = np.nan
             elif isinstance(param_name, list):
@@ -247,7 +247,7 @@ class _MFileWrapper:
             raise CodesError(
                 f"Missing PROCESS parameter in '{self.file_path}': {key_error}\n"
                 "Cannot derive required bluemira parameters."
-            )
+            ) from None
         return {
             "rtfin": rtfin,
             "r_ts_ib_in": r_ts_ib_in,

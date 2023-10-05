@@ -239,7 +239,7 @@ class FiniteElementModel:
             self.n_fixed_dofs += n_supports  # Count fixed DOFs
 
             if n_supports != 0:
-                support_indices = np.where(node.supports == True)[0]  # noqa (E712)
+                support_indices = np.nonzero(node.supports == True)[0]  # noqa: E712
                 dofs = [6 * node.id_number + i for i in support_indices]
                 # Keep tracked of fixed DOFs
                 self.fixed_dof_ids.extend(dofs)
@@ -451,7 +451,7 @@ class FiniteElementModel:
         k_matrix:
             The global stiffness matrix to be checked ((6*n_nodes, 6*n_nodes))
         """
-        if self.n_fixed_dofs < 6:
+        if self.n_fixed_dofs < 6:  # noqa: PLR2004
             # TODO: check dimensionality of problem (1-D, 2-D, 3-D) and reduce
             # number of fixed DOFs required accordingly.
             raise StructuralError(

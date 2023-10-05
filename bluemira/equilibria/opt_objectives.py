@@ -37,7 +37,7 @@ Note that the gradient of the objective function is of the form:
 
 :math:`\\nabla f = \\bigg[\\dfrac{\\partial f}{\\partial x_0}, \\dfrac{\\partial f}{\\partial x_1}, ...\\bigg]`
 """  # noqa (W505)
-
+import warnings
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
@@ -45,6 +45,15 @@ import numpy as np
 from bluemira.base.look_and_feel import bluemira_print_flush
 from bluemira.equilibria.error import EquilibriaError
 from bluemira.utilities.optimiser import approx_derivative
+
+warnings.warn(
+    f"The module '{__name__}' is deprecated and will be removed in v2.0.0.\n"
+    "See "
+    "https://bluemira.readthedocs.io/en/latest/optimisation/optimisation.html "
+    "for documentation of the new optimisation module.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 def ad_objective(

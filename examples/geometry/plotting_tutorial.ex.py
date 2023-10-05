@@ -41,8 +41,8 @@ Plotting module examples
 # %%
 import matplotlib.pyplot as plt
 
-import bluemira.display as display
 import bluemira.geometry.tools
+from bluemira import display
 from bluemira.base.components import Component, PhysicalComponent
 from bluemira.display.plotter import FacePlotter, WirePlotter
 from bluemira.geometry.face import BluemiraFace
@@ -104,8 +104,8 @@ print(my_options)
 # with the new options
 
 # %%
-my_options["wire_options"] = {"color": "red", "linewidth": "1.5"}
-display.plot_2d(wire, **my_options)
+my_options.wire_options = {"color": "red", "linewidth": "1.5"}
+display.plot_2d(wire, my_options)
 
 # %% [markdown]
 #
@@ -177,12 +177,12 @@ display.plot_3d(
 #
 # A WirePlotter is used with the default setup with:
 #
-# - plane = xz (this is the projection plane, not a section plane)
+# - view = xz (this is the projection plane, not a section plane)
 # - point size = 20
 # - ndiscr = 15
 
 # %%
-wplotter = WirePlotter(plane="xz")
+wplotter = WirePlotter(view="xz")
 wplotter.options.point_options["s"] = 20
 wplotter.options.ndiscr = 15
 wplotter.plot_2d(wire)
@@ -202,7 +202,7 @@ display.plot_3d(wire, **wplotter.options.as_dict())
 # In this example point_options is set to an empty dict. The default matplotlib are used.
 
 # %%
-display.plot_2d(wire, points_options={})
+display.plot_2d(wire, point_options={})
 # The plot is immediately shown by default, so it is not possible to act on the plot
 
 # %% [markdown]
@@ -223,13 +223,13 @@ plt.show()
 #
 # A FacePlotter is used with the default setup with:
 #
-# - plane = xz (this is the projection plane, not a section plane)
+# - view = xz (this is the projection plane, not a section plane)
 # - ndiscr = 30
 # - plot title
 
 # %%
 f, ax = plt.subplots()
-fplotter = FacePlotter(plane="xz")
+fplotter = FacePlotter(view="xz")
 fplotter.options.ndiscr = 30
 fplotter.plot_2d(face, ax=ax, show=False)
 ax.set_title("Face plot without points (default)")
@@ -243,10 +243,10 @@ plt.show()
 
 # %%
 f, ax = plt.subplots()
-fplotter = FacePlotter(plane="xz")
-fplotter.options.ndiscr = 30
-fplotter.options.show_points = True
-fplotter.plot_2d(face, ax=ax, show=False)
+fplotter2 = FacePlotter(view="xz")
+fplotter2.options.ndiscr = 30
+fplotter2.options.show_points = True
+fplotter2.plot_2d(face, ax=ax, show=False)
 ax.set_title("Face plot with points")
 plt.show()
 
@@ -257,10 +257,10 @@ plt.show()
 
 # %%
 f, ax = plt.subplots()
-fplotter = FacePlotter(plane="xz")
-fplotter.options.show_wires = True
-fplotter.options.show_faces = False
-fplotter.plot_2d(face, ax=ax, show=False)
+fplotter3 = FacePlotter(view="xz")
+fplotter3.options.show_wires = True
+fplotter3.options.show_faces = False
+fplotter3.plot_2d(face, ax=ax, show=False)
 ax.set_title("Face plot its wire")
 plt.show()
 
@@ -284,13 +284,13 @@ face2 = BluemiraFace(wire2)
 # been changed, the two faces will be plotted in the same way (e.g. same color).
 
 # %%
-fplotter2 = FacePlotter(plane="xz")
-fplotter2.options.show_points = True
-fplotter2.options.face_options = {"color": "blue"}
+fplotter4 = FacePlotter(view="xz")
+fplotter4.options.show_points = True
+fplotter4.options.face_options = {"color": "blue"}
 
 f, ax = plt.subplots()
-fplotter2.plot_2d(face, ax=ax, show=False)
-fplotter2.plot_2d(face2, ax=ax, show=False)
+fplotter4.plot_2d(face, ax=ax, show=False)
+fplotter4.plot_2d(face2, ax=ax, show=False)
 ax.set_title("Both faces in blue")
 plt.show()
 print(f"fplotter2.options: {fplotter2.options}")
@@ -304,10 +304,10 @@ print(f"fplotter2.options: {fplotter2.options}")
 
 # %%
 f, ax = plt.subplots()
-fplotter2.options.face_options = {"color": "blue"}
-fplotter2.plot_2d(face2, ax=ax, show=False)
-fplotter2.options.face_options = {"color": "green"}
-fplotter2.plot_2d(face, ax=ax, show=False)
+fplotter4.options.face_options = {"color": "blue"}
+fplotter4.plot_2d(face2, ax=ax, show=False)
+fplotter4.options.face_options = {"color": "green"}
+fplotter4.plot_2d(face, ax=ax, show=False)
 ax.set_title("Both faces with different colors")
 plt.show()
 
@@ -326,23 +326,24 @@ plt.show()
 # %%
 f, ax = plt.subplots()
 face3 = BluemiraFace([wire2.deepcopy(), wire.deepcopy()])
-fplotter3 = FacePlotter(plane="xz")
-fplotter3.options.show_points = True
-ax = fplotter3.plot_2d(face3, ax=ax, show=False)
+fplotter5 = FacePlotter(view="xz")
+fplotter5.options.show_points = True
+ax = fplotter5.plot_2d(face3, ax=ax, show=False)
 ax.set_title("Face with hole - points enabled")
 plt.show()
 
 f, ax = plt.subplots()
-fplotter3.options.face_options["color"] = "blue"
-fplotter3.options.show_points = False
-fplotter3.plot_2d(face3, ax=ax, show=False)
+fplotter5.options.face_options["color"] = "blue"
+fplotter5.options.show_points = False
+fplotter5.plot_2d(face3, ax=ax, show=False)
 ax.set_title("Face with hole - points disabled - blue")
 plt.show()
 
 # %% [markdown]
 # ## Perform Some Face Operations
 #
-# Scale and move our face
+# Scale and move our face,
+# if you run the above face plots again you can see they will change.
 
 # %%
 bari = face.center_of_mass
@@ -363,9 +364,9 @@ points = [[0, 0, 0], [1, 0, 0], [1, 0, 3], [0, 0, 3]]
 wire = bluemira.geometry.tools.make_polygon(points, closed=True)
 wire1 = wire.deepcopy()
 wire1.translate((3, 0, 5))
-wplotter = WirePlotter(plane="xz")
-ax = wplotter.plot_2d(wire, show=False)
-ax = wplotter.plot_2d(wire1, ax=ax, show=False)
+wplotter2 = WirePlotter(view="xz")
+ax = wplotter2.plot_2d(wire, show=False)
+ax = wplotter2.plot_2d(wire1, ax=ax, show=False)
 ax.set_title("Two wires")
 plt.show()
 
@@ -391,26 +392,24 @@ w1face = BluemiraFace(wire1)
 # by default. This will not be the same every time.
 
 # %%
-c = PhysicalComponent("Comp", face)
-c.plot_options.plane = "xz"
-c.plot_options.ndiscr = 30
-ax = c.plot_2d(show=False)
+pd_phycomp = PhysicalComponent("Comp", face)
+pd_phycomp.plot_options.view = "xz"
+pd_phycomp.plot_options.ndiscr = 30
+ax = pd_phycomp.plot_2d(show=False)
 ax.set_title("test component plot")
 plt.show(block=True)
 
 # %% [markdown]
-# ## PhysicalComponent Plot
-#
-# Creates a `PhysicalComponent` and plots only the wire and not the face.
+# this time plots only the wire and not the face.
 #
 # Note that unlike the `FacePlotter` when `show_faces = False` the wire is
 # shown by default.
 
 # %%
-c = PhysicalComponent("Comp", face)
-c.plot_options.plane = "xz"
-c.plot_options.show_faces = False
-ax = c.plot_2d(show=False)
+pd_phycomp = PhysicalComponent("Comp", face)
+pd_phycomp.plot_options.view = "xz"
+pd_phycomp.plot_options.show_faces = False
+ax = pd_phycomp.plot_2d(show=False)
 ax.set_title("test component plot wire of face")
 plt.show(block=True)
 
@@ -438,22 +437,29 @@ display.plot_2d(group, **my_group_options)
 # Plots a component on the same axes as a BluemiraFace.
 
 # %%
-wplotter.options.wire_options["color"] = "red"
-ax = wplotter.plot_2d(wface.boundary[0], show=False)
-fplotter.options.face_options["color"] = "green"
-fplotter.options.wire_options["color"] = "black"
-ax = fplotter.plot_2d(w1face, ax=ax, show=False)
-ax = c.plot_2d(ax=ax, show=False)
-ax.set_title("test component + bluemirageo plot")
+wplotter3 = WirePlotter(view="xz")
+wplotter3.options.point_options["s"] = 20
+wplotter3.options.ndiscr = 15
+wplotter3.options.wire_options["color"] = "red"
+ax = wplotter3.plot_2d(wface.boundary[0], show=False)
+
+fplotter6 = FacePlotter(view="xz")
+fplotter6.options.show_wires = True
+fplotter6.options.face_options["color"] = "green"
+fplotter6.options.wire_options["color"] = "black"
+ax = fplotter6.plot_2d(w1face, ax=ax, show=False)
+
+ax = pd_phycomp.plot_2d(ax=ax, show=False)
+ax.set_title("test component + BluemiraGeo plot")
 plt.show(block=True)
 
 # %% [markdown]
 # Show the options from our combined plot
 
 # %%
-print(f"wire plotter options: {wplotter.options}")
-print(f"face plotter options: {fplotter.options}")
-print(f"component plotter options: {c.plot_options}")
+print(f"wire plotter options: {wplotter3.options}")
+print(f"face plotter options: {fplotter6.options}")
+print(f"component plotter options: {pd_phycomp.plot_options}")
 
 # %% [markdown]
 # ## CAD Display
@@ -477,8 +483,8 @@ group.show_cad()
 # Colours can be specified as an R-G-B tuple, string, or hex-string.
 
 # %%
-c1.display_cad_options.modify(**{"color": (0.1, 0.2, 0.4)})
-c2.display_cad_options.modify(**{"color": "g"})
-c3.display_cad_options.modify(**{"color": "#FF3450", "transparency": 0.5})
+c1.display_cad_options.modify(color=(0.1, 0.2, 0.4))
+c2.display_cad_options.modify(color="g")
+c3.display_cad_options.modify(color="#FF3450", transparency=0.5)
 
 group.show_cad()

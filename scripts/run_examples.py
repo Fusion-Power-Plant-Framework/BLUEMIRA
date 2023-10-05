@@ -69,11 +69,13 @@ def parse_args(sys_args: List[str]) -> Args:
 
 def find_python_files(examples_dir: str, exclude_patterns: List[str]) -> List[str]:
     """Glob for Python files in the given directory."""
-    files = []
-    for path in Path(examples_dir).rglob("*.py"):
-        if not any(re.search(p, str(path)) for p in exclude_patterns):
-            files.append(path)
-    return sorted(files)
+    return sorted(
+        [
+            path
+            for path in Path(examples_dir).rglob("*.py")
+            if not any(re.search(p, str(path)) for p in exclude_patterns)
+        ]
+    )
 
 
 def run_example(file_path: str) -> bool:
@@ -81,7 +83,7 @@ def run_example(file_path: str) -> bool:
     source = Path(file_path).read_text()
     try:
         exec(compile(source, file_path, "exec"), globals())  # noqa: S102
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(e, file=sys.stderr)
         return False
     finally:
@@ -118,7 +120,7 @@ def run_examples(
 
 
 if __name__ == "__main__":
-    # Hack to make external_code example run
+    # Make external_code example run
     sys.path.insert(0, str(Path(Path(__file__).parent.parent, "examples", "codes")))
 
     args = parse_args(sys.argv[1:])

@@ -25,7 +25,7 @@ PROCESS's parameter definitions.
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import ClassVar, Dict, List, Union
 
 from bluemira.base.parameter_frame import Parameter
 from bluemira.codes.params import MappedParameterFrame, ParameterMapping
@@ -330,7 +330,7 @@ class ProcessSolverParams(MappedParameterFrame):
     Z_eff: Parameter[float]
     """Effective particle radiation atomic mass [unified_atomic_mass_unit]."""
 
-    _mappings = deepcopy(mappings)
+    _mappings: ClassVar = deepcopy(mappings)
     _defaults = ProcessInputs()
 
     @property

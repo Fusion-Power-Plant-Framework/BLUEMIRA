@@ -89,11 +89,9 @@ class TestPlacement:
         matrix = xy_placement.to_matrix()
         xy2_placement = BluemiraPlacement.from_matrix(matrix)
         self._check_placements_equal(xy_placement, xy2_placement)
-
+        rng = np.random.default_rng()
         for _ in range(10):
-            placement = BluemiraPlacement(
-                np.random.rand(3), np.random.rand(3), np.random.rand()
-            )
+            placement = BluemiraPlacement(rng.random(3), rng.random(3), rng.random())
             matrix = placement.to_matrix()
             matrix[:3, :3] *= 2  # Test that it gets normalised
             placement2 = BluemiraPlacement.from_matrix(matrix)

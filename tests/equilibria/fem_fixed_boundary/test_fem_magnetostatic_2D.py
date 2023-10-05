@@ -48,10 +48,9 @@ def parameterisation_fixture_not_fully_init(
     """
     if test_no == 1:
         return FemGradShafranovFixedBoundary(**solver_kwargs)
-    elif test_no == 2:
+    if test_no == 2:
         return FemGradShafranovFixedBoundary(p_prime, ff_prime, **solver_kwargs)
-    else:
-        return FemGradShafranovFixedBoundary(mesh=mesh, **solver_kwargs)
+    return FemGradShafranovFixedBoundary(mesh=mesh, **solver_kwargs)
 
 
 class TestFemGradShafranovFixedBoundary:

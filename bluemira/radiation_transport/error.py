@@ -31,12 +31,8 @@ class RadiationTransportError(BluemiraError):
     Base error for the radiation_transport module.
     """
 
-    pass
-
 
 class AdvectionTransportError(RadiationTransportError):
     """
     Error class for advective transport solver.
     """
-
-    pass

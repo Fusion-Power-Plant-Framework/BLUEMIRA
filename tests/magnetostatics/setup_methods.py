@@ -28,7 +28,7 @@ def _plot_verification_test(
 ):
     def relative_diff(x1, x2):
         diff = np.zeros(x1.shape)
-        mask = np.where(x1 != 0)
+        mask = np.nonzero(x1)
         diff[mask] = np.abs(x2[mask] - x1[mask]) / x1[mask]
         return diff
 

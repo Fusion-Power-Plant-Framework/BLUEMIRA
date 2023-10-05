@@ -69,10 +69,10 @@ def process_xyz_array(func):
         if len(x) == 1:
             # Float handling
             return func(cls, x[0], y[0], z[0])
-        elif len(x.shape) == 1:
+        if len(x.shape) == 1:
             # 1-D array handling
             return np.array([func(cls, xi, yi, zi) for xi, yi, zi in zip(x, y, z)]).T
-        elif len(x.shape) == 2:
+        if len(x.shape) == 2:  # noqa: PLR2004
             # 2-D array handling
             m, n = x.shape
             result = np.zeros((3, m, n))
@@ -81,10 +81,9 @@ def process_xyz_array(func):
                     result[:, i, j] = np.array([func(cls, x[i, j], y[i, j], z[i, j])])
             return result
 
-        else:
-            raise MagnetostaticsError(
-                "This operation only supports floats and 1-D and 2-D arrays."
-            )
+        raise MagnetostaticsError(
+            "This operation only supports floats and 1-D and 2-D arrays."
+        )
 
     return wrapper
 
@@ -126,8 +125,7 @@ def process_to_coordinates(shape: Union[np.ndarray, dict, Coordinates]) -> Coord
     """
     if isinstance(shape, Coordinates):
         return shape
-    else:
-        return Coordinates(shape)
+    return Coordinates(shape)
 
 
 def jit_llc7(f_integrand: Callable) -> LowLevelCallable:
@@ -146,7 +144,7 @@ def jit_llc7(f_integrand: Callable) -> LowLevelCallable:
     f_jitted = nb.jit(f_integrand, nopython=True, cache=True)
 
     @nb.cfunc(float64(intc, CPointer(float64)))
-    def wrapped(n, xx):  # noqa: U100
+    def wrapped(n, xx):  # noqa: ARG001
         return f_jitted(xx[0], xx[1], xx[2], xx[3], xx[4], xx[5], xx[6])
 
     return LowLevelCallable(wrapped.ctypes)
@@ -168,7 +166,7 @@ def jit_llc5(f_integrand: Callable) -> LowLevelCallable:
     f_jitted = nb.jit(f_integrand, nopython=True, cache=True)
 
     @nb.cfunc(float64(intc, CPointer(float64)))
-    def wrapped(n, xx):  # noqa: U100
+    def wrapped(n, xx):  # noqa: ARG001
         return f_jitted(xx[0], xx[1], xx[2], xx[3], xx[4])
 
     return LowLevelCallable(wrapped.ctypes)
@@ -190,7 +188,7 @@ def jit_llc4(f_integrand: Callable) -> LowLevelCallable:
     f_jitted = nb.jit(f_integrand, nopython=True, cache=True)
 
     @nb.cfunc(float64(intc, CPointer(float64)))
-    def wrapped(n, xx):  # noqa: U100
+    def wrapped(n, xx):  # noqa: ARG001
         return f_jitted(xx[0], xx[1], xx[2], xx[3])
 
     return LowLevelCallable(wrapped.ctypes)
@@ -212,15 +210,13 @@ def jit_llc3(f_integrand: Callable) -> LowLevelCallable:
     f_jitted = nb.jit(f_integrand, nopython=True, cache=True)
 
     @nb.cfunc(float64(intc, CPointer(float64)))
-    def wrapped(n, xx):  # noqa: U100
+    def wrapped(n, xx):  # noqa: ARG001
         return f_jitted(xx[0], xx[1], xx[2])
 
     return LowLevelCallable(wrapped.ctypes)
 
 
-def integrate(
-    func: Callable, args: Iterable, bound1: Union[float, int], bound2: Union[float, int]
-) -> float:
+def integrate(func: Callable, args: Iterable, bound1: float, bound2: float) -> float:
     """
     Utility for integration of a function between bounds. Easier to refactor
     integration methods.

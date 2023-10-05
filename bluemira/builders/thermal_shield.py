@@ -47,6 +47,7 @@ from bluemira.geometry.tools import (
     _offset_wire_discretised,
     boolean_cut,
     boolean_fuse,
+    force_wire_to_spline,
     make_polygon,
     offset_wire,
 )
@@ -110,17 +111,19 @@ class VVTSBuilder(Builder):
         # _offset_wire_discretised used because
         # the cad offset regularly doesn't work properly here.
         # due to topology but unknown why here particularly
-        ex_args = dict(
-            join="intersect",
-            open_wire=False,
-            ndiscr=600,
-        )
+        ex_args = {
+            "join": "intersect",
+            "open_wire": False,
+            "ndiscr": 600,
+        }
         vvts_inner_wire = _offset_wire_discretised(
             koz, self.params.g_vv_ts.value, **ex_args
         )
         vvts_outer_wire = _offset_wire_discretised(
             koz, self.params.tk_ts.value + self.params.g_vv_ts.value, **ex_args
         )
+        vvts_inner_wire = force_wire_to_spline(vvts_inner_wire, n_edges_max=100)
+        vvts_outer_wire = force_wire_to_spline(vvts_outer_wire, n_edges_max=100)
         vvts_face = BluemiraFace([vvts_outer_wire, vvts_inner_wire])
         self.vvts_face = vvts_face
 
@@ -133,7 +136,8 @@ class VVTSBuilder(Builder):
         apply_component_display_options(vvts_void, color=(0, 0, 0))
         return vvts, vvts_void
 
-    def build_xy(self, vvts_face: BluemiraFace) -> List[PhysicalComponent]:
+    @staticmethod
+    def build_xy(vvts_face: BluemiraFace) -> List[PhysicalComponent]:
         """
         Build the x-y components of the vacuum vessel thermal shield.
 

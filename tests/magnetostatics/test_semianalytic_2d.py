@@ -20,7 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import json
-import os
+from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -169,7 +169,7 @@ class TestPoloidalFieldBenchmark:
 
     @staticmethod
     def load_data(filename):
-        with open(filename, "r") as file:
+        with open(filename) as file:
             data = json.load(file)
             x = np.array(data["x"], dtype=float)
             z = np.array(data["z"], dtype=float)
@@ -178,14 +178,13 @@ class TestPoloidalFieldBenchmark:
         return x, z, B
 
     def test_field_inside_coil_z_z(self):
-        filename = os.sep.join([self.path, "new_B_along_z-z.json"])
-        x, z, B = self.load_data(filename)
+        x, z, B = self.load_data(Path(self.path, "new_B_along_z-z.json"))
 
         fig, ax = plt.subplots()
 
         x_values = np.unique(x)
         for x_value in x_values:
-            idx = np.where(np.isclose(x, x_value))[0]
+            idx = np.nonzero(np.isclose(x, x_value))[0]
             z_x = z[idx]
             b_fe = B[idx]
 
@@ -210,14 +209,13 @@ class TestPoloidalFieldBenchmark:
         plt.close(fig)
 
     def test_field_inside_coil_x_x(self):
-        filename = os.sep.join([self.path, "new_B_along_x-x.json"])
-        x, z, B = self.load_data(filename)
+        x, z, B = self.load_data(Path(self.path, "new_B_along_x-x.json"))
 
         fig, ax = plt.subplots()
 
         z_values = np.unique(z)[:5]  # Mirrored about coil zc-axis
         for z_value in z_values:
-            idx = np.where(np.isclose(z, z_value))[0]
+            idx = np.nonzero(np.isclose(z, z_value))[0]
             x_z = x[idx][1:]  # Can't do 0
             b_fe = B[idx][1:]
 

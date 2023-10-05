@@ -40,7 +40,8 @@ Test for plasmod run
 """
 
 # %%
-import os
+import shutil
+from pathlib import Path
 from pprint import pprint
 
 import matplotlib.pyplot as plt
@@ -71,8 +72,11 @@ set_log_level("DEBUG")
 # binary location to the solver.
 
 # %%
-PLASMOD_PATH = os.path.join(os.path.dirname(get_bluemira_root()), "plasmod")
-binary = os.path.join(PLASMOD_PATH, "bin", "plasmod")
+if plasmod_binary := shutil.which("plasmod"):
+    PLASMOD_PATH = Path(plasmod_binary).parent
+else:
+    PLASMOD_PATH = Path(Path(get_bluemira_root()).parent, "plasmod/bin")
+binary = Path(PLASMOD_PATH, "plasmod").as_posix()
 
 # %% [markdown]
 # ### Creating the solver object
@@ -168,10 +172,12 @@ def print_outputs(solver):
     print(f"{solver.params.Z_eff}")
     print(f"H-factor [-]: {outputs.Hfact}")
     print(
-        f"Divertor challenging criterion (P_sep * Bt /(q95 * R0 * A)) [-]: {outputs.psepb_q95AR}"
+        "Divertor challenging criterion (P_sep * Bt /(q95 * R0 * A)) [-]:"
+        f" {outputs.psepb_q95AR}"
     )
     print(
-        f"H-mode operating regime f_LH = P_sep/P_LH [-]: {solver.params.P_sep.value / solver.params.P_LH.value}"
+        "H-mode operating regime f_LH = P_sep/P_LH [-]:"
+        f" {solver.params.P_sep.value / solver.params.P_LH.value}"
     )
     print(f"{solver.params.tau_e}")
     print(f"Protium fraction [-]: {outputs.cprotium}")
@@ -216,7 +222,7 @@ solver.execute(plasmod.RunMode.RUN)
 
 # %%
 print("Profiles")
-pprint(list(plasmod.mapping.Profiles))
+pprint(list(plasmod.mapping.Profiles))  # noqa: T203
 
 # %%
 plot_profile(solver, plasmod.Profiles.Te, "keV")

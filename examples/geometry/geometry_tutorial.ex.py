@@ -60,7 +60,7 @@ A geometry tutorial for users.
 # Let's start out by importing all the basic objects, and some typical tools
 
 # %%
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -86,7 +86,7 @@ from bluemira.geometry.tools import (
     make_circle,
     make_polygon,
     revolve_shape,
-    save_as_STP,
+    save_cad,
     sweep_shape,
 )
 from bluemira.geometry.wire import BluemiraWire
@@ -144,13 +144,14 @@ wire_plotter.plot_2d(full_wire)
 # More complex geometries can be created using splines, arcs, etc.
 
 # %%
-wires = []
-wires.append(make_polygon([[0, 3], [0, 0], [0, 0]], label="w1"))
-wires.append(make_circle(1, (3, 1, 0), 270, 360, label="c2"))
-wires.append(make_polygon([[4, 4], [1, 3], [0, 0]], label="w3"))
-wires.append(make_circle(1, (3, 3, 0), 0, 90, label="c4"))
-wires.append(make_polygon([[3, 0], [4, 4], [0, 0]], label="w5"))
-wires.append(make_polygon([[0, 0], [4, 0], [0, 0]], label="w6"))
+wires = [
+    make_polygon([[0, 3], [0, 0], [0, 0]], label="w1"),
+    make_circle(1, (3, 1, 0), 270, 360, label="c2"),
+    make_polygon([[4, 4], [1, 3], [0, 0]], label="w3"),
+    make_circle(1, (3, 3, 0), 0, 90, label="c4"),
+    make_polygon([[3, 0], [4, 4], [0, 0]], label="w5"),
+    make_polygon([[0, 0], [4, 0], [0, 0]], label="w6"),
+]
 closed_wire = BluemiraWire(wires, label="closed_wire")
 wire_plotter.plot_2d(closed_wire)
 
@@ -406,8 +407,8 @@ show_cad([cut_box_1, new_cut_box_1], options=blue_red_options)
 # %% [markdown]
 # ## Exporting geometry
 #
-# At present, only the STEP Assembly format is supported
-# for exporting geometry.
+# Many different CAD file types can be written,
+# for a full list see the `CADFileType` class.
 
 # %%
 # Try saving any shape or group of shapes created above
@@ -416,10 +417,10 @@ show_cad([cut_box_1, new_cut_box_1], options=blue_red_options)
 my_shapes = [cut_box_1]
 # Modify this file path to where you want to save the data.
 my_file_path = "my_tutorial_assembly.STP"
-save_as_STP(
+save_cad(
     my_shapes,
-    filename=os.path.join(
+    filename=Path(
         get_bluemira_path("", subfolder="generated_data"), my_file_path
-    ),
-    scale=1,
+    ).as_posix(),
+    unit_scale="metre",
 )

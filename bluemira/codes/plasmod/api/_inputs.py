@@ -35,10 +35,10 @@ from bluemira.codes.error import CodesError
 from bluemira.codes.plasmod.mapping import (
     EquilibriumModel,
     ImpurityModel,
-    PedestalModel,
     PLHModel,
-    SafetyProfileModel,
+    PedestalModel,
     SOLModel,
+    SafetyProfileModel,
     TransportModel,
 )
 
@@ -228,7 +228,7 @@ class PlasmodInputs:
             except ValueError as value_error:
                 raise CodesError(
                     f"Invalid value found for plasmod input '{model}': {value_error}"
-                )
+                ) from value_error
             setattr(self, model, enum_value)
 
     @staticmethod
@@ -242,7 +242,7 @@ class PlasmodInputs:
         for enum_val in enum_cls:
             # Let's us specify using the enum value (usually an int)
             # or specify using the enum's name (e.g., q95_sawtooth)
-            if enum_val.value == value or enum_val.name == value:
+            if value in (enum_val.value, enum_val.name):
                 return enum_val
         raise ValueError(
             f"Cannot convert '{value}' to value enumerated by '{enum_cls.__name__}'."

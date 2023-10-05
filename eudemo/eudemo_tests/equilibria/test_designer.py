@@ -20,7 +20,7 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import json
-import os
+from pathlib import Path
 from typing import Dict
 
 import pytest
@@ -32,14 +32,14 @@ from eudemo.equilibria._designer import EquilibriumDesignerParams
 
 
 class TestEquilibriumDesigner:
-    EQDSK_FILE = os.path.join(
+    EQDSK_FILE = Path(
         get_bluemira_path("equilibria", subfolder="data"), "EU-DEMO_EOF.json"
     )
-    DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
+    DATA_DIR = Path(Path(__file__).parent, "test_data")
 
     @classmethod
     def setup_class(cls):
-        cls.param_dict = cls._read_json(os.path.join(cls.DATA_DIR, "params.json"))
+        cls.param_dict = cls._read_json(Path(cls.DATA_DIR, "params.json"))
 
     def test_params_converted_to_parameter_frame(self):
         designer = EquilibriumDesigner(self.param_dict)
@@ -68,10 +68,10 @@ class TestEquilibriumDesigner:
         assert eq.analyse_plasma() == ref_eq.analyse_plasma()
 
     def test_ValueError_on_init_given_read_mode_and_no_file_path(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             EquilibriumDesigner(self.param_dict, {"run_mode": "read"})
 
     @staticmethod
     def _read_json(file_path: str) -> Dict:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             return json.load(f)

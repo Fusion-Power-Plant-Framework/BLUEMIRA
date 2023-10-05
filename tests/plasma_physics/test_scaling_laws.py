@@ -20,7 +20,9 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import pytest
 
+from bluemira.base.constants import EPS
 from bluemira.plasma_physics.scaling_laws import P_LH, IPB98y2, lambda_q
 
 
@@ -57,4 +59,4 @@ class TestIPB98y2:
 
         value = IPB98y2(15e6, 5.3, 100e6, 1e20, 2.5, 6.2, 3.1, 1.59)
 
-        assert round(value, 0) == 3.0
+        assert round(value, 0) == pytest.approx(3.0, rel=0, abs=EPS)

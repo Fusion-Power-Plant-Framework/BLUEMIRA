@@ -160,7 +160,11 @@ def piecewise_linear_threshold(
     -------
     The vector of fitted values
     """
-    return np.piecewise(x, [x < x0], [lambda fx: m1 * fx + y0 - m1 * x0, lambda fx: m2])
+    return np.piecewise(
+        x,
+        [x < x0],
+        [lambda fx: m1 * fx + y0 - m1 * x0, lambda fx: m2],  # noqa: ARG005
+    )
 
 
 def piecewise_sqrt_threshold(
@@ -185,7 +189,9 @@ def piecewise_sqrt_threshold(
     The vector of fitted values
     """
     return np.piecewise(
-        x, [x < kink], [lambda fx: factor * np.sqrt(fx), lambda fx: threshold]
+        x,
+        [x < kink],
+        [lambda fx: factor * np.sqrt(fx), lambda fx: threshold],  # noqa: ARG005
     )
 
 
@@ -215,7 +221,7 @@ def fit_sink_data(
         The threshold of the fitted piecewise linear threshold function
     """
     x, y = np.array(x), np.array(y)
-    arg = np.where(y > 0.98 * max(y))[0][0]
+    arg = np.nonzero(y > 0.98 * max(y))[0][0]
     kink_point = x[arg]
 
     if method == "linear":
@@ -284,8 +290,7 @@ def delay_decay(t: np.ndarray, m_t_flow: np.ndarray, tt_delay: float) -> np.ndar
     deldec = np.exp(-T_LAMBDA * t_delay)
     flow = np.append(flow, deldec * m_t_flow)
     # TODO: Slight "loss" of tritium because of this?
-    flow = flow[: len(t)]  # TODO: figure why you had to do this
-    return flow
+    return flow[: len(t)]  # TODO: figure why you had to do this
 
 
 @nb.jit(nopython=True, cache=True)
@@ -317,7 +322,7 @@ def fountain(flow: np.ndarray, t: np.ndarray, min_inventory: float) -> np.ndarra
     m_out, inventory = np.zeros(len(flow)), np.zeros(len(flow))
     inventory[0] = min_inventory
 
-    for i, ti in zip(range(1, len(flow)), flow[1:]):
+    for i, _ti in zip(range(1, len(flow)), flow[1:]):
         dt = t[i] - t[i - 1]
         dts = dt * YR_TO_S
         m_in = flow[i] * dts
@@ -393,8 +398,8 @@ def find_max_load_factor(time_years: np.ndarray, time_fpy: np.ndarray) -> float:
         a = 1
     if a > 1 or a < 0:
         bluemira_warn(f"Maximum load factor result is non-sensical: {a}.")
-    else:
-        return a
+        return None
+    return a
 
 
 def legal_limit(
@@ -446,7 +451,7 @@ def legal_limit(
 
 
 @nb.jit(nopython=True, cache=True)
-def _dec_I_mdot(  # noqa :N802
+def _dec_I_mdot(  # noqa: N802
     inventory: float, eta: float, m_dot: float, t_in: float, t_out: float
 ) -> float:
     """
@@ -456,7 +461,7 @@ def _dec_I_mdot(  # noqa :N802
     \t:math:`I_{end} = Ie^{-{\\lambda}{\\Delta}t}+{\\eta}\\dot{m}\\sum_{t=0}^{{\\Delta}t}e^{-\\lambda(T-t)}`
 
     \t:math:`I_{end} = Ie^{-{\\lambda}{\\Delta}t}+{\\eta}\\dot{m}\\dfrac{e^{-{\\lambda}T}\\big(e^{{\\lambda}({\\Delta}t+1/2)}-1\\big)}{e^{\\lambda}-1}`
-    """  # noqa :W505
+    """  # noqa: W505, E501
     # intuitive hack for 1/2... maths says it should be 1
     dt = t_out - t_in
 
@@ -486,7 +491,7 @@ def _timestep_decay(flux: float, dt: float) -> float:
     Returns
     -------
     The value of the total inventory which decayed over the time-step.
-    """  # noqa :W505
+    """  # noqa: W505, E501
     return flux * (
         1
         - (np.exp(-T_LAMBDA * dt) * (np.exp(T_LAMBDA * (dt + 0)) - 1))
@@ -524,15 +529,12 @@ def _find_t15(
         )
         / T_LAMBDA
     )
-    if t > 0.0:  # don't use max for numbagoodness
+    if t > 0.0:  # don't use max for numbagoodness  # noqa: PLR2004
         dt = t_out - t_in
         if t < dt:
             return t
-        else:
-            t = dt
-            return t
-    else:
-        return 0.0  # Approximate answer sometimes negative... :'(
+        return dt
+    return 0.0  # Approximate answer sometimes negative... :'(
 
 
 @nb.jit(nopython=True, cache=True)

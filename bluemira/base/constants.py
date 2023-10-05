@@ -45,7 +45,6 @@ class BMUnitRegistry(UnitRegistry):
 
     displacements_per_atom (dpa)
     full_power_year (fpy)
-    percent (%)
     atomic_parts_per_million (appm)
     USD ($)
 
@@ -59,7 +58,6 @@ class BMUnitRegistry(UnitRegistry):
         super().__init__(
             fmt_locale="en_GB",
             preprocessors=[
-                lambda x: x.replace("%", " percent "),
                 lambda x: x.replace("$", "USD "),
             ],
         )
@@ -67,8 +65,7 @@ class BMUnitRegistry(UnitRegistry):
         # Extra units
         self.define("displacements_per_atom  = count = dpa")
         self.define("full_power_year = year = fpy")
-        self.define("percent = 0.01 count = %")
-        self.define("atomic_parts_per_million = count * 1e-6 = appm")
+        self.define("atomic_parts_per_million = appm = ppm")
         # Other currencies need to be set up in a new context
         self.define("USD = [currency]")
 
@@ -257,7 +254,7 @@ ANGLE_UNITS = [
     "arcsecond",
     "milliarcsecond",
     "grade",
-    "mil",
+    # "mil",  # this break milli conversion with current implementation
     "steradian",
     "square_degree",
 ]
@@ -377,9 +374,10 @@ def units_compatible(unit_1: str, unit_2: str) -> bool:
     """
     try:
         raw_uc(1, unit_1, unit_2)
-        return True
     except PintError:
         return False
+    else:
+        return True
 
 
 def raw_uc(
@@ -500,7 +498,7 @@ def to_kelvin(
     return converted_val
 
 
-def _temp_check(unit: Unit, val: Union[float, int, complex, Quantity]):
+def _temp_check(unit: Unit, val: Union[complex, Quantity]):
     """
     Check temperature is above absolute zero
 

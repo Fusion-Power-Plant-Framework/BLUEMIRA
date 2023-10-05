@@ -89,7 +89,6 @@ def build_coil_structures_component(
     gs_builder = ITERGravitySupportBuilder(params, build_config, tf_koz)
     gs_component = gs_builder.build()
 
-    component = Component(
+    return Component(
         "Coil Structures", children=[ois_component, pf_support_component, gs_component]
     )
-    return component

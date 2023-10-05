@@ -18,12 +18,12 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
-import os
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
-import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import patches
 
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.codes.error import CodesError
@@ -57,6 +57,7 @@ def read_rb_line(line: str):
             line[1] = float(v)
             line[2] = float(line[i + 1])
             return line[:3]
+    return None
 
 
 def strip_num(line: str, typ: str = "float", n: int = 0) -> int:
@@ -77,7 +78,7 @@ def read_n_line(line: str):
     """
     line = line.split()
     out = [""] * 3
-    for i, word in enumerate(line):
+    for word in line:
         if word.startswith("(") is True or word.endswith(")") is True:
             out[2] = " ".join([out[2], word]).lstrip()
         elif is_num(word) is True:
@@ -160,20 +161,18 @@ def setup_radial_build(run: Dict[str, Any], width: float = 1.0):
 
     ax.set_xlim([0, np.ceil(run["Radial Build"][-1][-1])])
     ax.set_ylim([-width * 0.5, width * 0.5])
-    ax.set_xticks(list(ax.get_xticks()) + [R_0])
+    ax.set_xticks([*list(ax.get_xticks()), R_0])
     ax.axes.set_axisbelow(False)
 
-    def tick_format(value, n):
+    def tick_format(value, n):  # noqa: ARG001
         if value == R_0:
             return "\n$R_{0}$"
-        else:
-            return int(value)
+        return int(value)
 
-    def tick_formaty(value, n):
+    def tick_formaty(value, n):  # noqa: ARG001
         if value == 0:
             return int(value)
-        else:
-            return ""
+        return ""
 
     ax.xaxis.set_major_formatter(plt.FuncFormatter(tick_format))
     ax.yaxis.set_major_formatter(plt.FuncFormatter(tick_formaty))
@@ -189,18 +188,18 @@ def setup_radial_build(run: Dict[str, Any], width: float = 1.0):
     return ax
 
 
-def process_RB_fromOUT(f):  # noqa :N802
+def process_RB_fromOUT(f):
     """
     Parse PROCESS radial build from an OUT.DAT file.
     """
     # If the input is a string, treat as file name, and ensure it is closed.
-    if isinstance(f, str):
+    if isinstance(f, (str, Path)):
         with open(f) as fh:
             return process_RB_fromOUT(fh)  # Recursive call with file object
     raw = f.readlines()
     raw = raw[1:]
     if not raw:
-        raise IOError("Cannot read from input file.")
+        raise OSError("Cannot read from input file.")
     if PROCESS not in raw[1] and PROCESS not in raw[2]:
         bluemira_warn(
             "Either this ain't a PROCESS OUT.DAT file, or those hijos "
@@ -254,9 +253,9 @@ def plot_radial_build(
     -------
     The plot Axes object.
     """
-    filename = os.path.join(sys_code_dir, "OUT.DAT")
+    filename = Path(sys_code_dir, "OUT.DAT")
 
-    if not os.path.isfile(filename):
+    if not filename.is_file():
         raise CodesError(f"Could not find PROCESS OUT.DAT file '{filename}'.")
 
     radial_build = process_RB_fromOUT(filename)

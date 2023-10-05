@@ -27,12 +27,13 @@ from typing import TYPE_CHECKING, Dict
 if TYPE_CHECKING:
     from bluemira.base.parameter_frame import ParameterFrame
     from bluemira.geometry.parameterisations import GeometryParameterisation
+    from bluemira.geometry.wire import BluemiraWire
 
 import numpy as np
 
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.equilibria.grid import Grid
-from bluemira.equilibria.opt_constraints import (
+from bluemira.equilibria.optimisation.constraints import (
     FieldNullConstraint,
     IsofluxConstraint,
     MagneticConstraintSet,
@@ -40,7 +41,6 @@ from bluemira.equilibria.opt_constraints import (
 )
 from bluemira.equilibria.shapes import flux_surface_johner
 from bluemira.geometry.coordinates import Coordinates, interpolate_points
-from bluemira.geometry.wire import BluemiraWire
 
 
 def estimate_kappa95(A: float, m_s_limit: float) -> float:
@@ -74,12 +74,13 @@ def estimate_kappa95(A: float, m_s_limit: float) -> float:
     design driving. Exercise caution.
     \t:math:`m_{s} = a\\kappa_{95}^{2}+bA^{2}+c\\kappa A+d\\kappa+eA+f`\n
     \t:math:`\\kappa_{95}(A, m_{s}) = \\dfrac{-d-cA-\\sqrt{(c^{2}-4ab)A^{2}+(2dc-4ae)A+d^{2}-4af+4am_{s})}}{2a}`
-    """  # noqa :W505
-    if not 2.6 <= A <= 3.6:
+    """  # noqa: W505, E501
+    if not 2.6 <= A <= 3.6:  # noqa: PLR2004
         bluemira_warn(f"Kappa 95 estimate only valid for 2.6 <= A <= 3.6, not A = {A}")
-    if not 0.0 <= m_s_limit <= 0.8655172413793104:
+    if not 0.0 <= m_s_limit <= 0.8655172413793104:  # noqa: PLR2004
         bluemira_warn(
-            f"Kappa 95 estimate only valid for 0.0 <= m_s <= 0.865, not m_s = {m_s_limit}"
+            "Kappa 95 estimate only valid for 0.0 <= m_s <= 0.865, not m_s ="
+            f" {m_s_limit}"
         )
 
     a = 3.68436807
@@ -103,7 +104,7 @@ def estimate_kappa95(A: float, m_s_limit: float) -> float:
 
     # We're going to trim kappa_95 to 1.8, which is the maximum of the data, keeping
     # the function smooth
-    if kappa_95 > 1.77:
+    if kappa_95 > 1.77:  # noqa: PLR2004
         ratio = 1.77 / kappa_95
         corner_fudge = 0.3 * (kappa_95 - 1.77) / ratio
         kappa_95 = kappa_95 ** (ratio) + corner_fudge
@@ -165,7 +166,8 @@ def handle_lcfs_shape_input(
             input_dict[k] = {"value": v}
         else:
             bluemira_warn(
-                f"Unknown shape parameter {k} for GeometryParameterisation: {param_cls_instance.name}"
+                f"Unknown shape parameter {k} for GeometryParameterisation:"
+                f" {param_cls_instance.name}"
             )
     return input_dict
 
@@ -285,10 +287,7 @@ class EUDEMOSingleNullConstraints(DivertorLegCalculator, MagneticConstraintSet):
             n=200,
         )
 
-        if lower:
-            arg_x = np.argmin(f_s.z)
-        else:
-            arg_x = np.argmax(f_s.z)
+        arg_x = np.argmin(f_s.z) if lower else np.argmax(f_s.z)
 
         x_point = [f_s.x[arg_x], f_s.z[arg_x]]
 
@@ -332,8 +331,8 @@ class EUDEMODoubleNullConstraints(DivertorLegCalculator, MagneticConstraintSet):
         delta: float,
         psi_neg: float,
         psi_pos: float,
-        div_l_ib: float,
-        div_l_ob: float,
+        div_l_ib: float,  # noqa: ARG002
+        div_l_ob: float,  # noqa: ARG002
         psibval: float,
         n: int = 400,
     ):

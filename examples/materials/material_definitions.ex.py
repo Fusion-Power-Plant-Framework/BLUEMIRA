@@ -75,7 +75,9 @@ material_dict = {
         },
         # Let's try a linear interpolated property from some data
         "coefficient_thermal_expansion": {
-            "value": "interp(temperature_in_C, [20, 100, 200, 400], [10.3, 3.3, 2.2, 1.1])",
+            "value": (
+                "interp(temperature_in_C, [20, 100, 200, 400], [10.3, 3.3, 2.2, 1.1])"
+            ),
             "temp_min_celsius": 20.0,
             "temp_max_celsius": 400.0,
         },

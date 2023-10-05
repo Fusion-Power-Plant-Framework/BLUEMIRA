@@ -31,12 +31,8 @@ class EquilibriaError(BluemiraError):
     Base class for equilibria errors.
     """
 
-    pass
-
 
 class FluxSurfaceError(EquilibriaError):
     """
     Error class for FluxSurfaces.
     """
-
-    pass

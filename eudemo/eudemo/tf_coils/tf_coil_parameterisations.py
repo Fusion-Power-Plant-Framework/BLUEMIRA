@@ -23,9 +23,10 @@
 EU-DEMO parameterisations classes for TF Coils.
 """
 import copy
-from typing import Dict
+from typing import ClassVar, Optional
 
 from bluemira.geometry.parameterisations import PolySpline
+from bluemira.utilities.opt_variables import VarDictT
 
 
 class TFCoilPolySpline(PolySpline):
@@ -34,7 +35,7 @@ class TFCoilPolySpline(PolySpline):
      parameterisation.
     """
 
-    _defaults = {
+    _defaults: ClassVar = {
         "x1": {"value": 3.8},
         "x2": {"value": 16},
         "z2": {"value": 0},
@@ -48,32 +49,32 @@ class TFCoilPolySpline(PolySpline):
         "flat": {"value": 0.0},
     }
 
-    def __init__(self, var_dict: Dict = None):
+    def __init__(self, var_dict: Optional[VarDictT] = None):
         if var_dict is None:
             var_dict = {}
         defaults = copy.deepcopy(self._defaults)
         defaults.update(var_dict)
         super().__init__(defaults)
 
-        ib_radius = self.variables["x1"].value
-        ob_radius = self.variables["x2"].value
-        z2 = self.variables["z2"].value
-        height = self.variables["height"].value
-        top = self.variables["top"].value
-        upper = self.variables["upper"].value
-        dz = self.variables["dz"].value
-        tilt = self.variables["tilt"].value
-        lower = self.variables["lower"].value
-        bottom = self.variables["bottom"].value
+        ib_radius = self.variables.x1.value
+        ob_radius = self.variables.x2.value
+        z2 = self.variables.z2.value
+        height = self.variables.height.value
+        top = self.variables.top.value
+        upper = self.variables.upper.value
+        dz = self.variables.dz.value
+        tilt = self.variables.tilt.value
+        lower = self.variables.lower.value
+        bottom = self.variables.bottom.value
 
-        if not self.variables["x1"].fixed:
+        if not self.variables.x1.fixed:
             self.adjust_variable(
                 "x1",
                 ib_radius,
                 lower_bound=ib_radius - 2,
                 upper_bound=ib_radius * 1.1,
             )
-        if not self.variables["x2"].fixed:
+        if not self.variables.x2.fixed:
             self.adjust_variable(
                 "x2",
                 value=ob_radius,

@@ -51,11 +51,11 @@ def surface_fit(
     Returns
     -------
     x2d:
-        The gridded x data
+        The gridded x data (i, j indexed)
     y2d:
-        The gridded y data
+        The gridded y data (i, j indexed)
     zz:
-        The gridded z fit data
+        The gridded z fit data (i, j indexed)
     coeffs:
         The list of polynomial coefficents
     r2:
@@ -87,7 +87,9 @@ def surface_fit(
 
     # Grid the x and y arrays
     x2d, y2d = np.meshgrid(
-        np.linspace(x_min, x_max, n_grid), np.linspace(y_min, y_max, n_grid)
+        np.linspace(x_min, x_max, n_grid),
+        np.linspace(y_min, y_max, n_grid),
+        indexing="ij",
     )
     xx = x2d.flatten()
     yy = y2d.flatten()

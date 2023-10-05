@@ -27,6 +27,7 @@ import pytest
 from dolfin import Mesh
 
 from bluemira.base.components import PhysicalComponent
+from bluemira.base.constants import EPS
 from bluemira.base.parameter_frame import Parameter, ParameterFrame
 from bluemira.codes.plasmod.equilibrium_2d_coupling import (
     PlasmaFixedBoundaryParams,
@@ -47,9 +48,9 @@ from bluemira.geometry.tools import make_circle
 def test_update_delta_kappa_it_err():
     pfb = PlasmaFixedBoundaryParams(1, 3, 5, 7, 9, 11)
     iter_err = _update_delta_kappa(pfb, 10, 8, 6, 4, 2)
-    assert pfb.delta_u == 12.0
-    assert pfb.kappa_u == 6.0
-    assert iter_err == 0.5
+    assert pfb.delta_u == pytest.approx(12.0, rel=0, abs=EPS)
+    assert pfb.kappa_u == pytest.approx(6.0, rel=0, abs=EPS)
+    assert iter_err == pytest.approx(0.5, rel=0, abs=EPS)
 
 
 @dataclass
@@ -152,7 +153,7 @@ class DummyTransportSolver:
         self.n = 50
         self.x = np.linspace(0, 1, self.n)
 
-    def execute(self, mode):
+    def execute(self, mode):  # noqa: ARG002
         return self.params
 
     def get_profile(self, prof):
@@ -182,9 +183,9 @@ class TestSolveTransportFixedBoundary:
     )
 
     @pytest.mark.parametrize(
-        "max_iter,message",
+        ("max_iter", "message"),
         [
-            [1, "did not"],
+            (1, "did not"),
         ],
     )
     def test_full_run_through(self, max_iter, message, caplog):

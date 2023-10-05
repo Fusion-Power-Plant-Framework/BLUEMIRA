@@ -312,4 +312,4 @@ class ProcessInputs:
         A dictionary representation of the dataclass
 
         """
-        return {name: value for name, value in self}
+        return dict(self)

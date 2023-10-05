@@ -54,7 +54,7 @@ def _partial_x_integrand(phi: float, rr: float, zz: float) -> float:
     if abs(zz) < EPS:
         if abs(rr - 1.0) < EPS:
             return -1.042258937608 / np.pi
-        elif rr < 1.0:
+        if rr < 1.0:  # noqa: PLR2004
             return cos_phi * (
                 r0 + cos_phi * np.log((r0 + 1 + rr) / (r0 + 1 - rr))
             ) - 0.25 * (1 + np.log(4))
@@ -94,12 +94,9 @@ def _partial_z_integrand_nojit(phi: float, rr: float, zz: float) -> float:
     result = zz * np.log(r0 + rr - cos_phi) - cos_phi * np.log(r0 + zz)
 
     # F2
-    if rr - 1 < EPS:
-        result = result - 0.5 * rr
-    else:
-        result = result - 0.5 / rr
+    result = result - 0.5 * rr if rr - 1 < EPS else result - 0.5 / rr
     # F3
-    if 0.5 * np.pi * sin_phi > 1e-9:
+    if 0.5 * np.pi * sin_phi > 1e-9:  # noqa: PLR2004
         result = result - sin_phi * np.arctan(zz * (rr - cos_phi) / (r0 * sin_phi))
     return result
 
@@ -176,27 +173,25 @@ def _array_dispatcher(func):
                         result[i, j] = func(
                             xc[:, j], zc[:, j], x[i], z[i], d_xc[:, j], d_zc[:, j]
                         )
-
+        # 2-D arrays
+        elif not isinstance(xc, np.ndarray) or len(xc.shape) == 1:
+            result = np.zeros(x.shape)
+            for i in range(x.shape[0]):
+                for j in range(z.shape[1]):
+                    result[i, j] = func(xc, zc, x[i, j], z[i, j], d_xc, d_zc)
         else:
-            # 2-D arrays
-            if not isinstance(xc, np.ndarray) or len(xc.shape) == 1:
-                result = np.zeros(x.shape)
+            result = np.zeros([*list(x.shape), xc.shape[1]])
+            for k in range(xc.shape[1]):
                 for i in range(x.shape[0]):
                     for j in range(z.shape[1]):
-                        result[i, j] = func(xc, zc, x[i, j], z[i, j], d_xc, d_zc)
-            else:
-                result = np.zeros((list(x.shape) + [xc.shape[1]]))
-                for k in range(xc.shape[1]):
-                    for i in range(x.shape[0]):
-                        for j in range(z.shape[1]):
-                            result[i, j, ..., k] = func(
-                                xc[:, k],
-                                zc[:, k],
-                                x[i, j],
-                                z[i, j],
-                                d_xc[:, k],
-                                d_zc[:, k],
-                            )
+                        result[i, j, ..., k] = func(
+                            xc[:, k],
+                            zc[:, k],
+                            x[i, j],
+                            z[i, j],
+                            d_xc[:, k],
+                            d_zc[:, k],
+                        )
         return result
 
     return wrapper

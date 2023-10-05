@@ -36,7 +36,7 @@ from eudemo.pf_coils.tools import (
 
 
 class TestMakeCoilMapper:
-    tracks = [
+    tracks = (
         PrincetonD(
             {"x1": {"value": 4}, "x2": {"value": 14}, "dz": {"value": 0}}
         ).create_shape(label="PrincetonD"),
@@ -51,7 +51,7 @@ class TestMakeCoilMapper:
             },
         ).create_shape(label="PFrame"),
         TripleArc().create_shape(label="TripleArc"),
-    ]
+    )
 
     @classmethod
     def setup_class(cls):
@@ -116,10 +116,10 @@ class TestMakeSolenoid:
 
 
 class TestMakeCoilset:
-    boundaries = [
+    boundaries = (
         PrincetonD().create_shape(label="PrincetonD"),
         TripleArc().create_shape(label="TripleArc"),
-    ]
+    )
 
     @pytest.mark.parametrize("boundary", boundaries)
     def test_make_coilset(self, boundary):
@@ -148,10 +148,10 @@ class TestMakeCoilset:
 
 
 class TestMakePfCoilPath:
-    fixtures = [
+    fixtures = (
         PrincetonD().create_shape(),
         PictureFrame().create_shape(),
-    ]
+    )
 
     @pytest.mark.parametrize("wire", fixtures)
     def test_make_pf_coil_path(self, wire):

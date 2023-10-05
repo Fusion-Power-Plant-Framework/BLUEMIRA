@@ -24,7 +24,7 @@ jobs:
         sourceRunId: ${{ github.event.workflow_run.id }}
     - name: Checkout
       if: env.RESULT == 'success' && steps.workflow-run-info.outputs.pullRequestNumber != ''
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: ${{ steps.workflow-run-info.outputs.targetBranch }}
     - name: Get base hash
@@ -35,7 +35,7 @@ jobs:
       if: env.RESULT == 'success' && steps.workflow-run-info.outputs.pullRequestNumber != ''
       run: |
         artifact_url="$( \
-          gh api repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[] | select(.name == "report-json") | select(.workflow_run.head_sha == "${{ steps.base_sha.outputs.base_sha }}") | .archive_download_url')"
+          gh api repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[] | select(.name == "report-json") | select(.workflow_run.head_sha == "${{ steps.base_sha.outputs.base_sha}}") | .archive_download_url' | head -1)"
         if [ ! -z "${artifact_url}" ]; then
           gh api ${artifact_url} > report-json.zip
           mkdir ref_report

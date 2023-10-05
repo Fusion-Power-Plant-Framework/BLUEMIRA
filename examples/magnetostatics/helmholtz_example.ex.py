@@ -40,7 +40,7 @@ Simple HelmholzCage example with different current sources.
 """
 
 # %% [markdown]
-# # Simple HelmholzCage example
+# # Simple HelmholtzCage example
 # ## Introduction
 #
 # In this example we will build some HelmholtzCages with different types of current
@@ -120,7 +120,7 @@ analytical_circuit2 = CircularArcCurrentSource(
     breadth=breadth,
     depth=depth,
     radius=radius,
-    dtheta=2 * np.pi,
+    dtheta=360,
     current=current,
 )
 

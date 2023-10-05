@@ -20,9 +20,9 @@
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
 import filecmp
-import os
 import re
 import tempfile
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -95,7 +95,7 @@ class TestSolver:
 
 @pytest.mark.skipif(not ENABLED, reason="PROCESS is not installed on the system.")
 class TestSolverIntegration:
-    DATA_DIR = os.path.join(os.path.dirname(__file__), "test_data")
+    DATA_DIR = Path(Path(__file__).parent, "test_data")
 
     def setup_method(self):
         self.params = ProcessSolverParams.from_json(utils.PARAM_FILE)
@@ -108,8 +108,8 @@ class TestSolverIntegration:
 
         solver.execute(RunMode.RUN)
 
-        assert os.path.isfile(os.path.join(run_dir.name, "IN.DAT"))
-        assert os.path.isfile(os.path.join(run_dir.name, "MFILE.DAT"))
+        assert Path(run_dir.name, "IN.DAT").exists()
+        assert Path(run_dir.name, "MFILE.DAT").exists()
 
     @pytest.mark.parametrize("run_mode", [RunMode.READ, RunMode.READALL])
     def test_read_mode_updates_params_from_mfile(self, run_mode):
@@ -141,7 +141,7 @@ class TestSolverIntegration:
     @pytest.mark.longrun
     def test_runinput_mode_does_not_edit_template(self):
         run_dir = tempfile.TemporaryDirectory()
-        template_path = os.path.join(self.DATA_DIR, "IN.DAT")
+        template_path = Path(self.DATA_DIR, "IN.DAT")
         build_config = {
             "run_dir": run_dir.name,
             "template_in_dat": template_path,
@@ -150,13 +150,16 @@ class TestSolverIntegration:
         solver = Solver(self.params, build_config)
         solver.execute(RunMode.RUN)
 
-        assert os.path.isfile(os.path.join(run_dir.name, "IN.DAT"))
-        filecmp.cmp(os.path.join(run_dir.name, "IN.DAT"), template_path)
-        assert os.path.isfile(os.path.join(run_dir.name, "MFILE.DAT"))
+        assert Path(run_dir.name, "IN.DAT").is_file()
+        filecmp.cmp(Path(run_dir.name, "IN.DAT"), template_path)
+        assert Path(run_dir.name, "MFILE.DAT").is_file()
 
     def test_get_species_data_returns_row_vectors(self):
         temp, loss_f, z_eff = Solver.get_species_data("H")
 
-        assert isinstance(temp.size, int) == 1 and temp.size > 0
-        assert isinstance(loss_f.size, int) == 1 and loss_f.size > 0
-        assert isinstance(z_eff.size, int) == 1 and z_eff.size > 0
+        assert isinstance(temp.size, int) == 1
+        assert temp.size > 0
+        assert isinstance(loss_f.size, int) == 1
+        assert loss_f.size > 0
+        assert isinstance(z_eff.size, int) == 1
+        assert z_eff.size > 0

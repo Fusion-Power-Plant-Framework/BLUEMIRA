@@ -10,8 +10,8 @@ source = TrapezoidalPrismCurrentSource(
     t_vec=[1, 0, 0],
     breadth=0.5,  # in t_vec direction
     depth=0.25,  # in normal direction
-    alpha=np.pi / 4,  # angle at the tip of the current source
-    beta=np.pi / 8,  # angle at the tail of the current source
+    alpha=45.0,  # angle at the tip of the current source
+    beta=22.5,  # angle at the tail of the current source
     current=1e6,
 )
 

@@ -30,5 +30,3 @@ class FuelCycleError(BluemiraError):
     """
     The base fuel_cycle error class.
     """
-
-    pass

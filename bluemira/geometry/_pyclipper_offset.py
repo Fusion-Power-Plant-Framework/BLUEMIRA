@@ -35,8 +35,8 @@ from pyclipper import (
     JT_ROUND,
     JT_SQUARE,
     PolyTreeToPaths,
-    PyclipperOffset,
     PyPolyNode,
+    PyclipperOffset,
     scale_from_clipper,
     scale_to_clipper,
 )
@@ -134,18 +134,17 @@ class PyclipperMixin:
         if not solution:
             self.raise_warning()
             return None
+        coords = []
+        if isinstance(solution, PyPolyNode):
+            coords = pyclippolytree_to_coordinates(solution)
         else:
-            coords = []
-            if isinstance(solution, PyPolyNode):
-                coords = pyclippolytree_to_coordinates(solution)
-            else:
-                for path in solution:
-                    c = pyclippath_to_coordinates(path)
-                    c.close()
-                    coords.append(c)
+            for path in solution:
+                c = pyclippath_to_coordinates(path)
+                c.close()
+                coords.append(c)
 
-            # Sort open coordinates by length
-            return sorted(coords, key=lambda x: -x.length)
+        # Sort open coordinates by length
+        return sorted(coords, key=lambda x: -x.length)
 
 
 # =============================================================================
@@ -172,10 +171,7 @@ class OffsetOperationManager(PyclipperMixin):
         path = coordinates_to_pyclippath(coordinates)
         self._scale = self._calculate_scale(path, coordinates)  # Store scale
 
-        if coordinates.closed:
-            co_method = self.closed_method
-        else:
-            co_method = self.open_method
+        co_method = self.closed_method if coordinates.closed else self.open_method
 
         self.tool.AddPath(path, self.method, co_method)
 
@@ -204,6 +200,7 @@ class OffsetOperationManager(PyclipperMixin):
                 return path[i][0] / coordinates.x[i]
             if path[i][1] != 0:
                 return path[i][1] / coordinates.z[i]
+        return None
 
 
 class RoundOffset(OffsetOperationManager):
@@ -308,14 +305,14 @@ def offset_clipper(
 
     if len(result) > 1:
         bluemira_warn(
-            f"Offset operation with delta={delta} has produced multiple 'islands'; only returning the biggest one!"
+            f"Offset operation with delta={delta} has produced multiple 'islands'; only"
+            " returning the biggest one!"
         )
 
     result = result[0]
 
     # Transform offset coordinates back to original plane
-    result = transform_coordinates_to_original(result, com, coordinates.normal_vector)
-    return result
+    return transform_coordinates_to_original(result, com, coordinates.normal_vector)
 
 
 def transform_coordinates_to_xz(
@@ -325,14 +322,13 @@ def transform_coordinates_to_xz(
     Rotate coordinates to the x-z plane.
     """
     coordinates.translate(base)
-    if abs(coordinates.normal_vector[1]) == 1.0:
+    if abs(coordinates.normal_vector[1]) == 1.0:  # noqa: PLR2004
         return coordinates
 
     r = rotation_matrix_v1v2(coordinates.normal_vector, np.array(direction))
     x, y, z = r.T @ coordinates
 
-    coordinates = Coordinates({"x": x, "y": y, "z": z})
-    return coordinates
+    return Coordinates({"x": x, "y": y, "z": z})
 
 
 def transform_coordinates_to_original(

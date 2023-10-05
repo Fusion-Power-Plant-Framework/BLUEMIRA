@@ -25,6 +25,7 @@ Script used to analyse T retention data
 
 import json
 import os
+from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -42,20 +43,13 @@ plot_defaults()
 
 PATH = get_bluemira_path("fuel_cycle/blanket_fw_T_retention", subfolder="data")
 
-# Get all the data files
-files = []
-for file in os.listdir(PATH):
-    if os.path.splitext(file)[-1] == ".json":
-        files.append(file)
-
-
 # Compiles the data from the files
 data = {}
-for file in files:
-    filepath = os.sep.join([PATH, file])
-    short_name = os.path.splitext(file)[0]
-    with open(filepath, "r") as fh:
-        data[short_name] = json.load(fh)
+for file in os.listdir(PATH):
+    if Path(file).suffix == ".json":
+        short_name = Path(file).stem
+        with open(Path(PATH, file)) as fh:
+            data[short_name] = json.load(fh)
 
 # Convert the data to arrays and inventories to kg
 for v in data.values():
@@ -68,7 +62,7 @@ for k, v in data.items():
     ax.plot(v["time"], v["inventory"], "s", marker="o", label=k)
 
 # Fit the data with a sqrt threshold model
-for k, v in data.items():
+for v in data.values():
     p_opt = fit_sink_data(v["time"], v["inventory"], method="sqrt", plot=False)
 
     x_fit = np.linspace(0, max(v["time"]), 50)

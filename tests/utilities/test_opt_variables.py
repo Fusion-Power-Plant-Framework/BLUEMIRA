@@ -19,31 +19,33 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
 
-import os
-import re
 import shutil
 import tempfile
+from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pytest
 
+from bluemira.base.constants import EPS
 from bluemira.utilities.opt_variables import (
-    BoundedVariable,
-    OptVariables,
+    OptVariable,
     OptVariablesError,
+    OptVariablesFrame,
+    ov,
 )
 
 
-class TestBoundedVariable:
+class TestOptVariable:
     def test_initialisation(self):
-        v1 = BoundedVariable("a", 2, 0, 3, descr="test")
+        v1 = OptVariable("a", 2, 0, 3, description="test")
         assert v1.name == "a"
         assert v1.value == 2
         assert v1.lower_bound == 0
         assert v1.upper_bound == 3
         assert v1.description == "test"
 
-        v2 = BoundedVariable("b", 0, -1, 1)
+        v2 = OptVariable("b", 0, -1, 1)
         assert v2.name == "b"
         assert v2.value == 0
         assert v2.lower_bound == -1
@@ -51,21 +53,21 @@ class TestBoundedVariable:
         assert v2.description is None
 
         with pytest.raises(OptVariablesError):
-            v3 = BoundedVariable("a", 2, 2.5, 3)
+            v3 = OptVariable("a", 2, 2.5, 3)
 
     def test_normalised_value(self):
-        v1 = BoundedVariable("a", 2, 0, 4)
-        assert v1.normalised_value == 0.5
+        v1 = OptVariable("a", 2, 0, 4)
+        assert v1.normalised_value == pytest.approx(0.5, rel=0, abs=EPS)
 
     def test_adjust(self):
-        v1 = BoundedVariable("a", 2, 0, 4)
+        v1 = OptVariable("a", 2, 0, 4)
         v1.adjust(value=3, lower_bound=2, upper_bound=4)
         assert v1.value == 3
         assert v1.lower_bound == 2
         assert v1.upper_bound == 4
 
     def test_adjust_bad(self):
-        v1 = BoundedVariable("a", 2, 0, 4)
+        v1 = OptVariable("a", 2, 0, 4)
         with pytest.raises(OptVariablesError):
             v1.adjust(value=0, lower_bound=1, upper_bound=2)
         with pytest.raises(OptVariablesError):
@@ -74,7 +76,7 @@ class TestBoundedVariable:
             v1.adjust(value=-2, lower_bound=-4, upper_bound=-3)
 
     def test_adjust_fixed(self):
-        v1 = BoundedVariable("a", 2, 0, 4, fixed=True)
+        v1 = OptVariable("a", 2, 0, 4, fixed=True)
         assert v1.value == 2
         with pytest.raises(OptVariablesError):
             v1.adjust(value=3)
@@ -84,35 +86,23 @@ class TestBoundedVariable:
             v1.value = 3
 
 
+@dataclass
+class TestOptVariablesOptVariables(OptVariablesFrame):
+    __test__ = False
+
+    a: OptVariable = ov("a", 2, 0, 3)
+    b: OptVariable = ov("b", 0, -1, 1)
+    c: OptVariable = ov("c", -1, -10, 10)
+
+
 class TestOptVariables:
     def setup_method(self):
-        v1 = BoundedVariable("a", 2, 0, 3)
-        v2 = BoundedVariable("b", 0, -1, 1)
-        v3 = BoundedVariable("c", -1, -10, 10)
-        self.vars = OptVariables([v1, v2, v3])
-        v1 = BoundedVariable("a", 2, 0, 3)
-        v2 = BoundedVariable("b", 0, -1, 1)
-        v3 = BoundedVariable("c", -1, -10, 10)
-        self.vars_frozen = OptVariables([v1, v2, v3], frozen=True)
+        self.vars = TestOptVariablesOptVariables()
 
     def test_init(self):
         assert self.vars.n_free_variables == 3
         assert len(self.vars.values) == 3
         assert np.allclose(self.vars.values, np.array([2, 0, -1]))
-
-    def test_add(self):
-        v4 = BoundedVariable("d", 4, -4, 6, fixed=False)
-        v5 = BoundedVariable("e", 1, -1, 2, fixed=True)
-        self.vars.add_variable(v4)
-        self.vars.add_variable(v5)
-        assert self.vars.n_free_variables == 4
-        assert len(self.vars.values) == 5
-        assert np.allclose(self.vars.values, np.array([2, 0, -1, 4, 1]))
-
-    def test_remove(self):
-        self.vars.remove_variable("c")
-        assert len(self.vars.values) == 2
-        assert np.allclose(self.vars.values, np.array([2, 0]))
 
     def test_fix(self):
         self.vars.fix_variable("a", value=100)
@@ -121,80 +111,58 @@ class TestOptVariables:
         assert np.allclose(self.vars.values, np.array([100, 0, -1]))
 
     def test_getitem(self):
-        assert self.vars["a"] == self.vars._var_dict["a"]
-
-    def test_frozen(self):
-        with pytest.raises(OptVariablesError):
-            self.vars_frozen.add_variable(BoundedVariable("new", 0, 0, 0))
-        with pytest.raises(OptVariablesError):
-            self.vars_frozen.remove_variable("a")
+        assert self.vars["a"] == self.vars.a
 
     def test_adjust(self):
         self.vars.adjust_variable("b", fixed=True)
-        self.vars_frozen.adjust_variable("b", fixed=True)
-        assert self.vars["b"].fixed
-        assert self.vars_frozen["b"].fixed
+        assert self.vars.b.fixed
 
     def test_not_strict_bounds(self):
-        v1 = BoundedVariable("a", 2, 0, 3)
-        v2 = BoundedVariable("b", 0, -1, 1)
-        v3 = BoundedVariable("c", -1, -10, 10)
-        opt_vars = OptVariables([v1, v2, v3])
+        self.vars.adjust_variables({"a": {"value": -2}}, strict_bounds=False)
 
-        opt_vars.adjust_variables({"a": {"value": -2}}, strict_bounds=False)
-
-        assert opt_vars["a"].value == -2
-        assert opt_vars["a"].lower_bound == -2
+        assert self.vars.a.value == -2
+        assert self.vars.a.lower_bound == -2
 
     def test_not_strict_bounds2(self):
-        v1 = BoundedVariable("a", 2, 0, 3)
-        v2 = BoundedVariable("b", 0, -1, 1)
-        v3 = BoundedVariable("c", -1, -10, 10)
-        opt_vars = OptVariables([v1, v2, v3])
-
-        opt_vars.adjust_variables(
+        self.vars.adjust_variables(
             {"a": {"value": -2, "lower_bound": -1, "upper_bound": 3}},
             strict_bounds=False,
         )
-        assert opt_vars["a"].value == -2
-        assert opt_vars["a"].lower_bound == -2
+        assert self.vars.a.value == -2
+        assert self.vars.a.lower_bound == -2
 
         with pytest.raises(OptVariablesError):
-            opt_vars.adjust_variables(
+            self.vars.adjust_variables(
                 {"a": {"value": -2, "lower_bound": -1, "upper_bound": -3}},
-                strict_bounds=False,
+                strict_bounds=True,
             )
 
     def test_read_write(self):
         tempdir = tempfile.mkdtemp()
         try:
-            the_path = os.sep.join([tempdir, "opt_var_test.json"])
+            the_path = Path(tempdir, "opt_var_test.json")
             self.vars.to_json(the_path)
-            new_vars = OptVariables.from_json(the_path)
+            new_vars = TestOptVariablesOptVariables.from_json(the_path)
             assert new_vars.as_dict() == self.vars.as_dict()
         finally:
             shutil.rmtree(tempdir)
 
     def test_tabulate_displays_column_values(self):
-        v1 = BoundedVariable("a", 2, 0, 3, descr="var a")
-        v2 = BoundedVariable("b", 0, -1, 1, fixed=True)
-        v3 = BoundedVariable("c", -1, -10, 10)
-        opt_vars = OptVariables([v3, v1, v2])
+        table = self.vars.tabulate()
 
-        table = opt_vars.tabulate()
-
-        table_pattern = "\n".join(
+        table_pattern = "\n".join(  # noqa: FLY002
             [
-                ".*",
-                ".*Name.*Value.*Lower Bound.*Upper Bound.*Fixed.*Description.*",
-                ".*",
-                ".*a.*2.*0.*3.*False.*var a.*",
-                ".*",
-                ".*b.*0.*-1.*1.*True.* .*",
-                ".*",
-                ".*c.*-1.*-10.*10.*False.* .*",
-                ".*",
+                "TestOptVariablesOptVariables",
+                "╒════════╤═════════╤═══════════════╤═══════════════╤═════════╤═══════════════╕",
+                "│ name   │   value │   lower_bound │   upper_bound │ fixed   │ description   │",
+                "╞════════╪═════════╪═══════════════╪═══════════════╪═════════╪═══════════════╡",
+                "│ a      │       2 │             0 │             3 │ False   │               │",
+                "├────────┼─────────┼───────────────┼───────────────┼─────────┼───────────────┤",
+                "│ b      │       0 │            -1 │             1 │ False   │               │",
+                "├────────┼─────────┼───────────────┼───────────────┼─────────┼───────────────┤",
+                "│ c      │      -1 │           -10 │            10 │ False   │               │",
+                "╘════════╧═════════╧═══════════════╧═══════════════╧═════════╧═══════════════╛",
             ]
         )
-        assert len(table.split("\n")) == 9
-        assert re.match(table_pattern, table, flags=re.MULTILINE)
+        assert len(table.split("\n")) == 10
+        assert table == table_pattern

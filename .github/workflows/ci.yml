@@ -23,10 +23,10 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Checkout bluemira-private-data
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       if: ${{ !github.event.pull_request.head.repo.fork }}
       with:
         repository: 'Fusion-Power-Plant-Framework/bluemira-private-data'
@@ -78,6 +78,10 @@ jobs:
         miniforge-variant: Mambaforge
         use-mamba: true
 
+    - name: Install bluemira
+      shell: bash -l {0}
+      run: pip install -U -e .
+
     - name: Freeze conda env
       shell: bash -l {0}
       run: |
@@ -93,12 +97,10 @@ jobs:
       env:
          COPYRIGHT: ${{ github.event_name == 'pull_request' && 'PR' || '' }}
       run: |
-        SKIP=flake8,black,update_copyright pre-commit run --all-files
-        flake8 --count
-        black --check .
+        SKIP=update_copyright pre-commit run --all-files
         if [ $COPYRIGHT ]; then
-           git fetch origin $GITHUB_BASE_REF $GITHUB_HEAD_REF
-           pre-commit run update_copyright --from-ref origin/$GITHUB_BASE_REF --to-ref origin/$GITHUB_HEAD_REF
+           git fetch origin $GITHUB_REF $GITHUB_BASE_REF
+           pre-commit run update_copyright --from-ref origin/$GITHUB_BASE_REF --to-ref FETCH_HEAD
         fi
 
     - name: Build Documentation bluemira

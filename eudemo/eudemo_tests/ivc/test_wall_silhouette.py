@@ -23,7 +23,6 @@ Test first wall silhouette designer.
 """
 
 import copy
-import os
 from pathlib import Path
 
 import numpy as np
@@ -71,13 +70,16 @@ PARAMS = {
 class TestWallSilhouetteDesigner:
     @classmethod
     def setup_class(cls):
-        cls.eq = Equilibrium.from_eqdsk(os.path.join(EQDATA, "eqref_OOB.json"))
+        cls.eq = Equilibrium.from_eqdsk(Path(EQDATA, "eqref_OOB.json"))
         _, cls.x_points = find_OX_points(cls.eq.x, cls.eq.z, cls.eq.psi())
 
     def test_parameterisation_read(self):
         config = copy.deepcopy(CONFIG)
         config.update(
-            {"run_mode": "read", "file_path": os.path.join(DATA, "wall_polyspline.json")}
+            {
+                "run_mode": "read",
+                "file_path": Path(DATA, "wall_polyspline.json").as_posix(),
+            }
         )
 
         designer = WallSilhouetteDesigner(
@@ -97,19 +99,7 @@ class TestWallSilhouetteDesigner:
             PARAMS, build_config=config, equilibrium=self.eq
         )
 
-        with pytest.raises(ValueError):
-            designer.execute()
-
-    def test_run_no_problem_class(self):
-        config = copy.deepcopy(CONFIG)
-        config.update({"run_mode": "run"})
-        del config["problem_class"]
-
-        designer = WallSilhouetteDesigner(
-            PARAMS, build_config=config, equilibrium=self.eq
-        )
-
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError):  # noqa: PT011
             designer.execute()
 
     def test_run_check_parameters(self):

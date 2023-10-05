@@ -1,3 +1,24 @@
+# bluemira is an integrated inter-disciplinary design tool for future fusion
+# reactors. It incorporates several modules, some of which rely on other
+# codes, to carry out a range of typical conceptual fusion reactor design
+# activities.
+#
+# Copyright (C) 2021-2023 M. Coleman, J. Cook, F. Franza, I.A. Maione, S. McIntosh,
+#                         J. Morris, D. Short
+#
+# bluemira is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
+#
+# bluemira is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public
+# License along with bluemira; if not, see <https://www.gnu.org/licenses/>.
+
 """EUDEMO reactor build parameters."""
 
 from dataclasses import dataclass
@@ -133,8 +154,6 @@ class EUDEMOReactorParams(ParameterFrame):
     # Equilibrium
     div_L2D_ib: Parameter[float]
     div_L2D_ob: Parameter[float]
-    n_CS: Parameter[int]
-    n_PF: Parameter[int]
     shaf_shift: Parameter[float]
 
     # Wall designer
@@ -189,8 +208,9 @@ class EUDEMOReactorParams(ParameterFrame):
     tf_gs_base_depth: Parameter[float]
 
     # Ports
-    tk_upper_port_wall_end: Parameter[float]
-    tk_upper_port_wall_side: Parameter[float]
+    tk_vv_single_wall: Parameter[float]
+    tk_vv_double_wall: Parameter[float]
+    lower_port_angle: Parameter[float]
 
     # Powercycle
     bb_p_inlet: Parameter[float]

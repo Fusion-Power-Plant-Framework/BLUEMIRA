@@ -39,9 +39,8 @@ from bluemira.balance_of_plant.steady_state import (
     SuperheatedRankine,
 )
 from bluemira.base.parameter_frame import Parameter, ParameterFrame, make_parameter_frame
-from bluemira.codes.interface import CodesSolver
+from bluemira.codes.interface import BaseRunMode, CodesSolver
 from bluemira.codes.interface import CodesTask as Task
-from bluemira.codes.interface import RunMode
 
 __all__ = ["SteadyStatePowerCycleSolver"]
 
@@ -100,7 +99,7 @@ class EUDEMOReferenceParasiticLoadStrategy(ParasiticLoadStrategy):
         return p_mag, p_cryo, p_t_plant, p_other
 
 
-class SteadyStatePowerCycleRunMode(RunMode):
+class SteadyStatePowerCycleRunMode(BaseRunMode):
     """Enumeration of the run modes for the steady state power cycle solver"""
 
     RUN = enum.auto()
@@ -192,7 +191,8 @@ class SteadyStatePowerCycleTeardown(Task):
     Teardown task for the steady-state power cycle model.
     """
 
-    def run(self, run_result):
+    @staticmethod
+    def run(run_result):
         """
         Run the teardown task.
         """

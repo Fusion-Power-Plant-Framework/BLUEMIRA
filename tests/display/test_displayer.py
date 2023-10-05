@@ -33,6 +33,7 @@ import bluemira.codes._freecadapi as cadapi
 from bluemira.base.components import Component, PhysicalComponent
 from bluemira.display import displayer
 from bluemira.display.error import DisplayError
+from bluemira.display.palettes import BLUE_PALETTE
 from bluemira.geometry.face import BluemiraFace
 from bluemira.geometry.tools import extrude_shape, make_circle, make_polygon
 
@@ -42,10 +43,10 @@ _FREECAD_REF = "bluemira.codes._freecadapi"
 def _skip_polyscope():
     try:
         import polyscope  # noqa: F401
-
-        return False
     except ImportError:
         return True
+    else:
+        return False
 
 
 class TestDisplayCADOptions:
@@ -54,7 +55,8 @@ class TestDisplayCADOptions:
         Check the values of the default options correspond to the global defaults.
         """
         the_options = displayer.DisplayCADOptions()
-        assert the_options.as_dict() == asdict(displayer.get_default_options())
+        d_dict = asdict(displayer.get_default_options())
+        assert the_options.as_dict() == d_dict
         assert the_options.as_dict() is not displayer.get_default_options()
 
     def test_options(self):
@@ -94,6 +96,7 @@ class TestDisplayCADOptions:
 
 
 class TestComponentDisplayer:
+    @pytest.mark.parametrize("colour", [(1.0, 0.0, 0.0), BLUE_PALETTE["VV"]])
     @pytest.mark.parametrize(
         "viewer",
         [
@@ -104,7 +107,7 @@ class TestComponentDisplayer:
             ),
         ],
     )
-    def test_display(self, viewer):
+    def test_display(self, colour, viewer):
         square_points = np.array(
             [
                 (0.0, 0.0, 0.0),
@@ -124,24 +127,22 @@ class TestComponentDisplayer:
 
         child1.show_cad(backend=viewer)
         group.show_cad(backend=viewer)
-        child2.display_cad_options = displayer.DisplayCADOptions(colour=(1.0, 0.0, 0.0))
+        child2.display_cad_options = displayer.DisplayCADOptions(colour=colour)
         group.show_cad(backend=viewer)
         group.show_cad(colour=(0.0, 0.0, 1.0), backend=viewer)
-        displayer.ComponentDisplayer().show_cad(
-            group, color=(1.0, 0.0, 0.0), backend=viewer
-        )
+        displayer.ComponentDisplayer().show_cad(group, color=colour, backend=viewer)
 
         with pytest.raises(DisplayError):
             child2.display_cad_options = (0.0, 0.0, 1.0)
 
 
 class TestGeometryDisplayer:
-    square_points = [
+    square_points = (
         (0.0, 0.0, 0.0),
         (1.0, 0.0, 0.0),
         (1.0, 1.0, 0.0),
         (0.0, 1.0, 0.0),
-    ]
+    )
 
     def setup_method(self):
         displayer.ViewerBackend.get_module.cache_clear()
@@ -204,7 +205,7 @@ class TestGeometryDisplayer:
         return extrude_shape(circle_face, vec=(0, 0, 10), label="my_solid")
 
     @pytest.mark.parametrize(
-        "labels, result",
+        ("labels", "result"),
         [
             ("name", ["name", "name"]),
             (["name", "name"], ["name", "name"]),

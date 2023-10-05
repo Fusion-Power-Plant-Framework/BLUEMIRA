@@ -92,7 +92,7 @@ def logger_setup(
 def set_log_level(
     verbose: Union[int, str] = 1,
     increase: bool = False,
-    logger_names: Iterable[str] = ("bluemira"),
+    logger_names: Iterable[str] = ("bluemira",),
 ):
     """
     Get new log level and check if it is possible.
@@ -130,13 +130,11 @@ def get_log_level(logger_name: str = "bluemira", as_str: bool = True) -> Union[s
 
     max_level = 0
     for handler in logger.handlers or logger.parent.handlers:
-        if not isinstance(handler, logging.FileHandler):
-            if handler.level > max_level:
-                max_level = handler.level
+        if not isinstance(handler, logging.FileHandler) and handler.level > max_level:
+            max_level = handler.level
     if as_str:
         return LogLevel(max_level).name
-    else:
-        return max_level // 10
+    return max_level // 10
 
 
 def _convert_log_level(level: Union[str, int], current_level: int = 0) -> LogLevel:
@@ -161,9 +159,9 @@ def _convert_log_level(level: Union[str, int], current_level: int = 0) -> LogLev
             value = int(current_level + (level * 10))
             new_level = LogLevel(value)
     except ValueError:
-        raise LogsError(f"Unknown severity level - {value}")
+        raise LogsError(f"Unknown severity level - {value}") from None
     except KeyError:
-        raise LogsError(f"Unknown severity level - {level}")
+        raise LogsError(f"Unknown severity level - {level}") from None
     return new_level
 
 
@@ -203,7 +201,7 @@ class LoggingContext:
         """
         set_log_level(self.level)
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, traceback):  # noqa: A002
         """
         Set the logging level to the original level when we exit the context.
         """

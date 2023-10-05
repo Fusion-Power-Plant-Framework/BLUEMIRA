@@ -23,6 +23,11 @@
 Initialise the bluemira package.
 """
 
-from . import _version  # noqa: ABS101
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = _version.get_versions()["version"]
+try:
+    __version__ = version("bluemira")
+except PackageNotFoundError:
+    from setuptools_scm import get_version
+
+    __version__ = get_version()

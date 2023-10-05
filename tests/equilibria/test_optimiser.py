@@ -22,8 +22,9 @@
 import numpy as np
 
 from bluemira.equilibria.coils import Coil, CoilSet, SymmetricCircuit
-from bluemira.equilibria.opt_problems import CoilsetPositionCOP
-from bluemira.geometry.coordinates import Coordinates
+from bluemira.equilibria.optimisation.problem import CoilsetPositionCOP
+from bluemira.geometry.tools import make_polygon
+from bluemira.utilities.positioning import PositionMapper, RegionInterpolator
 
 
 class TestCoilsetOptimiser:
@@ -92,10 +93,13 @@ class TestCoilsetOptimiser:
         zlo = cls.coilset.z[cls.coilset._control_ind] + max_coil_shifts["z_shifts_lower"]
 
         for name, xl, xu, zl, zu in zip(cls.coilset.name, xup, xlo, zup, zlo):
-            rect = Coordinates({"x": [xl, xu, xu, xl, xl], "z": [zl, zl, zu, zu, zl]})
-            cls.pfregions[name] = rect
+            cls.pfregions[name] = RegionInterpolator(
+                make_polygon({"x": [xl, xu, xu, xl, xl], "z": [zl, zl, zu, zu, zl]})
+            )
 
-        cls.optimiser = CoilsetPositionCOP(cls.coilset, None, None, cls.pfregions)
+        cls.optimiser = CoilsetPositionCOP(
+            cls.coilset, None, None, PositionMapper(cls.pfregions)
+        )
 
     def test_modify_coilset(self):
         # Read
