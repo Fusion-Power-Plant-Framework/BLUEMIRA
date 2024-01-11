@@ -1,0 +1,38 @@
+{
+  "coil_supply_system": {
+    "name": "ITER-like Coil Supply System",
+    "corrector_list": ["PMS", "FDU", "SNU"],
+    "converter_technology": "THY"
+  },
+  "converter_library": {
+    "THY": {
+      "name": "Thyristor Bridges",
+      "max_bridge_voltage": 1.6e3,
+      "power_loss_percentages": {
+        "bridge losses": 1.5,
+        "step-down transformer": 1,
+        "output busbars": 0.5
+      }
+    },
+    "NEW": {
+      "name": "New technology (?)"
+    }
+  },
+  "corrector_library": {
+    "PMS": {
+      "name": "Protective Make Switch",
+      "correction_target": "voltage",
+      "correction_factor": 0
+    },
+    "FDU": {
+      "name": "Fast Discharging Unit",
+      "correction_target": "voltage",
+      "correction_factor": 0
+    },
+    "SNU": {
+      "name": "Switiching Network Unit",
+      "correction_target": "voltage",
+      "correction_factor": -0.4
+    }
+  }
+}
