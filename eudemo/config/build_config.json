@@ -60,7 +60,7 @@
     }
   },
   "Free boundary equilibrium": {
-    "run_mode": "run",
+    "run_mode": "read",
     "plot": true,
     "save": true,
     "fixed_eq_file_path": "$path_expand:./fixed_boundary_eqdsk.json",
@@ -122,9 +122,8 @@
     "show_data": false
   },
   "TF coils": {
-    "run_mode": "run",
+    "run_mode": "read",
     "file_path": "$path_expand:./TFCoilDesign.json",
-    "file_path": "config/TFCoilDesign.json",
     "plot": true,
     "param_class": "TripleArc",
     "variables_map": {
@@ -151,7 +150,7 @@
     }
   },
   "PF coils": {
-    "run_mode": "run",
+    "run_mode": "read",
     "file_path": "$path_expand:./PFCoilDesign.json",
     "verbose": false,
     "plot": true,
