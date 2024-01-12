@@ -52,8 +52,8 @@ class CoilVariable(Enum):
     'CoilSupplySystem' object.
     """
 
-    voltage = "V"
-    current = "I"
+    VOLTAGE = "voltage"
+    CURRENT = "current"
 
 
 class CoilSupplyABC(ABC):
@@ -61,11 +61,14 @@ class CoilSupplyABC(ABC):
 
     @abstractmethod
     def _just_to_stop_ruff_checks(self):
-        """Dummy method to stop ruff checks."""
+        """Define dummy method to stop ruff checks."""
 
 
 class CoilSupplySubSystem(CoilSupplyABC):
     """Base class for subsystems of 'CoilSupplySystem' class."""
+
+    def _just_to_stop_ruff_checks(self):
+        pass
 
 
 @dataclass
@@ -103,14 +106,14 @@ class CoilSupplyConverterConfig(Config):
 
 
 class CoilSupplyConfigDescriptor(Descriptor):
-    """Coil suppply config descriptor for use with dataclasses"""
+    """Coil suppply config descriptor for use with dataclasses."""
 
     def __get__(self, obj: Any, _) -> CoilSupplyConfig:
-        """Get the coil supply system config"""
+        """Get the coil supply system config."""
         return getattr(obj, self._name)
 
     def __set__(self, obj: Any, value: Union[dict, CoilSupplyConfig]):
-        """Set the coils supply system config"""
+        """Set the coils supply system config."""
         if not isinstance(value, CoilSupplyConfig):
             value = CoilSupplyConfig(**value)
 
@@ -132,9 +135,11 @@ class CoilSupplyInputs:
 
 class CoilSupplyCorrector(CoilSupplySubSystem):
     """
-    Class to represent safety mechanisms of a 'CoilSupplySystem' object,
-    that result in a correction of currents or voltages demanded by the
-    coils.
+    Safety and auxiliary sub-systems for coil power supply systems.
+
+    Class to represent safety and auxiliary sub-systems of a
+    'CoilSupplySystem' object, that result in a correction of currents
+    or voltages demanded by the coils.
 
     Parameters
     ----------
@@ -145,22 +150,24 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
     def __init__(self, config: CoilSupplyCorrectorConfig):
         self.name = config.name
         self.description = config.description
-        self.variable = config.correction_variable
+        self.variable = CoilVariable(config.correction_variable)
         self.factor = config.correction_factor
 
     def _correct(self, value):
-        return value * (1 + self.factor)
+        if isinstance(value, np.ndarray):
+            return value * (1 + self.factor)
+        return [element * (1 + self.factor) for element in value]
 
     def compute_correction(self, voltage, current):
-        """
-        Apply correction factor to a member of CoilVariable.
-        """
-        if self.variable == CoilVariable.voltage:
+        """Apply correction factor to a member of CoilVariable."""
+        if self.variable == CoilVariable.VOLTAGE:
             voltage = self._correct(voltage)
-        elif self.variable == CoilVariable.current:
+        elif self.variable == CoilVariable.CURRENT:
             current = self._correct(current)
         else:
-            raise ValueError
+            raise ValueError(
+                f"Unknown routine for correcting variable '{self.variable}'."
+            )
         return voltage, current
 
 
@@ -233,13 +240,18 @@ class ThyristorBridges(CoilSupplyConverter):
         current: np.ndarray
             current array
         """
-        v_max = self.max_bridge_voltage
         loss_percentages = self.power_loss_percentages
+        v_max_bridge = self.max_bridge_voltage
+        v_max_coil = np.max(voltage)
+        if v_max_coil == 0:
+            raise ValueError(
+                "Voltage array must contain at least one value",
+                "different than zero.",
+            )
+        number_of_bridge_units = np.ceil(v_max_coil / v_max_bridge)
+        v_rated = number_of_bridge_units * v_max_bridge
 
-        number_of_bridge_units = np.ceil(np.max(voltage) / v_max)
-        v_rated = number_of_bridge_units * v_max
         p_apparent = v_rated * current
-
         phase = np.arccos(voltage / v_rated)
         power_factor = np.cos(phase)
 
@@ -287,6 +299,9 @@ class CoilSupplySystem(CoilSupplyABC):
 
     _computing_msg = "Computing coils power supply power loads..."
 
+    def _just_to_stop_ruff_checks(self):
+        pass
+
     def __init__(
         self,
         config: Union[CoilSupplyConfig, Dict[str, Any]],
@@ -314,7 +329,7 @@ class CoilSupplySystem(CoilSupplyABC):
         converter_inputs = self.inputs.converter_library[name]
         converter_class_name = converter_inputs.class_name
         converter_class = _get_module_class_from_str(converter_class_name)
-        if isinstance(converter_class, CoilSupplyConverter):
+        if issubclass(converter_class, CoilSupplyConverter):
             converter_args = converter_inputs.class_args
             converter_config = converter_class._config(
                 name=name,
@@ -336,22 +351,24 @@ class CoilSupplySystem(CoilSupplyABC):
         self._issue_computing_message()
         return wallplug_info
 
-    def compute_wallplug_loads(self, voltage, current):
+    def compute_wallplug_loads(self, coil_voltage, coil_current):
         """
         Compute power loads required by coil supply system to feed coils.
 
         Parameters
         ----------
-        voltage: np.ndarray
+        coil_voltage: Union[np.array, List[float] ]
             Array of voltages in time required by the coils. [V]
-        current: np.ndarray
+        coil_current: Union[np.array, List[float] ]
             Array of currents in time required by the coils. [V]
         """
-        if len(voltage) != len(current):
+        voltages = np.array(coil_voltage)
+        currents = np.array(coil_current)
+        if len(voltages) != len(currents):
             raise CoilSupplySystemError(
                 "Current and voltage vectors must have the same length!"
             )
         for corrector in self.correctors_list:
-            corrector.compute_correction(voltage, current)
-        wallplug_info = self.converter.compute_conversion(voltage, current)
+            corrector.compute_correction(voltages, currents)
+        wallplug_info = self.converter.compute_conversion(voltages, currents)
         return self._powerloads_from_wallpluginfo(wallplug_info)
