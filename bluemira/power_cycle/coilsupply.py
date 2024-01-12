@@ -15,6 +15,7 @@ TODO:
     - relocate `CoilSupplySystemError` to `errors.py`
     - implement `_powerloads_from_wallpluginfo` method
     - remove dummy abstract method from `CoilSupplyABC` class
+    - modify config/input classes to inherit from bluemira `Parameter`
 """
 
 import sys
@@ -75,8 +76,13 @@ class CoilSupplySubSystem(CoilSupplyABC):
 class CoilSupplyConfig:
     """Values that characterize a Coil Supply System."""
 
+    "Description of the 'CoilSupplySystem' instance."
     description: str = "Coil Supply System"
+
+    "Ordered labels to identify 'CoilSupplyCorrector' instances needed."
     correctors_tuple: Tuple[Union[None, str]] = ()
+
+    "Label to identify 'CoilSupplyConverter' instance needed."
     converter_technology: Union[None, str] = None
 
 
@@ -153,10 +159,8 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
         self.variable = CoilVariable(config.correction_variable)
         self.factor = config.correction_factor
 
-    def _correct(self, value):
-        if isinstance(value, np.ndarray):
-            return value * (1 + self.factor)
-        return [element * (1 + self.factor) for element in value]
+    def _correct(self, value: np.ndarray):
+        return value * (1 + self.factor)
 
     def compute_correction(self, voltage, current):
         """Apply correction factor to a member of CoilVariable."""
