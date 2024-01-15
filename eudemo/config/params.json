@@ -377,7 +377,7 @@
     "long_name": "Margin to vertical stability criterion"
   },
   "l_i": {
-    "value": 0.8,
+    "value": 0.78,
     "unit": "dimensionless",
     "source": "Input",
     "long_name": "Normalised internal plasma inductance"

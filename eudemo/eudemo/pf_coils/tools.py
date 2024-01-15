@@ -395,23 +395,28 @@ def make_pf_coil_path(tf_boundary: BluemiraWire, offset_value: float) -> Bluemir
     :
         Path along which the PF coil centroids should be positioned
     """
+    coordinates = tf_boundary.discretize(byedges=True, ndiscr=200)
+    x_min = np.min(coordinates.x)
+    z_min = np.min(coordinates.z) - offset_value
+    z_max = np.max(coordinates.z) + offset_value
+
     tf_offset = offset_wire(
         tf_boundary, offset_value, fallback_method="miter", fallback_force_spline=True
     )
 
-    # Find top-left and bottom-left "corners"
-    coordinates = tf_offset.discretise(byedges=True, ndiscr=200)
-    x_min = np.min(coordinates.x)
-    z_min, z_max = 0.0, 0.0
-    eps = 0.0
-    while np.isclose(z_min, z_max):
-        # This is unlikely, but if so, shifting x_min a little ensures the boolean cut
-        # can be performed and that an open wire will be returned
-        idx_inner = np.nonzero(np.isclose(coordinates.x, x_min))[0]
-        z_min = np.min(coordinates.z[idx_inner])
-        z_max = np.max(coordinates.z[idx_inner])
-        x_min += eps
-        eps += 1e-3
+    # # Find top-left and bottom-left "corners"
+    # coordinates = tf_offset.discretize(byedges=True, ndiscr=200)
+    # #x_min = np.min(coordinates.x)
+    # z_min, z_max = 0.0, 0.0
+    # eps = 0.0
+    # while np.isclose(z_min, z_max):
+    #     # This is unlikely, but if so, shifting x_min a little ensures the boolean cut
+    #     # can be performed and that an open wire will be returned
+    #     idx_inner = np.nonzero(np.isclose(coordinates.x, x_min))[0]
+    #     z_min = np.min(coordinates.z[idx_inner])
+    #     z_max = np.max(coordinates.z[idx_inner])
+    #     x_min += eps
+    #     eps += 1e-3
 
     cutter = BluemiraFace(
         make_polygon(
