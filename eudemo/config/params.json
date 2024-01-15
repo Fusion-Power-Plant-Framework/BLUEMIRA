@@ -1,6 +1,6 @@
 {
   "A": {
-    "value": 3.1,
+    "value": 2.7,
     "unit": "dimensionless",
     "source": "Input",
     "long_name": "Plasma aspect ratio"
@@ -24,7 +24,7 @@
     "long_name": "Peak field inside the TF coil winding pack"
   },
   "C_Ejima": {
-    "value": 0.3,
+    "value": 0.2,
     "unit": "dimensionless",
     "source": "Input (Ejima, et al., Volt-second analysis and consumption in Doublet III plasmas, Nuclear Fusion 22, 1313 (1982))",
     "long_name": "Ejima constant"
@@ -365,7 +365,7 @@
     "long_name": "Last closed surface plasma elongation"
   },
   "kappa_95": {
-    "value": 1.6,
+    "value": 1.747,
     "unit": "dimensionless",
     "source": "Input",
     "long_name": "95th percentile plasma elongation"
@@ -395,7 +395,7 @@
     "long_name": "Plasma safety factor on axis"
   },
   "q_95": {
-    "value": 3.5,
+    "value": 3.6,
     "unit": "dimensionless",
     "source": "Input",
     "long_name": "Plasma safety factor at the 95th percentile flux surface"
