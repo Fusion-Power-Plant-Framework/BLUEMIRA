@@ -7,7 +7,7 @@
     "plot": false
   },
   "Fixed boundary equilibrium": {
-    "run_mode": "run",
+    "run_mode": "read",
     "file_path": "$path_expand:./fixed_boundary_eqdsk.json",
     "param_class": "JohnerLCFS",
     "shape_config": {
@@ -60,7 +60,7 @@
     }
   },
   "Free boundary equilibrium": {
-    "run_mode": "read",
+    "run_mode": "run",
     "plot": true,
     "save": true,
     "fixed_eq_file_path": "$path_expand:./fixed_boundary_eqdsk.json",
