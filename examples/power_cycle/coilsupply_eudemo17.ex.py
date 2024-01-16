@@ -4,24 +4,12 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-"""Coil Supply System example."""
+"""Coil Supply System example using the equilibria module (EU-DEMO 2017)."""
 
 # %%
-import matplotlib.pyplot as plt
-import numpy as np
 
 from bluemira.power_cycle.coilsupply import CoilSupplySystem
-
-if True:
-    import pprint
-    from dataclasses import asdict, is_dataclass
-
-    def pp(obj):
-        """Prety Printer for dataclasses."""
-        if is_dataclass(obj):
-            return pprint.pp(asdict(obj), sort_dicts=False, indent=4)
-        return pprint.pp(obj, indent=4)
-
+from bluemira.power_cycle.tools import pp
 
 # %% [markdown]
 # # Coil Supply System set-up
@@ -37,10 +25,11 @@ if True:
 #                              additional voltage during breakdown
 #
 
+
 # %%
 coilsupply_config = {
     "description": "Coil Supply System",
-    "correctors_tuple": ("PMS", "FDU", "SNU"),
+    "correctors_tuple": ("FDU", "SNU", "PMS"),
     "converter_technology": "THY",
 }
 
@@ -89,6 +78,7 @@ coilsupply = CoilSupplySystem(
     corrector_library,
     converter_library,
 )
+
 pp(coilsupply.inputs)
 pp(coilsupply.correctors_list)
 pp(coilsupply.converter)
@@ -96,70 +86,10 @@ pp(coilsupply.converter)
 # %% [markdown]
 # # Coil Supply System simulation
 #
-# Input data from IDM report 2Q6988.
-# Voltages in V. Currents in A, varying linearly.
+# Import data of coil voltages and currents from `equilibria` module.
 #
 
+
 # %%
-voltage_for_each_coil = 0
-currents_start_of_flat = {
-    "CS3U": 18.7e3,
-    "CS2U": 5.6e3,
-    "CS1": -1.9e3,
-    "CS2L": -0.9e3,
-    "CS3L": 25.6e3,
-    "PF1": 33.6e3,
-    "PF2": -18.9e3,
-    "PF3": -24.8e3,
-    "PF4": -5.3e3,
-    "PF5": -24.3e3,
-    "PF6": 34.1e3,
-}
-currents_end_of_flat = {
-    "CS3U": -10.1e3,
-    "CS2U": -33.5e3,
-    "CS1": -34.7e3,
-    "CS2L": -32.7e3,
-    "CS3L": -21.4e3,
-    "PF1": -3.0e3,
-    "PF2": -30.5e3,
-    "PF3": -23.6e3,
-    "PF4": -9.0e3,
-    "PF5": -26.8e3,
-    "PF6": 19.2e3,
-}
-
-n_points = 10
-voltages_during_flat = {}
-currents_during_flat = {}
-wallplug_info_during_flat = {}
-for coil in currents_start_of_flat:
-    coil_voltages = [voltage_for_each_coil] * n_points
-
-    SOF_current = currents_start_of_flat[coil]
-    EOF_current = currents_end_of_flat[coil]
-    coil_currents = np.linspace(SOF_current, EOF_current, n_points)
-    coil_currents = coil_currents.tolist()
-
-    coil_wallplug_info = coilsupply.compute_wallplug_loads(
-        coil_voltages,
-        coil_currents,
-    )
-
-    voltages_during_flat[coil] = coil_voltages
-    currents_during_flat[coil] = coil_currents
-    wallplug_info_during_flat[coil] = coil_wallplug_info
-
-    plt.plot(coil_currents, label=coil)
-plt.legend()
-plt.show()
-
-pp(wallplug_info_during_flat)
-
-key_variable = "power_reactive"
-for coil in wallplug_info_during_flat:
-    coil_info = wallplug_info_during_flat[coil]
-    plot_variable = coil_info[key_variable]
-    plt.plot(plot_variable, label=coil)
-plt.legend()
-plt.show()
+def run_equilibria_script():
+    """Run the equilibria script."""

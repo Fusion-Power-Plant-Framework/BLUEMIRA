@@ -254,6 +254,8 @@ class ThyristorBridges(CoilSupplyConverter):
             )
         number_of_bridge_units = np.ceil(v_max_coil / v_max_bridge)
         v_rated = number_of_bridge_units * v_max_bridge
+        i_rated = max(current)
+        p_rated = v_rated * i_rated
 
         p_apparent = v_rated * current
         phase = np.arccos(voltage / v_rated)
@@ -271,6 +273,8 @@ class ThyristorBridges(CoilSupplyConverter):
         return {
             "number_of_bridge_units": number_of_bridge_units,
             "voltage_rated": v_rated,
+            "current_rated": i_rated,
+            "power_rated": p_rated,
             "power_apparent": p_apparent,
             "phase": phase,
             "power_factor": power_factor,

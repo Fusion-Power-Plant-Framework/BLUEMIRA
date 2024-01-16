@@ -9,7 +9,9 @@ Utility functions for the power cycle model.
 """
 
 import json
-from typing import Any
+import pprint
+from dataclasses import asdict, is_dataclass
+from typing import Any, Dict
 
 import matplotlib.pyplot as plt
 import numba as nb
@@ -18,10 +20,8 @@ import numpy as np
 from bluemira.base.constants import EPS
 
 
-def read_json(file_path) -> dict[str, Any]:
-    """
-    Returns the contents of a 'json' file.
-    """
+def read_json(file_path) -> Dict[str, Any]:
+    """Return the contents of a 'json' file."""
     with open(file_path) as json_file:
         return json.load(json_file)
 
@@ -129,3 +129,8 @@ def match_domains(
             right=0,
         )
     return x_matched, all_y_matched
+def pp(obj):
+    """Prety Printer compatible with dataclasses."""
+    if is_dataclass(obj):
+        return pprint.pp(asdict(obj), sort_dicts=False, indent=4)
+    return pprint.pp(obj, indent=4)
