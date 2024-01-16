@@ -204,13 +204,11 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         # Create some vertical targets for now. Eventually the target
         # angle will be derived from the grazing-angle parameter
         target_length = self.params.div_Ltarg.value
-        target_coords = np.array(
-            [
-                [point[0], point[0]],
-                [point[1], point[1]],
-                [point[2] - target_length / 2, point[2] + target_length / 2],
-            ]
-        )
+        target_coords = np.array([
+            [point[0], point[0]],
+            [point[1], point[1]],
+            [point[2] - target_length / 2, point[2] + target_length / 2],
+        ])
         return make_polygon(target_coords, label=label)
 
     def make_dome(
@@ -249,12 +247,10 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         # the input start and end points
         start_coord = np.array([[start[0]], [start[1]]])  # [[x], [z]]
         end_coord = np.array([[end[0]], [end[1]]])
-        idx = np.array(
-            [
-                np.argmin(np.hypot(*(flux_surface - start_coord))),
-                np.argmin(np.hypot(*(flux_surface - end_coord))),
-            ]
-        )
+        idx = np.array([
+            np.argmin(np.hypot(*(flux_surface - start_coord))),
+            np.argmin(np.hypot(*(flux_surface - end_coord))),
+        ])
 
         # Make sure the start and end are in the right order
         if idx[0] > idx[1]:
