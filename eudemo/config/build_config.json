@@ -4,7 +4,7 @@
     "run_mode": "read",
     "read_dir": "$path_expand:./",
     "run_dir": "$path_expand:./",
-    "plot": true
+    "plot": false
   },
   "Fixed boundary equilibrium": {
     "run_mode": "read",
@@ -126,7 +126,7 @@
     "file_path": "$path_expand:./TFCoilDesign.json",
     "plot": true,
     "param_class": "TripleArc",
-    "variables_map": {},
+    "variables_map": { "sl": { "value": 12.0 } },
     "problem_class": "bluemira.builders.tf_coils::RippleConstrainedLengthGOP",
     "problem_settings": {
       "ripple_selector": {
@@ -186,9 +186,9 @@
     },
     "position_settings": {
       "optimisation_settings": {
-        "algorithm_name": "COBYLA",
+        "algorithm_name": "ISRES",
         "conditions": {
-          "max_eval": 200,
+          "max_eval": 500,
           "ftol_rel": 1e-10
         }
       }

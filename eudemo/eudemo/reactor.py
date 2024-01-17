@@ -300,11 +300,11 @@ def build_pf_coils(
     # This is a very crude way of forcing PF coil centrepoints away from the KOZs
     # to stop clashes between ports and PF coil corners
     # TODO: Implement adjustable current bounds on sub-opt problems
-    offset_value = np.sqrt(
+    offset_value = 0.15 * np.sqrt(
         params.global_params.I_p.value / params.global_params.PF_jmax.value
     )
     for koz in pf_coil_keep_out_zones:
-        new_wire = offset_wire(koz.boundary[0], offset_value, open_wire=False)
+        new_wire = offset_wire(koz.boundary[0], abs(offset_value), open_wire=False)
         new_face = BluemiraFace(new_wire)
         pf_coil_keep_out_zones_new.append(new_face)
 

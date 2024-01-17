@@ -768,7 +768,7 @@
     "long_name": "Fraction of neutrons deposited in VV"
   },
   "v_burn": {
-    "value": 0.05,
+    "value": 2.879e-2,
     "unit": "volt",
     "source": "Input",
     "long_name": "Loop voltage during burn"
@@ -784,7 +784,7 @@
     "source": "Input"
   },
   "CS_bmax": {
-    "value": 13,
+    "value": 14,
     "unit": "tesla",
     "source": "Input",
     "long_name": "Maximum peak field to use in CS modules"
@@ -844,7 +844,7 @@
     "long_name": "Shafranov shift of plasma (geometric=>magnetic)"
   },
   "tk_cs_casing": {
-    "value": 0.02,
+    "value": 0.001,
     "unit": "meter",
     "source": "Input",
     "long_name": "Thickness of the CS coil casing"

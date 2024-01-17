@@ -412,7 +412,11 @@ class PulsedCoilsetDesign(ABC):
             self.params.l_i.value,
             self.params.C_Ejima.value,
         )
-        psi_eof = psi_sof - self.params.tau_flattop.value * self.params.v_burn.value
+        psi_eof = (
+            psi_sof - 0.7 * self.params.tau_flattop.value * self.params.v_burn.value
+        )
+        # TODO: TOTAL HACK
+
         return psi_sof, psi_eof
 
     def _get_max_currents(self, coilset: CoilSet) -> npt.NDArray[np.float64]:

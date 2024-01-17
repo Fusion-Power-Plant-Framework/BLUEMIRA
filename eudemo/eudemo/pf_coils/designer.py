@@ -170,6 +170,16 @@ class PFCoilsDesigner(Designer[CoilSet]):
             self.build_config.get("grid_settings", {}),
         )
         profiles = deepcopy(self.ref_eq.profiles)
+        from bluemira.equilibria.profiles import CustomProfile
+
+        pn = np.linspace(0, 1, 50)
+        profiles = CustomProfile(
+            profiles.pprime(pn),
+            profiles.ffprime(pn),
+            profiles.R_0,
+            profiles._B_0,
+            I_p=profiles.I_p,
+        )
         constraints = self._make_opt_constraints(coilset)
         opt_problem = self._make_pulsed_coilset_opt_problem(
             coilset, grid, profiles, coil_mapper, constraints
@@ -309,6 +319,8 @@ class PFCoilsDesigner(Designer[CoilSet]):
             "phi_l_pos": {"value": 30.0},
         })
         lcfs = lcfs_parameterisation.create_shape().discretize(byedges=True, ndiscr=50)
+        # from bluemira.geometry.coordinates import interpolate_points, Coordinates
+
         lcfs = self.ref_eq.eq.get_LCFS()
         x_lcfs, z_lcfs = lcfs.x, lcfs.z
         arg_inner = np.argmin(x_lcfs)

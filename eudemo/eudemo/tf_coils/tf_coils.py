@@ -263,7 +263,7 @@ class TFCoilDesigner(Designer[GeometryParameterisation]):
         tk_offset = 0.5 * self.params.tf_wp_width.value
         # Variable thickness of the casing is problematic...
         # TODO: Improve this estimate (or use variable offset here too..)
-        tk_offset += 2 * np.sqrt(2) * self.params.tk_tf_front_ib.value
+        tk_offset += np.sqrt(2) * self.params.tk_tf_front_ib.value
         tk_offset += np.sqrt(2) * self.params.g_ts_tf.value
         return offset_wire(keep_out_zone, tk_offset, open_wire=False, join="arc")
 
