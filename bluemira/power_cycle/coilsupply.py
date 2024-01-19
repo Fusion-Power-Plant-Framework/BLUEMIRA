@@ -20,19 +20,24 @@ TODO:
 
 import sys
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from enum import Enum
-from typing import Any, Dict, Tuple, Union
+from dataclasses import (
+    asdict,
+    dataclass,
+    field,
+    fields,
+    make_dataclass,
+)
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 
-from bluemira.base.look_and_feel import bluemira_print
 from bluemira.power_cycle.errors import PowerCycleError
 from bluemira.power_cycle.net import (
     Config,
     Descriptor,
     LibraryConfigDescriptor,
 )
+from bluemira.power_cycle.tools import pp
 
 
 def _get_module_class_from_str(class_name):
@@ -45,24 +50,70 @@ class CoilSupplySystemError(PowerCycleError):
     """
 
 
-class CoilVariable(Enum):
-    """
-    Possible coil variables.
-
-    Members define possible variables demanded by coils, modified by a
-    'CoilSupplySystem' object.
-    """
-
-    VOLTAGE = "voltage"
-    CURRENT = "current"
-
-
 class CoilSupplyABC(ABC):
     """Abstract base class for coil supply systems."""
 
     @abstractmethod
     def _just_to_stop_ruff_checks(self):
         """Define dummy method to stop ruff checks."""
+
+
+@dataclass
+class CoilSupplyParameterABC:
+    """
+    Specifier of parameters for a 'CoilSupplySystem' instance.
+
+    Upon creation of a 'CoilSupplyInputs' instance, this class is used
+    to specify the structure of parameters applied to methods of the
+    'CoilSupplySystem' instance created with the 'CoilSupplyInputs'
+    instance.
+    """
+
+    @classmethod
+    def validate_parameter(cls, obj):
+        """
+        Validate 'obj' to be of the same class as the object testing it.
+
+        Substitute method for 'isinstance', since it fails in this
+        implementation.
+        """
+        return obj.__class__.__name__ == cls.__name__
+
+    @classmethod
+    def init_subclass(cls, argument: Any = None):
+        """
+        Create an instance from a generic argument.
+
+        If 'None' is given to instantiate the class, an empty instance
+        is created.
+        If an object of this class is given to instantiate the class, it
+        is returned as is.
+        If a 'dict' is given to instantiate the class, keys must match
+        class attributes and their values are distributed.
+        If a value of the 'int', 'float', 'list' or 'tuple' classes is
+        given to instantiate the class, copy that value to all attributes.
+        """
+        single_value_types = (int, float, list, tuple, np.ndarray)
+        if argument is None:
+            return cls()
+        if cls.validate_parameter(argument):
+            return argument
+        if isinstance(argument, dict):
+            return cls(**argument)
+        if isinstance(argument, single_value_types):
+            args = {}
+            all_fields = fields(cls)
+            for one_field in all_fields:
+                args[one_field.name] = argument
+            return cls(**args)
+        raise ValueError(
+            "A 'CoilSupplyParameter' instance must be initialized "
+            f"with 'None' for an empty instance, a '{cls.__name__}' "
+            "instance for no alteration, a 'dict' for a distributed "
+            "instantiation or any of the following types for a "
+            f"single-value instantiation: {single_value_types}. "
+            f"Argument was '{type(argument)}' instead."
+        )
 
 
 class CoilSupplySubSystem(CoilSupplyABC):
@@ -79,10 +130,19 @@ class CoilSupplyConfig:
     "Description of the 'CoilSupplySystem' instance."
     description: str = "Coil Supply System"
 
-    "Ordered labels to identify 'CoilSupplyCorrector' instances needed."
-    correctors_tuple: Tuple[Union[None, str]] = ()
+    "Names of the coils to which power is supplied."
+    coil_names: Union[None, List[str]] = None
 
-    "Label to identify 'CoilSupplyConverter' instance needed."
+    "Ordered list of names of corrector technologies, found in the"
+    "library of 'CoilSupplyCorrectorConfig' entries, used to create the"
+    "corresponding 'CoilSupplyCorrector' instances to be applied to"
+    "each coil."
+    corrector_technologies: Union[None, List[str]] = None
+
+    "Single name of converter technology, found in the library of"
+    "'CoilSupplyConverterConfig' entries, used to create the"
+    "corresponding 'CoilSupplyConverter' instance to be applied to"
+    "each coil."
     converter_technology: Union[None, str] = None
 
 
@@ -93,11 +153,10 @@ class CoilSupplyCorrectorConfig(Config):
     "Description of the 'CoilSupplyCorrector' instance."
     description: str
 
-    "Member of 'CoilVariable' corrected by the 'CoilSupplyCorrector' instance."
-    correction_variable: CoilVariable
-
-    "Dimensionless value that quantitavely defines the correction. [-]"
-    correction_factor: float
+    "Equivalent resistance of the corrector of each coil. [Ω (ohm)]"
+    "Must be a 'dict' with keys that match each 'str' in 'coil_names'"
+    "of 'CoilSupplyConfig'. A single value is copied to all coils."
+    resistance_set: Union[float, Dict[str, float]]
 
 
 @dataclass
@@ -122,7 +181,6 @@ class CoilSupplyConfigDescriptor(Descriptor):
         """Set the coils supply system config."""
         if not isinstance(value, CoilSupplyConfig):
             value = CoilSupplyConfig(**value)
-
         setattr(obj, self._name, value)
 
 
@@ -138,14 +196,47 @@ class CoilSupplyInputs:
         config=CoilSupplyConverterConfig,
     )
 
+    def _create_coilsupplyparameter_dataclass(self):
+        """
+        Dynamically create 'CoilSupplyParameter' dataclass inheriting
+        from 'CoilSupplyParameterABC' to contain attributes that match
+        'config.coil_names'.
+        """
+        parameter_fields = [
+            (
+                name,
+                Any,
+                field(default=None),
+            )
+            for name in self.config.coil_names
+        ]
+        parameter = CoilSupplyParameterABC()
+        parameter.__class__ = make_dataclass(
+            "CoilSupplyParameter",
+            fields=parameter_fields,
+            bases=(CoilSupplyParameterABC,),
+        )
+        self.parameter = parameter
+
+    def _transform_resistance_sets_in_coilsupplyparameter(self):
+        for config in self.corrector_library.values():
+            config.resistance_set = self.parameter.init_subclass(
+                config.resistance_set,
+            )
+
+    def __post_init__(self):
+        """Complete __init__ by ajusting inputs."""
+        self._create_coilsupplyparameter_dataclass()
+        self._transform_resistance_sets_in_coilsupplyparameter()
+
 
 class CoilSupplyCorrector(CoilSupplySubSystem):
     """
     Safety and auxiliary sub-systems for coil power supply systems.
 
     Class to represent safety and auxiliary sub-systems of a
-    'CoilSupplySystem' object, that result in a correction of currents
-    or voltages demanded by the coils.
+    'CoilSupplySystem' object, that result in a partial voltage
+    reduction due to an equivalent resistance.
 
     Parameters
     ----------
@@ -156,23 +247,32 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
     def __init__(self, config: CoilSupplyCorrectorConfig):
         self.name = config.name
         self.description = config.description
-        self.variable = CoilVariable(config.correction_variable)
-        self.factor = config.correction_factor
+        all_resistances = asdict(config.resistance_set).values()
+        if all(e >= 0 for e in all_resistances):
+            self.resistance_set = config.resistance_set
+        else:
+            raise ValueError("All resistances must be non-negative.")
 
     def _correct(self, value: np.ndarray):
         return value * (1 + self.factor)
 
-    def compute_correction(self, voltage, current):
-        """Apply correction factor to a member of CoilVariable."""
-        if self.variable == CoilVariable.VOLTAGE:
-            voltage = self._correct(voltage)
-        elif self.variable == CoilVariable.CURRENT:
-            current = self._correct(current)
-        else:
-            raise ValueError(
-                f"Unknown routine for correcting variable '{self.variable}'."
-            )
-        return voltage, current
+    def compute_correction(self, voltages_parameter, currents_parameter):
+        """
+        Apply correction to each attribute of a 'CoilSupplyParameter.
+
+        As a first approximation, neglect current reduction due to
+        resistance of corrector device, and reduce total voltage
+        by contribution to resistance connected in series.
+        """
+        coil_names = list(asdict(self.resistance_set).keys())
+        for name in coil_names:
+            initial_voltages = getattr(voltages_parameter, name)
+            initial_currents = getattr(currents_parameter, name)
+            corrector_resistance = getattr(self.resistance_set, name)
+            corrector_voltages = corrector_resistance * initial_currents
+            final_voltages = initial_voltages - corrector_voltages
+            setattr(voltages_parameter, name, final_voltages)
+        return voltages_parameter, currents_parameter
 
 
 class CoilSupplyConverter(CoilSupplySubSystem):
@@ -200,7 +300,8 @@ class ThyristorBridgesConfig(Config):
     "Maximum voltage allowed accross single thyristor bridge unit. [V]"
     max_bridge_voltage: float
 
-    "Power loss percentages applied to coil power."
+    "Power loss percentages applied to active power demanded by the"
+    "converter from the grid."
     power_loss_percentages: Dict[str, float]
 
 
@@ -232,6 +333,9 @@ class ThyristorBridges(CoilSupplyConverter):
         self.description = config.description
         self.max_bridge_voltage = config.max_bridge_voltage
         self.power_loss_percentages = config.power_loss_percentages
+
+    def _convert(self):
+        pass
 
     def compute_conversion(self, voltage, current):
         """
@@ -299,7 +403,7 @@ class CoilSupplySystem(CoilSupplyABC):
 
     Attributes
     ----------
-    correctors_list:
+    correctors: Dict[str, Tuple[CoilSupplyCorrector]]
         Ordered list of corrector system instances
     converter:
         blablabla
@@ -313,26 +417,27 @@ class CoilSupplySystem(CoilSupplyABC):
     def __init__(
         self,
         config: Union[CoilSupplyConfig, Dict[str, Any]],
-        correctors: Dict[str, Any],
-        converters: Dict[str, Any],
+        corrector_library: Dict[str, Tuple[CoilSupplyCorrector]],
+        converter_library: Dict[str, Any],
     ):
         self.inputs = CoilSupplyInputs(
             config=config,
-            corrector_library=correctors,
-            converter_library=converters,
+            corrector_library=corrector_library,
+            converter_library=converter_library,
         )
 
-        self.correctors_list = self._build_correctors_list()
+        self.correctors = self._build_correctors()
         self.converter = self._build_converter()
+        # self._sanity()
 
-    def _build_correctors_list(self):
-        correctors_list = []
-        for name in self.inputs.config.correctors_tuple:
+    def _build_correctors(self) -> Tuple[CoilSupplyCorrector]:
+        corrector_list = []
+        for name in self.inputs.config.corrector_technologies:
             corrector_config = self.inputs.corrector_library[name]
-            correctors_list.append(CoilSupplyCorrector(corrector_config))
-        return correctors_list
+            corrector_list.append(CoilSupplyCorrector(corrector_config))
+        return tuple(corrector_list)
 
-    def _build_converter(self):
+    def _build_converter(self) -> CoilSupplyConverter:
         name = self.inputs.config.converter_technology
         converter_inputs = self.inputs.converter_library[name]
         converter_class_name = converter_inputs.class_name
@@ -350,16 +455,121 @@ class CoilSupplySystem(CoilSupplyABC):
             )
         return converter_class(converter_config)
 
-    def _issue_computing_message(self, verbose=False):
+    '''
+    def _sanity(self):
+        for corrector in self.correctors_list:
+            if len(corrector.resistance_set) != self.coilset_size:
+                raise CoilSupplySystemError(
+                    f"Every 'CoilSupplyCorrector' in the 'corrector_list'"
+                    f"must have a 'resistance_set with {self.coilset_size}"
+                    "elements."
+                )
+
+    def _print_computing_message(self, verbose=False):
         if verbose:
             bluemira_print(self._computing_msg)
 
     def _powerloads_from_wallpluginfo(self, wallplug_info):
         """TODO: transform converter info into power loads."""
-        self._issue_computing_message()
+        self._print_computing_message()
+        return wallplug_info
+    '''
+
+    def validate_parameter(self, obj=None):
+        """
+        Create parameter compatible with this 'CoilSupplySystem' instance.
+
+        Use this method to transform objects into instances of the
+        'CoilSupplyParameter' class, that have attributes that match
+        the coil names in 'inputs.config.coil_names'.
+        """
+        return self.inputs.parameter.init_subclass(obj)
+
+    def compute_wallplug_loads(
+        self,
+        voltages_argument: Any,
+        currents_argument: Any,
+    ):
+        """
+        Compute power loads required by coil supply system to feed coils.
+
+        Parameters
+        ----------
+        voltages_parameter: Any
+            Array of voltages in time required by the coils. [V]
+        currents_parameter: Any
+            Array of currents in time required by the coils. [A]
+        """
+        voltages_parameter = self.validate_parameter(
+            np.array(voltages_argument),
+        )
+        currents_parameter = self.validate_parameter(
+            np.array(currents_argument),
+        )
+
+        wallplug_info = self.validate_parameter()
+
+        for corrector in self.correctors:
+            (
+                voltages_parameter,
+                currents_parameter,
+            ) = corrector.compute_correction(
+                voltages_parameter,
+                currents_parameter,
+            )
+            pp(voltages_parameter)
+
+        """
+        for name in self.inputs.config.coil_names:
+            wallplug_info[name] = self.converter.compute_conversion(
+                voltages_parameter[name],
+                currents_parameter[name],
+            )
+        """
+
         return wallplug_info
 
-    def compute_wallplug_loads(self, coil_voltage, coil_current):
+    '''
+    def compute_wallplug_loads(
+        self,
+        voltage_set: Dict[str, Union[np.array, List[float]]],
+        current_set: Dict[str, Union[np.array, List[float]]],
+    ):
+        """
+        Compute power loads required by coil supply system to feed coils.
+
+        Parameters
+        ----------
+        coil_voltage: Union[np.array, List[float] ]
+            Array of voltages in time required by the coils. [V]
+        coil_current: Union[np.array, List[float] ]
+            Array of currents in time required by the coils. [V]
+        """
+        self._validate_sets(voltage_set, current_set)
+
+        wallplug_info = {}
+        for coil in voltage_set:
+            coil_voltage = np.array(voltage_set[coil])
+            coil_current = np.array(current_set[coil])
+            if len(coil_voltage) != len(coil_current):
+                raise CoilSupplySystemError(
+                    f"Current and voltage vectors for coil '{coil}' do"
+                    "not have the same length!"
+                )
+            corrected_voltage = coil_voltage
+            for corrector in self.correctors_list:
+                corrected_voltage = corrector.compute_correction(
+                    corrected_voltage,
+                    coil_current,
+                )
+            wallplug_info_for_coil = self.converter.compute_conversion(
+                corrected_voltage,
+                coil_current,
+            )
+            wallplug_info[coil] = wallplug_info_for_coil
+        return self._powerloads_from_wallpluginfo(wallplug_info)
+
+    def old_compute_wallplug_loads(self, coil_voltage, coil_current):
         """
         Compute power loads required by coil supply system to feed coils.
 
@@ -380,3 +590,5 @@ class CoilSupplySystem(CoilSupplyABC):
             corrector.compute_correction(voltages, currents)
         wallplug_info = self.converter.compute_conversion(voltages, currents)
         return self._powerloads_from_wallpluginfo(wallplug_info)
+
+    '''
