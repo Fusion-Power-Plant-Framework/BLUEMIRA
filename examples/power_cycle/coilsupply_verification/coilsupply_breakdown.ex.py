@@ -108,7 +108,13 @@ pp(coilsupply.converter)
 for corrector in coilsupply.correctors:
     print(corrector.resistance_set)
 
-print(coilsupply.compute_wallplug_loads([10, 9, 8], [1, 1, 1]))
+test_voltages = [10, 9, 8]
+test_currents = [1, 1, 1]
+wallplug_parameter = coilsupply.compute_wallplug_loads(
+    test_voltages,
+    test_currents,
+)
+pp(wallplug_parameter)
 
 
 # """

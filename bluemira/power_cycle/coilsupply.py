@@ -31,6 +31,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 
+from bluemira.base.look_and_feel import bluemira_print
 from bluemira.power_cycle.errors import PowerCycleError
 from bluemira.power_cycle.net import (
     Config,
@@ -337,20 +338,20 @@ class ThyristorBridges(CoilSupplyConverter):
     def _convert(self):
         pass
 
-    def compute_conversion(self, voltage, current):
+    def compute_conversion(self, voltages_array, currents_array):
         """
         Compute power loads required by converter to feed coils.
 
         Parameters
         ----------
         voltage: np.ndarray
-            voltage array
+            Array of voltages in time. [V]
         current: np.ndarray
-            current array
+            Array of currents in time. [A]
         """
         loss_percentages = self.power_loss_percentages
         v_max_bridge = self.max_bridge_voltage
-        v_max_coil = np.max(voltage)
+        v_max_coil = np.max(voltages_array)
         if v_max_coil == 0:
             raise ValueError(
                 "Voltage array must contain at least one value",
@@ -358,11 +359,11 @@ class ThyristorBridges(CoilSupplyConverter):
             )
         number_of_bridge_units = np.ceil(v_max_coil / v_max_bridge)
         v_rated = number_of_bridge_units * v_max_bridge
-        i_rated = max(current)
+        i_rated = max(currents_array)
         p_rated = v_rated * i_rated
 
-        p_apparent = v_rated * current
-        phase = np.arccos(voltage / v_rated)
+        p_apparent = v_rated * currents_array
+        phase = np.arccos(voltages_array / v_rated)
         power_factor = np.cos(phase)
 
         p_reactive = p_apparent * np.sin(phase)
@@ -428,7 +429,6 @@ class CoilSupplySystem(CoilSupplyABC):
 
         self.correctors = self._build_correctors()
         self.converter = self._build_converter()
-        # self._sanity()
 
     def _build_correctors(self) -> Tuple[CoilSupplyCorrector]:
         corrector_list = []
@@ -455,26 +455,6 @@ class CoilSupplySystem(CoilSupplyABC):
             )
         return converter_class(converter_config)
 
-    '''
-    def _sanity(self):
-        for corrector in self.correctors_list:
-            if len(corrector.resistance_set) != self.coilset_size:
-                raise CoilSupplySystemError(
-                    f"Every 'CoilSupplyCorrector' in the 'corrector_list'"
-                    f"must have a 'resistance_set with {self.coilset_size}"
-                    "elements."
-                )
-
-    def _print_computing_message(self, verbose=False):
-        if verbose:
-            bluemira_print(self._computing_msg)
-
-    def _powerloads_from_wallpluginfo(self, wallplug_info):
-        """TODO: transform converter info into power loads."""
-        self._print_computing_message()
-        return wallplug_info
-    '''
-
     def validate_parameter(self, obj=None):
         """
         Create parameter compatible with this 'CoilSupplySystem' instance.
@@ -485,10 +465,22 @@ class CoilSupplySystem(CoilSupplyABC):
         """
         return self.inputs.parameter.init_subclass(obj)
 
+    def _print_computing_message(self, verbose=False):
+        if verbose:
+            bluemira_print(self._computing_msg)
+
+    def _powerloads_from_wallpluginfo(self, wallplug_info, verbose):
+        """TODO: transform converter info into power loads."""
+        self._print_computing_message(verbose=verbose)
+        active_load = wallplug_info["power_active"]
+        reactive_load = wallplug_info["power_reactive"]
+        return active_load, reactive_load
+
     def compute_wallplug_loads(
         self,
         voltages_argument: Any,
         currents_argument: Any,
+        verbose: bool = False,
     ):
         """
         Compute power loads required by coil supply system to feed coils.
@@ -506,9 +498,6 @@ class CoilSupplySystem(CoilSupplyABC):
         currents_parameter = self.validate_parameter(
             np.array(currents_argument),
         )
-
-        wallplug_info = self.validate_parameter()
-
         for corrector in self.correctors:
             (
                 voltages_parameter,
@@ -517,78 +506,24 @@ class CoilSupplySystem(CoilSupplyABC):
                 voltages_parameter,
                 currents_parameter,
             )
-            pp(voltages_parameter)
+            if verbose:
+                pp(voltages_parameter)
 
-        """
+        wallplug_parameter = self.validate_parameter()
         for name in self.inputs.config.coil_names:
-            wallplug_info[name] = self.converter.compute_conversion(
-                voltages_parameter[name],
-                currents_parameter[name],
+            voltages_array = getattr(voltages_parameter, name)
+            currents_array = getattr(currents_parameter, name)
+
+            wallplug_info = self.converter.compute_conversion(
+                voltages_array,
+                currents_array,
             )
-        """
-
-        return wallplug_info
-
-    '''
-    def compute_wallplug_loads(
-        self,
-        voltage_set: Dict[str, Union[np.array, List[float]]],
-        current_set: Dict[str, Union[np.array, List[float]]],
-    ):
-        """
-        Compute power loads required by coil supply system to feed coils.
-
-        Parameters
-        ----------
-        coil_voltage: Union[np.array, List[float] ]
-            Array of voltages in time required by the coils. [V]
-        coil_current: Union[np.array, List[float] ]
-            Array of currents in time required by the coils. [V]
-        """
-        self._validate_sets(voltage_set, current_set)
-
-        wallplug_info = {}
-        for coil in voltage_set:
-            coil_voltage = np.array(voltage_set[coil])
-            coil_current = np.array(current_set[coil])
-            if len(coil_voltage) != len(coil_current):
-                raise CoilSupplySystemError(
-                    f"Current and voltage vectors for coil '{coil}' do"
-                    "not have the same length!"
-                )
-            corrected_voltage = coil_voltage
-            for corrector in self.correctors_list:
-                corrected_voltage = corrector.compute_correction(
-                    corrected_voltage,
-                    coil_current,
-                )
-            wallplug_info_for_coil = self.converter.compute_conversion(
-                corrected_voltage,
-                coil_current,
+            active_load, reactive_load = self._powerloads_from_wallpluginfo(
+                wallplug_info,
+                verbose,
             )
-            wallplug_info[coil] = wallplug_info_for_coil
-        return self._powerloads_from_wallpluginfo(wallplug_info)
+            wallplug_info["active_load"] = active_load
+            wallplug_info["reactive_load"] = reactive_load
+            setattr(wallplug_parameter, name, wallplug_info)
 
-    def old_compute_wallplug_loads(self, coil_voltage, coil_current):
-        """
-        Compute power loads required by coil supply system to feed coils.
-
-        Parameters
-        ----------
-        coil_voltage: Union[np.array, List[float] ]
-            Array of voltages in time required by the coils. [V]
-        coil_current: Union[np.array, List[float] ]
-            Array of currents in time required by the coils. [V]
-        """
-        voltages = np.array(coil_voltage)
-        currents = np.array(coil_current)
-        if len(voltages) != len(currents):
-            raise CoilSupplySystemError(
-                "Current and voltage vectors must have the same length!"
-            )
-        for corrector in self.correctors_list:
-            corrector.compute_correction(voltages, currents)
-        wallplug_info = self.converter.compute_conversion(voltages, currents)
-        return self._powerloads_from_wallpluginfo(wallplug_info)
-
-    '''
+        return wallplug_parameter
