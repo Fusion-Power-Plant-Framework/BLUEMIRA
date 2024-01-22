@@ -70,6 +70,9 @@ class CoilSupplyParameterABC:
     instance.
     """
 
+    subclass_name = "CoilSupplyParameter"
+    single_value_types = (int, float, list, tuple, np.ndarray)
+
     @classmethod
     def validate_parameter(cls, obj):
         """
@@ -83,7 +86,7 @@ class CoilSupplyParameterABC:
     @classmethod
     def init_subclass(cls, argument: Any = None):
         """
-        Create an instance from a generic argument.
+        Create a 'CoilSupplyParameter' subclass instance from argument.
 
         If 'None' is given to instantiate the class, an empty instance
         is created.
@@ -91,17 +94,16 @@ class CoilSupplyParameterABC:
         is returned as is.
         If a 'dict' is given to instantiate the class, keys must match
         class attributes and their values are distributed.
-        If a value of the 'int', 'float', 'list' or 'tuple' classes is
-        given to instantiate the class, copy that value to all attributes.
+        If a value of one of the 'single_value_types' classes is given
+        to instantiate the class, copy that value to all attributes.
         """
-        single_value_types = (int, float, list, tuple, np.ndarray)
         if argument is None:
             return cls()
         if cls.validate_parameter(argument):
             return argument
         if isinstance(argument, dict):
             return cls(**argument)
-        if isinstance(argument, single_value_types):
+        if isinstance(argument, cls.single_value_types):
             args = {}
             all_fields = fields(cls)
             for one_field in all_fields:
@@ -112,9 +114,62 @@ class CoilSupplyParameterABC:
             f"with 'None' for an empty instance, a '{cls.__name__}' "
             "instance for no alteration, a 'dict' for a distributed "
             "instantiation or any of the following types for a "
-            f"single-value instantiation: {single_value_types}. "
+            f"single-value instantiation: {cls.single_value_types}. "
             f"Argument was '{type(argument)}' instead."
         )
+
+    def absorb_parameter(
+        self,
+        other,
+        self_key: str = "original",
+        other_key: str = "absorbed",
+    ):
+        """
+        Absorbe a 'CoilSupplyParameter' instance into another instance.
+
+        If 'other' is a 'CoilSupplyParameter' instance, the data in its
+        attributes are distributed over the attributes of the 'self'
+        instance.
+        If 'other' is a 'dict' or one of the 'single_value_types' classes,
+        copy it to all attributes of the 'self' instance.
+
+        The value stored in each attribute of the 'self' instance is
+        always returned as a 'dict'. If it was not a dictionary, its
+        value is stored in the 'self_key' key of the new 'dict'.
+
+        The value stored in each attribute of the 'other' instance is
+        added to its respective 'dict' in the returned 'self'. If it
+        was not a dictionary, its value is stored in the 'other_key'
+        key of that attribute's dictionary.
+        """
+        all_fields = fields(self)
+        for one_field in all_fields:
+            self_value = getattr(self, one_field.name)
+            if self.validate_parameter(other):
+                other_value = getattr(other, one_field.name)
+            elif isinstance(other, (dict, self.single_value_types)):
+                other_value = other
+            else:
+                raise TypeError(
+                    "A 'CoilSupplyParameter' instance must absorb a "
+                    f"'{self.__class__.__name__}' instance or any one of "
+                    f"the following types: {self.single_value_types}. "
+                    f"Argument was a '{type(other)}' instance instead."
+                )
+
+            if isinstance(self_value, dict):
+                self_dict = self_value
+            else:
+                self_dict = {self_key: self_value}
+
+            if isinstance(other_value, dict):
+                other_dict = other_value
+            else:
+                other_dict = {other_key: other_value}
+
+            setattr(self, one_field.name, {**self_dict, **other_dict})
+
+        return self
 
 
 class CoilSupplySubSystem(CoilSupplyABC):
@@ -202,6 +257,9 @@ class CoilSupplyInputs:
         Dynamically create 'CoilSupplyParameter' dataclass inheriting
         from 'CoilSupplyParameterABC' to contain attributes that match
         'config.coil_names'.
+
+        Based on:
+        # https://stackoverflow.com/questions/52534427/dynamically-add-fields-to-dataclass-objects
         """
         parameter_fields = [
             (
@@ -213,7 +271,7 @@ class CoilSupplyInputs:
         ]
         parameter = CoilSupplyParameterABC()
         parameter.__class__ = make_dataclass(
-            "CoilSupplyParameter",
+            parameter.subclass_name,
             fields=parameter_fields,
             bases=(CoilSupplyParameterABC,),
         )
@@ -266,6 +324,7 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
         by contribution to resistance connected in series.
         """
         coil_names = list(asdict(self.resistance_set).keys())
+
         for name in coil_names:
             initial_voltages = getattr(voltages_parameter, name)
             initial_currents = getattr(currents_parameter, name)
@@ -498,6 +557,8 @@ class CoilSupplySystem(CoilSupplyABC):
         currents_parameter = self.validate_parameter(
             np.array(currents_argument),
         )
+        wallplug_parameter = self.validate_parameter()
+
         for corrector in self.correctors:
             (
                 voltages_parameter,
@@ -509,7 +570,6 @@ class CoilSupplySystem(CoilSupplyABC):
             if verbose:
                 pp(voltages_parameter)
 
-        wallplug_parameter = self.validate_parameter()
         for name in self.inputs.config.coil_names:
             voltages_array = getattr(voltages_parameter, name)
             currents_array = getattr(currents_parameter, name)
@@ -525,5 +585,14 @@ class CoilSupplySystem(CoilSupplyABC):
             wallplug_info["active_load"] = active_load
             wallplug_info["reactive_load"] = reactive_load
             setattr(wallplug_parameter, name, wallplug_info)
+
+        wallplug_parameter.absorb_parameter(
+            voltages_parameter,
+            other_key="coil_voltages",
+        )
+        wallplug_parameter.absorb_parameter(
+            currents_parameter,
+            other_key="coil_currents",
+        )
 
         return wallplug_parameter

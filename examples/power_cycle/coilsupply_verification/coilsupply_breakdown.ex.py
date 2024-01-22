@@ -10,7 +10,10 @@
 from pathlib import Path
 
 from bluemira.power_cycle.coilsupply import CoilSupplyInputs, CoilSupplySystem
-from bluemira.power_cycle.tools import pp, read_json
+from bluemira.power_cycle.tools import (
+    pp,
+    read_json,
+)
 
 script_dir = Path(__file__).resolve().parent
 
@@ -74,14 +77,12 @@ coil_names = list(breakdown_data.keys())
 coilsupply_config["coil_names"] = coil_names
 corrector_library["SNU"]["resistance_set"] = snu_resistances
 
-# """
 coilsupply_inputs = CoilSupplyInputs(
     config=coilsupply_config,
     corrector_library=corrector_library,
     converter_library=converter_library,
 )
-pp(coilsupply_inputs)
-# """
+# pp(coilsupply_inputs)
 
 # %% [markdown]
 # # Set-up the Coil Supply System
@@ -95,15 +96,14 @@ pp(coilsupply_inputs)
 
 # %%
 
-# """
 coilsupply = CoilSupplySystem(
     coilsupply_config,
     corrector_library,
     converter_library,
 )
-pp(coilsupply.inputs)
-pp(coilsupply.correctors)
-pp(coilsupply.converter)
+# pp(coilsupply.inputs)
+# pp(coilsupply.correctors)
+# pp(coilsupply.converter)
 
 for corrector in coilsupply.correctors:
     print(corrector.resistance_set)
@@ -116,8 +116,23 @@ wallplug_parameter = coilsupply.compute_wallplug_loads(
 )
 pp(wallplug_parameter)
 
+"""
 
-# """
+fig = plt.figure()
+
+n_plots = len(wallplug_parameter)
+n_rows, n_cols = symmetrical_subplot_distribution(n_plots)
+
+plot_index = 0
+for name in wallplug_parameter:
+    plot_index += 1
+    ax = fig.add_subplot(n_rows, n_cols, plot_index)
+    wallplug_info = wallplug_parameter[name]
+
+    ax.plot([1, 2, 3, 4, 5], [10, 5, 10, 5, 10], "r-")
+
+"""
+
 # Change coilset_size to coilset_names ->
 # Make correctors and converters operate in voltage and current sets
 # Make correctors operate in voltage and current sets depending on switch sets

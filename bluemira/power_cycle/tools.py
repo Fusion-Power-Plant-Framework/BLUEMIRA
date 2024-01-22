@@ -134,3 +134,25 @@ def pp(obj):
     if is_dataclass(obj):
         return pprint.pp(asdict(obj), sort_dicts=False, indent=4)
     return pprint.pp(obj, indent=4)
+
+
+def symmetrical_subplot_distribution(n_plots, direction="row"):
+    """Create a symmetrical (squared) distribution for subplots."""
+    n_primary = np.ceil(np.sqrt(n_plots))
+    n_secondary = np.ceil(n_plots / n_primary)
+
+    valid_row_args = {"row", "rows", "r", "R"}
+    valid_col_args = {"row", "rows", "r", "R"}
+    if direction in valid_row_args:
+        n_rows = int(n_primary)
+        n_cols = int(n_secondary)
+    elif direction in valid_col_args:
+        n_rows = int(n_secondary)
+        n_cols = int(n_primary)
+    else:
+        raise ValueError(
+            f"Invalid argument: '{direction}'. The parameter"
+            "'direction' can only assume one of the following values:"
+            "'row' or 'col'."
+        )
+    return n_rows, n_cols
