@@ -18,6 +18,7 @@ from matplotlib import (
 
 from bluemira.power_cycle.coilsupply import CoilSupplyInputs, CoilSupplySystem
 from bluemira.power_cycle.tools import (
+    pp,
     read_json,
     symmetrical_subplot_distribution,
 )
@@ -113,7 +114,7 @@ coilsupply = CoilSupplySystem(
 # pp(coilsupply.converter)
 
 for corrector in coilsupply.correctors:
-    print(corrector.resistance_set)
+    pp(corrector.resistance_set)
 
 wallplug_parameter = coilsupply.compute_wallplug_loads(
     coil_voltages,
@@ -129,11 +130,12 @@ wallplug_parameter = coilsupply.compute_wallplug_loads(
 #
 
 # %%
-n_plots = wallplug_parameter.len()
+n_plots = len(wallplug_parameter)
 n_rows, n_cols = symmetrical_subplot_distribution(n_plots, direction="col")
 colormap_choice = "cool"
 ax_left_color = "b"
 ax_right_color = "k"
+line_width = 2
 
 
 def color_yaxis(ax, side, color):
@@ -147,9 +149,13 @@ def color_yaxis(ax, side, color):
     ax.tick_params(axis="y", labelcolor=color)
 
 
-voltage_labels = ["coil_voltages", "SNU_voltages", "THY_voltages"]
-voltage_styles = ["-", "-.", ":"]
-voltage_colors = cmap[colormap_choice].resampled(n_plots)
+v_labels_and_verification = {
+    "coil_voltages": coil_voltages,
+    "SNU_voltages": snu_voltages,
+    "THY_voltages": thy_voltages,
+}
+v_styles = ["-", "-.", ":"]
+v_colors = cmap[colormap_choice].resampled(n_plots)
 
 fig, axs = plt.subplots(
     nrows=n_rows,
@@ -162,12 +168,21 @@ for name in reversed(coil_names):
     wallplug_info = getattr(wallplug_parameter, name)
 
     ax_left = axs.flat[plot_index]
-    for label, style in zip(voltage_labels, voltage_styles):
+    for label, style in zip(v_labels_and_verification.keys(), v_styles):
+        ax_left.plot(
+            coil_times[name],
+            v_labels_and_verification[label][name],
+            f"{style}",
+            linewidth=line_width + 1,
+            color="k",
+            label=f"_{label}_verification",
+        )
         ax_left.plot(
             coil_times[name],
             wallplug_info[label],
             f"{style}",
-            color=voltage_colors(plot_index),
+            linewidth=line_width,
+            color=v_colors(plot_index),
             label=label,
         )
     ax_left.set_ylabel("Voltage [V]")
@@ -180,9 +195,18 @@ for name in reversed(coil_names):
     color_yaxis(ax_right, "right", ax_right_color)
     ax_right.plot(
         coil_times[name],
+        coil_currents[name],
+        "-",
+        linewidth=line_width + 1,
+        color="k",
+        label="coil_currents",
+    )
+    ax_right.plot(
+        coil_times[name],
         wallplug_info["coil_currents"],
         "-",
-        color="k",
+        linewidth=line_width,
+        color="w",
         label="coil_currents",
     )
 
@@ -191,5 +215,4 @@ for name in reversed(coil_names):
 
     plot_index += 1
 
-# fig.tight_layout()
 plt.show()
