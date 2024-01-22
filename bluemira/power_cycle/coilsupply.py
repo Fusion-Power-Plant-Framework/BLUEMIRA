@@ -26,6 +26,7 @@ from dataclasses import (
     field,
     fields,
     make_dataclass,
+    replace,
 )
 from typing import Any, Dict, List, Tuple, Union
 
@@ -38,7 +39,6 @@ from bluemira.power_cycle.net import (
     Descriptor,
     LibraryConfigDescriptor,
 )
-from bluemira.power_cycle.tools import pp
 
 
 def _get_module_class_from_str(class_name):
@@ -118,6 +118,10 @@ class CoilSupplyParameterABC:
             f"Argument was '{type(argument)}' instead."
         )
 
+    def __len__(self):
+        """Number of attributes in dataclass instance."""
+        return len(asdict(self))
+
     def absorb_parameter(
         self,
         other,
@@ -161,11 +165,13 @@ class CoilSupplyParameterABC:
                 self_dict = self_value
             else:
                 self_dict = {self_key: self_value}
+                self_dict = {} if self_value is None else self_dict
 
             if isinstance(other_value, dict):
                 other_dict = other_value
             else:
                 other_dict = {other_key: other_value}
+                other_dict = {} if other_value is None else other_dict
 
             setattr(self, one_field.name, {**self_dict, **other_dict})
 
@@ -315,24 +321,52 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
     def _correct(self, value: np.ndarray):
         return value * (1 + self.factor)
 
-    def compute_correction(self, voltages_parameter, currents_parameter):
+    def compute_correction(
+        self,
+        voltages_parameter: CoilSupplyParameterABC,
+        currents_parameter: CoilSupplyParameterABC,
+    ):
         """
-        Apply correction to each attribute of a 'CoilSupplyParameter.
+        Apply the effect of the 'CoilSupplyCorrector'.
+
+        Apply a correction due to the presence of the 'CoilSupplyCorrector'
+        in coil circuits. Given a couple of concrete instances of the
+        'CoilSupplyParameterABC' class that represent the demanded
+        voltages and currents, compute the effect of the corrector to
+        each attribute of the parameters.
 
         As a first approximation, neglect current reduction due to
         resistance of corrector device, and reduce total voltage
         by contribution to resistance connected in series.
         """
-        coil_names = list(asdict(self.resistance_set).keys())
+        voltages_corrector = replace(voltages_parameter)
+        currents_corrector = replace(currents_parameter)
 
+        voltages_following = replace(voltages_parameter)
+        currents_following = replace(currents_parameter)
+
+        coil_names = list(asdict(self.resistance_set).keys())
         for name in coil_names:
-            initial_voltages = getattr(voltages_parameter, name)
-            initial_currents = getattr(currents_parameter, name)
+            requested_v = getattr(voltages_parameter, name)
+            requested_i = getattr(currents_parameter, name)
+
             corrector_resistance = getattr(self.resistance_set, name)
-            corrector_voltages = corrector_resistance * initial_currents
-            final_voltages = initial_voltages - corrector_voltages
-            setattr(voltages_parameter, name, final_voltages)
-        return voltages_parameter, currents_parameter
+            corrector_i = requested_i
+            corrector_v = -corrector_resistance * corrector_i
+            setattr(voltages_corrector, name, corrector_v)
+            setattr(currents_corrector, name, corrector_i)
+
+            following_v = requested_v - corrector_v
+            following_i = requested_i
+            setattr(voltages_following, name, following_v)
+            setattr(currents_following, name, following_i)
+
+        return (
+            voltages_following,
+            currents_following,
+            voltages_corrector,
+            currents_corrector,
+        )
 
 
 class CoilSupplyConverter(CoilSupplySubSystem):
@@ -422,12 +456,13 @@ class ThyristorBridges(CoilSupplyConverter):
         p_rated = v_rated * i_rated
 
         p_apparent = v_rated * currents_array
-        phase = np.arccos(voltages_array / v_rated)
-        power_factor = np.cos(phase)
+        phase_rad = np.arccos(voltages_array / v_rated)
+        phase_deg = phase_rad * 180 / np.pi
+        power_factor = np.cos(phase_rad)
 
-        p_reactive = p_apparent * np.sin(phase)
+        p_reactive = p_apparent * np.sin(phase_rad)
 
-        p_active = p_apparent * np.cos(phase)
+        p_active = p_apparent * np.cos(phase_rad)
         p_loss_multiplier = 1
         for percentage in loss_percentages:
             p_loss_multiplier *= 1 + loss_percentages[percentage] / 100
@@ -435,12 +470,15 @@ class ThyristorBridges(CoilSupplyConverter):
         p_active = p_active + p_losses
 
         return {
+            f"{self.name}_voltages": voltages_array,
+            f"{self.name}_currents": currents_array,
             "number_of_bridge_units": number_of_bridge_units,
             "voltage_rated": v_rated,
             "current_rated": i_rated,
             "power_rated": p_rated,
             "power_apparent": p_apparent,
-            "phase": phase,
+            "phase_radians": phase_rad,
+            "phase_degrees": phase_deg,
             "power_factor": power_factor,
             "power_losses": p_losses,
             "power_active": p_active,
@@ -522,6 +560,8 @@ class CoilSupplySystem(CoilSupplyABC):
         'CoilSupplyParameter' class, that have attributes that match
         the coil names in 'inputs.config.coil_names'.
         """
+        if isinstance(obj, dict):
+            obj = {k: np.array(v) for k, v in obj.items()}
         return self.inputs.parameter.init_subclass(obj)
 
     def _print_computing_message(self, verbose=False):
@@ -552,24 +592,43 @@ class CoilSupplySystem(CoilSupplyABC):
             Array of currents in time required by the coils. [A]
         """
         voltages_parameter = self.validate_parameter(
-            np.array(voltages_argument),
+            voltages_argument,
         )
         currents_parameter = self.validate_parameter(
-            np.array(currents_argument),
+            currents_argument,
         )
-        wallplug_parameter = self.validate_parameter()
+
+        outputs_parameter = self.validate_parameter()
+        outputs_parameter.absorb_parameter(
+            voltages_parameter,
+            other_key="coil_voltages",
+        )
+        outputs_parameter.absorb_parameter(
+            currents_parameter,
+            other_key="coil_currents",
+        )
 
         for corrector in self.correctors:
             (
                 voltages_parameter,
                 currents_parameter,
+                voltages_corrector,
+                currents_corrector,
             ) = corrector.compute_correction(
                 voltages_parameter,
                 currents_parameter,
             )
+            outputs_parameter.absorb_parameter(
+                voltages_corrector,
+                other_key=f"{corrector.name}_voltages",
+            )
             if verbose:
-                pp(voltages_parameter)
+                outputs_parameter.absorb_parameter(
+                    currents_corrector,
+                    other_key=f"{corrector.name}_currents",
+                )
 
+        wallplug_parameter = self.validate_parameter()
         for name in self.inputs.config.coil_names:
             voltages_array = getattr(voltages_parameter, name)
             currents_array = getattr(currents_parameter, name)
@@ -586,13 +645,5 @@ class CoilSupplySystem(CoilSupplyABC):
             wallplug_info["reactive_load"] = reactive_load
             setattr(wallplug_parameter, name, wallplug_info)
 
-        wallplug_parameter.absorb_parameter(
-            voltages_parameter,
-            other_key="coil_voltages",
-        )
-        wallplug_parameter.absorb_parameter(
-            currents_parameter,
-            other_key="coil_currents",
-        )
-
-        return wallplug_parameter
+        outputs_parameter.absorb_parameter(wallplug_parameter)
+        return outputs_parameter

@@ -142,7 +142,7 @@ def symmetrical_subplot_distribution(n_plots, direction="row"):
     n_secondary = np.ceil(n_plots / n_primary)
 
     valid_row_args = {"row", "rows", "r", "R"}
-    valid_col_args = {"row", "rows", "r", "R"}
+    valid_col_args = {"col", "cols", "c", "C"}
     if direction in valid_row_args:
         n_rows = int(n_primary)
         n_cols = int(n_secondary)

@@ -9,10 +9,17 @@
 # %%
 from pathlib import Path
 
+from matplotlib import (
+    colormaps as cmap,
+)
+from matplotlib import (
+    pyplot as plt,
+)
+
 from bluemira.power_cycle.coilsupply import CoilSupplyInputs, CoilSupplySystem
 from bluemira.power_cycle.tools import (
-    pp,
     read_json,
+    symmetrical_subplot_distribution,
 )
 
 script_dir = Path(__file__).resolve().parent
@@ -108,31 +115,81 @@ coilsupply = CoilSupplySystem(
 for corrector in coilsupply.correctors:
     print(corrector.resistance_set)
 
-test_voltages = [10, 9, 8]
-test_currents = [1, 1, 1]
 wallplug_parameter = coilsupply.compute_wallplug_loads(
-    test_voltages,
-    test_currents,
+    coil_voltages,
+    coil_currents,
 )
-pp(wallplug_parameter)
+# pp(wallplug_parameter)
 
-"""
 
-fig = plt.figure()
+# %% [markdown]
+# # Simulate the Coil Supply System
+#
+#
+#
 
-n_plots = len(wallplug_parameter)
-n_rows, n_cols = symmetrical_subplot_distribution(n_plots)
+# %%
+n_plots = wallplug_parameter.len()
+n_rows, n_cols = symmetrical_subplot_distribution(n_plots, direction="col")
+colormap_choice = "cool"
+ax_left_color = "b"
+ax_right_color = "k"
 
+
+def color_yaxis(ax, side, color):
+    """
+    Color all characteristics of a y-axis.
+
+    The 'side' parameter chould be 'left' or 'right'.
+    """
+    ax.yaxis.label.set_color(color)
+    ax.spines[side].set_color(color)
+    ax.tick_params(axis="y", labelcolor=color)
+
+
+voltage_labels = ["coil_voltages", "SNU_voltages", "THY_voltages"]
+voltage_styles = ["-", "-.", ":"]
+voltage_colors = cmap[colormap_choice].resampled(n_plots)
+
+fig, axs = plt.subplots(
+    nrows=n_rows,
+    ncols=n_cols,
+    layout="constrained",
+    figsize=(3.5 * n_cols, 3.5 * n_rows),
+)
 plot_index = 0
-for name in wallplug_parameter:
+for name in reversed(coil_names):
+    wallplug_info = getattr(wallplug_parameter, name)
+
+    ax_left = axs.flat[plot_index]
+    for label, style in zip(voltage_labels, voltage_styles):
+        ax_left.plot(
+            coil_times[name],
+            wallplug_info[label],
+            f"{style}",
+            color=voltage_colors(plot_index),
+            label=label,
+        )
+    ax_left.set_ylabel("Voltage [V]")
+    color_yaxis(ax_left, "left", ax_left_color)
+    ax_left.set_xlabel("Time [s]")
+    ax_left.grid()
+
+    ax_right = ax_left.twinx()
+    ax_right.set_ylabel("Current [A]")
+    color_yaxis(ax_right, "right", ax_right_color)
+    ax_right.plot(
+        coil_times[name],
+        wallplug_info["coil_currents"],
+        "-",
+        color="k",
+        label="coil_currents",
+    )
+
+    ax_left.legend(loc="upper right")
+    ax_left.title.set_text(name)
+
     plot_index += 1
-    ax = fig.add_subplot(n_rows, n_cols, plot_index)
-    wallplug_info = wallplug_parameter[name]
 
-    ax.plot([1, 2, 3, 4, 5], [10, 5, 10, 5, 10], "r-")
-
-"""
-
-# Change coilset_size to coilset_names ->
-# Make correctors and converters operate in voltage and current sets
-# Make correctors operate in voltage and current sets depending on switch sets
+# fig.tight_layout()
+plt.show()
