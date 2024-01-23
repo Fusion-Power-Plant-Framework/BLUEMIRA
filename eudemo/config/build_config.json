@@ -4,7 +4,7 @@
     "run_mode": "read",
     "read_dir": "$path_expand:./",
     "run_dir": "$path_expand:./",
-    "plot": true
+    "plot": false
   },
   "Fixed boundary equilibrium": {
     "run_mode": "read",
@@ -122,16 +122,16 @@
     "show_data": false
   },
   "TF coils": {
-<<<<<<< HEAD
-    "run_mode": "read",
-    "file_path": "$path_expand:./TFCoilDesign.json",
-=======
     "run_mode": "run",
+    "file_path": "$path_expand:./TFCoilDesign.json",
     "file_path": "config/TFCoilDesign.json",
->>>>>>> 5878bc49 (pause)
     "plot": true,
     "param_class": "TripleArc",
-    "variables_map": { "sl": { "value": 12.0 } },
+    "variables_map": {
+      "sl": { "value": 12.0 },
+      "f1": { "value": 4.0, "lower_bound": 4.0 },
+      "f2": { "value": 4.0, "lower_bound": 4.0 }
+    },
     "problem_class": "bluemira.builders.tf_coils::RippleConstrainedLengthGOP",
     "problem_settings": {
       "ripple_selector": {
@@ -193,7 +193,7 @@
       "optimisation_settings": {
         "algorithm_name": "ISRES",
         "conditions": {
-          "max_eval": 500,
+          "max_eval": 5000,
           "ftol_rel": 1e-10
         }
       }
