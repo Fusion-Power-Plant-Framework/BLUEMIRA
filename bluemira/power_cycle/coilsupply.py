@@ -9,12 +9,15 @@ Classes for computing coils active and reactive powers.
 
 TODO:
     - alter 'name' & 'description' to 'label' and 'name'?
-    - relocate classes used by `net.py` and coils.py` to `base.py`
-    - ensure every `...Config` class inherits from `Config`, and rename
-      other cases as `...Inputs`, `...Scheme`, etc.
     - relocate `CoilSupplySystemError` to `errors.py`
-    - implement `_powerloads_from_wallpluginfo` method
-    - remove dummy abstract method from `CoilSupplyABC` class
+    - relocate classes used by `net.py` and `coilsupply.py` to `base.py`
+    - ensure every '...Config' class inherits from 'Config', and rename
+      other cases as '...Inputs', '...Scheme', etc.
+    - implement '_powerloads_from_wallpluginfo' method with `net.py`
+      classes
+    - remove dummy abstract method from `CoilSupplyABC` class that
+      stops `ruff` complaints
+    - alter '_config' in 'CoilSupplyConverter' to abstract property
     - modify config/input classes to inherit from bluemira `Parameter`
 """
 
@@ -43,12 +46,6 @@ from bluemira.power_cycle.net import (
 
 def _get_module_class_from_str(class_name):
     return getattr(sys.modules[__name__], class_name)
-
-
-class CoilSupplySystemError(PowerCycleError):
-    """
-    Exception class for 'CoilSupplySystem' class of the Power Cycle module.
-    """
 
 
 class CoilSupplyABC(ABC):
@@ -647,3 +644,9 @@ class CoilSupplySystem(CoilSupplyABC):
 
         outputs_parameter.absorb_parameter(wallplug_parameter)
         return outputs_parameter
+
+
+class CoilSupplySystemError(PowerCycleError):
+    """
+    Exception class for 'CoilSupplySystem' class of the Power Cycle module.
+    """
