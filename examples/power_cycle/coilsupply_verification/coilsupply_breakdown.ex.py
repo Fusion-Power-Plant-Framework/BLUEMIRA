@@ -142,7 +142,7 @@ def color_yaxis(ax, side, color):
     """
     Color all characteristics of a y-axis.
 
-    The 'side' parameter chould be 'left' or 'right'.
+    The 'side' parameter should be 'left' or 'right'.
     """
     ax.yaxis.label.set_color(color)
     ax.spines[side].set_color(color)

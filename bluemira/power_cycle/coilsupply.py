@@ -247,10 +247,15 @@ class CoilSupplyConfigDescriptor(Descriptor):
 class CoilSupplyInputs:
     """Values used to characterize a Coil Supply System."""
 
+    "Basic configuration for Coil Supply System."
     config: CoilSupplyConfigDescriptor = CoilSupplyConfigDescriptor()
+
+    "Library of inputs for possible CoilSupplyCorrector objects."
     corrector_library: LibraryConfigDescriptor = LibraryConfigDescriptor(
         config=CoilSupplyCorrectorConfig,
     )
+
+    "Library of inputs for possible CoilSupplyConverter objects."
     converter_library: LibraryConfigDescriptor = LibraryConfigDescriptor(
         config=CoilSupplyConverterConfig,
     )
@@ -489,19 +494,15 @@ class CoilSupplySystem(CoilSupplyABC):
 
     Parameters
     ----------
-    scheme: Union[CoilSupplyScheme, Dict]
-        Coil Supply System characterization.
-    corrector_library: Union[CoilSupplyCorrectorLibrary, Dict]
-        Library of inputs for possible CoilSupplyCorrector objects.
-    converter_library: Union[CoilSupplyConverterLibrary, Dict]
-        Library of inputs for possible CoilSupplyConverter objects.
+    inputs: CoilSupplyInputs
+        All inputs for a characterization of a Coil Supply System.
 
     Attributes
     ----------
-    correctors: Dict[str, Tuple[CoilSupplyCorrector]]
-        Ordered list of corrector system instances
-    converter:
-        blablabla
+    correctors: Tuple[CoilSupplyCorrector]
+        Ordered list of corrector system instances.
+    converter: CoilSupplyConverter
+        Single converter instance.
     """
 
     _computing_msg = "Computing coils power supply power loads..."
@@ -509,18 +510,8 @@ class CoilSupplySystem(CoilSupplyABC):
     def _just_to_stop_ruff_checks(self):
         pass
 
-    def __init__(
-        self,
-        config: Union[CoilSupplyConfig, Dict[str, Any]],
-        corrector_library: Dict[str, Tuple[CoilSupplyCorrector]],
-        converter_library: Dict[str, Any],
-    ):
-        self.inputs = CoilSupplyInputs(
-            config=config,
-            corrector_library=corrector_library,
-            converter_library=converter_library,
-        )
-
+    def __init__(self, inputs: CoilSupplyInputs):
+        self.inputs = inputs
         self.correctors = self._build_correctors()
         self.converter = self._build_converter()
 

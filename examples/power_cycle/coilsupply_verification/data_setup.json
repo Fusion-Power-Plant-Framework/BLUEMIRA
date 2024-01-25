@@ -1,0 +1,35 @@
+{
+  "P6": {
+    "resistance_SNU": 0.285714285714286
+  },
+  "P5": {
+    "resistance_SNU": 0
+  },
+  "P4": {
+    "resistance_SNU": 0
+  },
+  "P3": {
+    "resistance_SNU": 0
+  },
+  "P2": {
+    "resistance_SNU": 0
+  },
+  "P1": {
+    "resistance_SNU": 0.25
+  },
+  "CS3L": {
+    "resistance_SNU": 0.2
+  },
+  "CS2L": {
+    "resistance_SNU": 0.2222222222222221
+  },
+  "CS1": {
+    "resistance_SNU": 0.5
+  },
+  "CS2U": {
+    "resistance_SNU": 0.2222222222222221
+  },
+  "CS3U": {
+    "resistance_SNU": 0.25
+  }
+}
