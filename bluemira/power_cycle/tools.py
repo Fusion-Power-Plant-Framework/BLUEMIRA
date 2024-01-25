@@ -11,7 +11,7 @@ Utility functions for the power cycle model.
 import json
 import pprint
 from dataclasses import asdict, is_dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import matplotlib.pyplot as plt
 import numba as nb
@@ -156,3 +156,29 @@ def symmetrical_subplot_distribution(n_plots, direction="row"):
             "'row' or 'col'."
         )
     return n_rows, n_cols
+
+
+def match_domains(
+    x_set: List[np.ndarray],
+    y_set: List[np.ndarray],
+):
+    """
+    Match the domains of multiple functions, each represented by 2 vectors.
+
+    For each pair of vectors (x,y), interpolate values in every 'y' vector,
+    to ensure that all of them have one element associated to every element
+    of the union of all distinct 'x' vectors.
+    """
+    n_vectors = len(x_set)
+
+    matched_x = np.concatenate(x_set)
+    matched_x = np.unique(matched_x)
+
+    for v in range(n_vectors):
+        x = x_set[v]
+        y = y_set[v]
+
+        y = np.interp(matched_x, x, y)
+        y_set[v] = y
+
+    return matched_x, y_set

@@ -10,6 +10,7 @@
 from pathlib import Path
 from typing import ClassVar
 
+import numpy as np
 from matplotlib import (
     colormaps as cmap,
 )
@@ -19,6 +20,7 @@ from matplotlib import (
 
 from bluemira.power_cycle.coilsupply import CoilSupplyInputs, CoilSupplySystem
 from bluemira.power_cycle.tools import (
+    match_domains,
     pp,
     read_json,
     symmetrical_subplot_distribution,
@@ -53,11 +55,15 @@ class _PlotOptions:
     def _make_colormap(self, n):
         return cmap[self.colormap_choice].resampled(n)
 
-    def _color_yaxis(self, ax, side):
+    def _side_color(self, side):
         if side == "left":
-            color = self.ax_left_color
-        elif side == "right":
-            color = self.ax_right_color
+            return self.ax_left_color
+        if side == "right":
+            return self.ax_right_color
+        return None
+
+    def _color_yaxis(self, ax, side):
+        color = self._side_color(side)
         ax.yaxis.label.set_color(color)
         ax.spines[side].set_color(color)
         ax.tick_params(axis="y", labelcolor=color)
@@ -400,21 +406,50 @@ def plot_pulse_verification(pulse, power):
         ax.set_ylabel(ylabel)
         ax.grid()
 
-    """
     total_subplot_settings = {
-        "active": ("active_power"),
-        "reactive": ("reactive_power"),
+        "power_active": ("left", "Active Power [W]"),
+        "power_reactive": ("right", "Reactive Power [VAR]"),
     }
-    for coil in reversed(coil_names):
+    times = {
+        "power_active": [],
+        "power_reactive": [],
+    }
+    totals = {
+        "power_active": [],
+        "power_reactive": [],
+    }
+    for key in totals:
+        settings = total_subplot_settings[key]
+        side = settings[0]
+        ylabel = settings[1]
+        ax_color = options._side_color(side)
+
+        for coil in reversed(coil_names):
             wallplug_info = getattr(pulse["wallplug_parameter"], coil)
-    """
 
-    ax_left = subplots_axes["total"]
-    ax_left.set_xlabel("Time [s]")
+            times[key].append(pulse["coil_times"][coil])
+            totals[key].append(wallplug_info[key])
 
-    """
-    ax_right = ax_left.twinx()
-    """
+        times[key], totals[key] = match_domains(times[key], totals[key])
+        pp([len(e) for e in totals[key]])
+        totals[key] = np.add.reduce(totals[key])
+        pp(totals[key])
+
+        if side == "left":
+            ax = subplots_axes["total"]
+        elif side == "right":
+            ax = ax.twinx()
+        options._color_yaxis(ax, side)
+        ax.set_ylabel(ylabel)
+        ax.plot(
+            times[key],
+            totals[key],
+            linewidth=options._line_thin,
+            color=ax_color,
+            label=key,
+        )
+    ax.set_xlabel("Time [s]")
+    ax.grid()
 
     plt.show()
     return fig, power
