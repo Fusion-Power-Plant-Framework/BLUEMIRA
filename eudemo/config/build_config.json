@@ -94,7 +94,7 @@
       "run_mode": "run",
       "file_path": "$path_expand:./FirstWallDesign.json",
       "problem_settings": {
-        "n_koz_points": 100
+        "n_koz_points": 70
       },
       "optimisation_settings": {
         "algorithm_name": "SLSQP",
