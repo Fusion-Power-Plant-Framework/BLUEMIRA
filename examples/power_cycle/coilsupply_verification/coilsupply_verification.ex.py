@@ -8,6 +8,7 @@
 
 # %%
 from pathlib import Path
+from typing import ClassVar
 
 from matplotlib import (
     colormaps as cmap,
@@ -33,6 +34,13 @@ class _PlotOptions:
     ax_right_color = "r"
     subplots_size = 3.5
     color_shade_factor = 0.5
+    fancy_legend: ClassVar = {
+        "loc": "upper center",
+        "bbox_to_anchor": (0.5, 1.2),
+        "ncol": 6,
+        "fancybox": True,
+        "shadow": True,
+    }
 
     @property
     def _line_thin(self):
@@ -386,6 +394,9 @@ def plot_pulse_verification(pulse, power):
                 color=color_computation,
                 label=coil,
             )
+
+        if key == "active":
+            ax.legend(**options.fancy_legend)
         ax.set_ylabel(ylabel)
         ax.grid()
 
