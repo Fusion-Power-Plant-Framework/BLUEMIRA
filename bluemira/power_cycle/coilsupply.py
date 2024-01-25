@@ -572,12 +572,15 @@ class CoilSupplySystem(CoilSupplyABC):
         """
         Compute power loads required by coil supply system to feed coils.
 
+        For each coil, voltage and current arrays must have the same
+        length, and elements must be sampled at the same points in time.
+
         Parameters
         ----------
         voltages_parameter: Any
-            Array of voltages in time required by the coils. [V]
+            Array (collection) of voltages in time required by the coils. [V]
         currents_parameter: Any
-            Array of currents in time required by the coils. [A]
+            Array (collection) of currents in time required by the coils. [A]
         """
         voltages_parameter = self.validate_parameter(
             voltages_argument,

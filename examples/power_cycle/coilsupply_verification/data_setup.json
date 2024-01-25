@@ -1,20 +1,20 @@
 {
-  "P6": {
+  "PF6": {
     "resistance_SNU": 0.285714285714286
   },
-  "P5": {
+  "PF5": {
     "resistance_SNU": 0
   },
-  "P4": {
+  "PF4": {
     "resistance_SNU": 0
   },
-  "P3": {
+  "PF3": {
     "resistance_SNU": 0
   },
-  "P2": {
+  "PF2": {
     "resistance_SNU": 0
   },
-  "P1": {
+  "PF1": {
     "resistance_SNU": 0.25
   },
   "CS3L": {
