@@ -25,6 +25,45 @@ from bluemira.power_cycle.tools import (
 
 script_dir = Path(__file__).resolve().parent
 
+
+class _PlotOptions:
+    colormap_choice = "cool"
+    line_width = 2
+    ax_left_color = "b"
+    ax_right_color = "r"
+    subplots_size = 3.5
+    color_shade_factor = 0.5
+
+    @property
+    def _line_thin(self):
+        return self.line_width
+
+    @property
+    def _line_thick(self):
+        return 1 + self.line_width
+
+    def _make_colormap(self, n):
+        return cmap[self.colormap_choice].resampled(n)
+
+    def _color_yaxis(self, ax, side):
+        if side == "left":
+            color = self.ax_left_color
+        elif side == "right":
+            color = self.ax_right_color
+        ax.yaxis.label.set_color(color)
+        ax.spines[side].set_color(color)
+        ax.tick_params(axis="y", labelcolor=color)
+
+    def _constrained_fig_size(self, n_rows, n_cols):
+        return (
+            self.subplots_size * n_cols,
+            self.subplots_size * n_rows,
+        )
+
+    def _darken_color(self, color):
+        return tuple(c * self.color_shade_factor for c in color)
+
+
 # %% [markdown]
 # # Import default Coil Supply System data
 #
@@ -141,8 +180,8 @@ def display_subsystems(coilsupply):
 #
 # The figure displays how computed voltages for the SNU and THY (in color)
 # coincide with the same values in the original data (in black). The
-# computation arguments (coil voltages and currents, in color and white,
-# respectively) are also plotted against the original data (in black).
+# computation arguments (coil currents, in red, and voltages, in shades
+# of blue) are also plotted against the original data (in black).
 #
 
 # %%
@@ -150,14 +189,14 @@ breakdown_path = script_dir / "data_breakdown.json"
 breakdown_data = read_json(breakdown_path)
 
 breakdown = {}
-breakdown_reorder = {
+breakdown_reorder_keys = {
     "SNU_voltages": "voltage_SNU",
     "THY_voltages": "voltage_THY",
     "coil_voltages": "voltage_coil",
     "coil_currents": "current_coil",
     "coil_times": "time_coil",
 }
-for new_key, old_key in breakdown_reorder.items():
+for new_key, old_key in breakdown_reorder_keys.items():
     breakdown[new_key] = {}
     for coil in breakdown_data:
         breakdown[new_key][coil] = breakdown_data[coil][old_key]
@@ -168,83 +207,77 @@ breakdown["wallplug_parameter"] = coilsupply.compute_wallplug_loads(
 )
 
 
-def _color_yaxis(ax, side, color):
-    ax.yaxis.label.set_color(color)
-    ax.spines[side].set_color(color)
-    ax.tick_params(axis="y", labelcolor=color)
-
-
 def plot_breakdown_verification(breakdown):
     """Plot Coil Supply System verification for breakdown data."""
     n_plots = len(breakdown["wallplug_parameter"])
-    n_rows, n_cols = symmetrical_subplot_distribution(n_plots, direction="col")
-    colormap_choice = "cool"
-    ax_left_color = "b"
-    ax_right_color = "k"
-    line_width = 2
+    n_rows, n_cols = symmetrical_subplot_distribution(
+        n_plots,
+        direction="col",
+    )
 
+    options = _PlotOptions()
     v_labels_and_styles = {
         "coil_voltages": "-",
         "SNU_voltages": "-.",
         "THY_voltages": ":",
     }
-    v_colors = cmap[colormap_choice].resampled(n_plots)
+    v_colors = options._make_colormap(n_plots)
 
     fig, axs = plt.subplots(
         nrows=n_rows,
         ncols=n_cols,
         layout="constrained",
-        figsize=(3.5 * n_cols, 3.5 * n_rows),
+        figsize=options._constrained_fig_size(n_rows, n_cols),
     )
     plot_index = 0
-    for name in reversed(coil_names):
-        wallplug_info = getattr(breakdown["wallplug_parameter"], name)
+    for coil in reversed(coil_names):
+        wallplug_info = getattr(breakdown["wallplug_parameter"], coil)
 
         ax_left = axs.flat[plot_index]
         for label, style in v_labels_and_styles.items():
             ax_left.plot(
-                breakdown["coil_times"][name],
-                breakdown[label][name],
+                breakdown["coil_times"][coil],
+                breakdown[label][coil],
                 f"{style}",
-                linewidth=line_width + 1,
+                linewidth=options._line_thick,
                 color="k",
                 label=f"_{label}_verification",
             )
             ax_left.plot(
-                breakdown["coil_times"][name],
+                breakdown["coil_times"][coil],
                 wallplug_info[label],
                 f"{style}",
-                linewidth=line_width,
+                linewidth=options._line_thin,
                 color=v_colors(plot_index),
                 label=label,
             )
         ax_left.set_ylabel("Voltage [V]")
-        _color_yaxis(ax_left, "left", ax_left_color)
+        options._color_yaxis(ax_left, "left")
         ax_left.set_xlabel("Time [s]")
         ax_left.grid()
 
         ax_right = ax_left.twinx()
         ax_right.set_ylabel("Current [A]")
-        _color_yaxis(ax_right, "right", ax_right_color)
+        options._color_yaxis(ax_right, "right")
         ax_right.plot(
-            breakdown["coil_times"][name],
-            breakdown["coil_currents"][name],
+            breakdown["coil_times"][coil],
+            breakdown["coil_currents"][coil],
             "-",
-            linewidth=line_width + 1,
+            linewidth=options._line_thick,
             color="k",
             label="coil_currents",
         )
         ax_right.plot(
-            breakdown["coil_times"][name],
+            breakdown["coil_times"][coil],
             wallplug_info["coil_currents"],
             "-",
-            linewidth=line_width,
-            color="w",
+            linewidth=options._line_thin,
+            color=options.ax_right_color,
             label="coil_currents",
         )
 
         ax_left.legend(loc="upper right")
-        ax_left.title.set_text(name)
+        ax_left.title.set_text(coil)
 
         plot_index += 1
 
@@ -274,30 +307,112 @@ pulse_data = read_json(pulse_path)
 power = pulse_data["power"]
 
 pulse = {}
-pulse_reorder = [
-    "voltage_coil",
-    "current_coil",
-    "time_coil",
-]
-for key in pulse_reorder:
-    pulse[key] = {}
+pulse_reorder_keys = {
+    "coil_voltages": "voltage_coil",
+    "coil_currents": "current_coil",
+    "coil_times": "time_coil",
+}
+for new_key, old_key in pulse_reorder_keys.items():
+    pulse[new_key] = {}
     for coil in pulse_data["coils"]:
-        pulse[key][coil] = pulse_data["coils"][coil][key]
+        pulse[new_key][coil] = pulse_data["coils"][coil][old_key]
 
 pulse["wallplug_parameter"] = coilsupply.compute_wallplug_loads(
-    pulse["voltage_coil"],
-    pulse["current_coil"],
+    pulse["coil_voltages"],
+    pulse["coil_currents"],
 )
 
 
 def plot_pulse_verification(pulse, power):
     """Plot Coil Supply System verification for pulse data."""
-    return pulse, power
+    n_coils = len(pulse["wallplug_parameter"])
+
+    options = _PlotOptions()
+    coil_colors = options._make_colormap(n_coils)
+
+    n_rows = 5
+    n_cols = 1
+    fig, axs = plt.subplots(
+        nrows=n_rows,
+        ncols=n_cols,
+        sharex=True,
+    )
+    subplots_axes = {
+        "voltage": axs.flat[0],
+        "current": axs.flat[1],
+        "active": axs.flat[2],
+        "reactive": axs.flat[3],
+        "total": axs.flat[4],
+    }
+
+    idm_data = True
+    coil_subplots_settings = {
+        "voltage": ("coil_voltages", "Voltage [V]", idm_data),
+        "current": ("coil_currents", "Current [A]", idm_data),
+        "active": ("power_active", "Active Power [W]", not idm_data),
+        "reactive": ("power_reactive", "Reactive Power [VAR]", not idm_data),
+    }
+    for key, settings in coil_subplots_settings.items():
+        plot_index = 0
+        ax = subplots_axes[key]
+        variable = settings[0]
+        ylabel = settings[1]
+        verification_available = settings[2]
+
+        for coil in reversed(coil_names):
+            wallplug_info = getattr(pulse["wallplug_parameter"], coil)
+            plot_index = plot_index + 1
+            if verification_available:
+                color_verification = coil_colors(plot_index)
+                style_verification = "-"
+                ax.plot(
+                    pulse["coil_times"][coil],
+                    pulse[variable][coil],
+                    style_verification,
+                    linewidth=options._line_thick,
+                    color=color_verification,
+                    label=f"_{coil}_verification",
+                )
+                color_computation = options._darken_color(color_verification)
+                style_computation = "--"
+            else:
+                color_computation = coil_colors(plot_index)
+                style_computation = "-"
+            ax.plot(
+                pulse["coil_times"][coil],
+                wallplug_info[variable],
+                style_computation,
+                linewidth=options._line_thin,
+                color=color_computation,
+                label=coil,
+            )
+        ax.set_ylabel(ylabel)
+        ax.grid()
+
+    """
+    total_subplot_settings = {
+        "active": ("active_power"),
+        "reactive": ("reactive_power"),
+    }
+    for coil in reversed(coil_names):
+            wallplug_info = getattr(pulse["wallplug_parameter"], coil)
+    """
+
+    ax_left = subplots_axes["total"]
+    ax_left.set_xlabel("Time [s]")
+
+    """
+    ax_right = ax_left.twinx()
+    """
+
+    plt.show()
+    return fig, power
 
 
 # %%
 if __name__ == "__main__":
     display_inputs(coilsupply)
     display_subsystems(coilsupply)
-    fig_breakdown = plot_breakdown_verification(breakdown)
-    pp(pulse["wallplug_parameter"])
+    # fig_breakdown = plot_breakdown_verification(breakdown)
+    fig_pulse = plot_pulse_verification(pulse, power)
+    # print(pulse["wallplug_parameter"])
