@@ -299,5 +299,5 @@ def plot_pulse_verification(pulse, power):
 if __name__ == "__main__":
     display_inputs(coilsupply)
     display_subsystems(coilsupply)
-    # fig_breakdown = plot_breakdown_verification(breakdown)
+    fig_breakdown = plot_breakdown_verification(breakdown)
     pp(pulse["wallplug_parameter"])
