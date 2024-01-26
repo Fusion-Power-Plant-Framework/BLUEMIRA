@@ -1,9 +1,15 @@
 {
   "params": "$path:params.json",
   "Radial build": {
+<<<<<<< HEAD
     "run_mode": "run",
     "read_dir": "$path_expand:./",
     "run_dir": "$path_expand:./",
+=======
+    "run_mode": "read",
+    "read_dir": "config/",
+    "run_dir": "config/",
+>>>>>>> 4ff7fd03 (rebased I think)
     "plot": false
   },
   "Fixed boundary equilibrium": {
