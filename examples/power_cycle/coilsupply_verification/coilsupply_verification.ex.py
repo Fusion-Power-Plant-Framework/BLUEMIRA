@@ -152,32 +152,30 @@ coilsupply_inputs = CoilSupplyInputs(
 coilsupply = CoilSupplySystem(coilsupply_inputs)
 
 
-def display_inputs(coilsupply):
+def display_inputs(coilsupply, types_only):
     """Print Coil Supply System inputs."""
-    pp(coilsupply.inputs)
+    pp(coilsupply.inputs, types_only)
 
 
-def display_subsystems(coilsupply):
+def display_subsystems(coilsupply, types_only):
     """Print summary of Coil Supply System subsystems."""
-    pp(
-        {
-            c.name: {
-                "class": type(c),
-                "resistance": c.resistance_set,
-            }
-            for c in coilsupply.correctors
+    correctors_summary = {
+        c.name: {
+            "class": type(c),
+            "resistance": c.resistance_set,
         }
-    )
-    pp(
-        {
-            c.name: {
-                "class": type(c),
-                "v_bridge_arg": c.max_bridge_voltage,
-                "power_loss_arg": c.power_loss_percentages,
-            }
-            for c in [coilsupply.converter]
+        for c in coilsupply.correctors
+    }
+    converters_summary = {
+        c.name: {
+            "class": type(c),
+            "v_bridge_arg": c.max_bridge_voltage,
+            "power_loss_arg": c.power_loss_percentages,
         }
-    )
+        for c in [coilsupply.converter]
+    }
+    pp(correctors_summary, types_only)
+    pp(converters_summary, types_only)
 
 
 # %% [markdown]
@@ -294,6 +292,12 @@ def plot_breakdown_verification(breakdown):
         ax_left.title.set_text(coil)
 
         plot_index += 1
+
+    plt.text(
+        15,
+        -0.01,
+        " Coil Supply System Model:\n model (dashed) X IDM (continuous) ",
+    )
 
     plt.show()
     return fig
@@ -423,17 +427,15 @@ def plot_pulse_verification(pulse, power):
         side = settings[0]
         ylabel = settings[1]
         ax_color = options._side_color(side)
+        load_type = key.split("_")[1]
 
         for coil in reversed(coil_names):
             wallplug_info = getattr(pulse["wallplug_parameter"], coil)
-
             times[key].append(pulse["coil_times"][coil])
             totals[key].append(wallplug_info[key])
 
         times[key], totals[key] = match_domains(times[key], totals[key])
-        pp([len(e) for e in totals[key]])
         totals[key] = np.add.reduce(totals[key])
-        pp(totals[key])
 
         if side == "left":
             ax = subplots_axes["total"]
@@ -442,23 +444,33 @@ def plot_pulse_verification(pulse, power):
         options._color_yaxis(ax, side)
         ax.set_ylabel(ylabel)
         ax.plot(
+            power[load_type]["time"],
+            power[load_type]["power"],
+            "-",
+            linewidth=options._line_thick,
+            color=ax_color,
+            label=f"_{load_type}_verification",
+        )
+        ax.plot(
             times[key],
             totals[key],
+            "--",
             linewidth=options._line_thin,
             color=ax_color,
-            label=key,
+            label=load_type,
         )
+        ax.grid(True, axis="y", linestyle=":", color=ax_color)
+        ax.grid(True, axis="x")
     ax.set_xlabel("Time [s]")
-    ax.grid()
 
     plt.show()
-    return fig, power
+    return fig
 
 
 # %%
 if __name__ == "__main__":
-    display_inputs(coilsupply)
-    display_subsystems(coilsupply)
+    display_inputs(coilsupply, types_only=False)
+    display_subsystems(coilsupply, types_only=True)
     # fig_breakdown = plot_breakdown_verification(breakdown)
     fig_pulse = plot_pulse_verification(pulse, power)
     # print(pulse["wallplug_parameter"])

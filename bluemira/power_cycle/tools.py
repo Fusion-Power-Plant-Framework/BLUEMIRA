@@ -4,12 +4,11 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-"""
-Utility functions for the power cycle model.
-"""
+"""Utility functions for the power cycle model."""
 
 import json
 import pprint
+from copy import deepcopy
 from dataclasses import asdict, is_dataclass
 from typing import Any, Dict, List
 
@@ -129,11 +128,28 @@ def match_domains(
             right=0,
         )
     return x_matched, all_y_matched
-def pp(obj):
+
+def recursive_value_types_in_dict(dictionary):
+    """Recursively display value types in a dictionary."""
+    types_dict = dictionary.copy()
+    for key, value in types_dict.items():
+        if isinstance(types_dict[key], dict):
+            types_dict[key] = recursive_value_types_in_dict(types_dict[key])
+        else:
+            types_dict[key] = type(value)
+    return types_dict
+
+
+def pp(obj, types_only=False):
     """Prety Printer compatible with dataclasses."""
-    if is_dataclass(obj):
-        return pprint.pp(asdict(obj), sort_dicts=False, indent=4)
-    return pprint.pp(obj, indent=4)
+    kwargs = {"indent": 4}
+    target = deepcopy(obj)
+    if is_dataclass(target):
+        kwargs["sort_dicts"] = False
+        target = asdict(target)
+    if types_only and isinstance(target, dict):
+        target = recursive_value_types_in_dict(target)
+    return pprint.pp(target, **kwargs)
 
 
 def symmetrical_subplot_distribution(n_plots, direction="row"):
