@@ -208,10 +208,15 @@ breakdown_reorder_keys = {
     "coil_currents": "current_coil",
     "coil_times": "time_coil",
 }
+duration_breakdown = []
 for new_key, old_key in breakdown_reorder_keys.items():
     breakdown[new_key] = {}
     for coil in breakdown_data:
-        breakdown[new_key][coil] = breakdown_data[coil][old_key]
+        old_value = breakdown_data[coil][old_key]
+        if new_key == "coil_times":
+            duration_breakdown.append(max(old_value))
+        breakdown[new_key][coil] = old_value
+duration_breakdown = max(duration_breakdown)
 
 breakdown["wallplug_parameter"] = coilsupply.compute_wallplug_loads(
     breakdown["coil_voltages"],
@@ -329,15 +334,28 @@ pulse_reorder_keys = {
     "coil_voltages": "voltage_coil",
     "coil_currents": "current_coil",
     "coil_times": "time_coil",
+    "snu_switches": "time_coil",
 }
+t_start_breakdown = 500
+t_end_breakdown = t_start_breakdown + duration_breakdown
+
 for new_key, old_key in pulse_reorder_keys.items():
     pulse[new_key] = {}
     for coil in pulse_data["coils"]:
-        pulse[new_key][coil] = pulse_data["coils"][coil][old_key]
+        old_value = pulse_data["coils"][coil][old_key]
+        if new_key == "snu_switches":
+            t_after_start = [t >= t_start_breakdown for t in old_value]
+            t_before_end = [t <= t_end_breakdown for t in old_value]
+            new_value = [a and b for a, b in zip(t_after_start, t_before_end)]
+        else:
+            new_value = old_value
+        pulse[new_key][coil] = new_value
+
 
 pulse["wallplug_parameter"] = coilsupply.compute_wallplug_loads(
     pulse["coil_voltages"],
     pulse["coil_currents"],
+    {"SNU": pulse["snu_switches"]},
 )
 
 
@@ -396,6 +414,17 @@ def plot_pulse_verification(pulse, power):
             else:
                 color_computation = coil_colors(plot_index)
                 style_computation = "-"
+
+            visible_snu_switch = [
+                s * max(wallplug_info[variable]) for s in pulse["snu_switches"][coil]
+            ]
+            ax.plot(
+                pulse["coil_times"][coil],
+                visible_snu_switch,
+                ":",
+                label=f"_SNU_switch_{coil}",
+                color=color_computation,
+            )
             ax.plot(
                 pulse["coil_times"][coil],
                 wallplug_info[variable],
@@ -469,8 +498,8 @@ def plot_pulse_verification(pulse, power):
 
 # %%
 if __name__ == "__main__":
-    display_inputs(coilsupply, types_only=False)
-    display_subsystems(coilsupply, types_only=True)
+    # display_inputs(coilsupply, types_only=False)
+    # display_subsystems(coilsupply, types_only=True)
     # fig_breakdown = plot_breakdown_verification(breakdown)
     fig_pulse = plot_pulse_verification(pulse, power)
     # print(pulse["wallplug_parameter"])

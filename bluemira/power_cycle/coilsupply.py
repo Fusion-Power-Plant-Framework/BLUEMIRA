@@ -31,7 +31,7 @@ from dataclasses import (
     make_dataclass,
     replace,
 )
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -68,7 +68,7 @@ class CoilSupplyParameterABC:
     """
 
     subclass_name = "CoilSupplyParameter"
-    single_value_types = (int, float, list, tuple, np.ndarray)
+    single_value_types = (bool, int, float, list, tuple, np.ndarray)
 
     @classmethod
     def validate_parameter(cls, obj):
@@ -327,6 +327,7 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
         self,
         voltages_parameter: CoilSupplyParameterABC,
         currents_parameter: CoilSupplyParameterABC,
+        switches_parameter: CoilSupplyParameterABC,
     ):
         """
         Apply the effect of the 'CoilSupplyCorrector'.
@@ -351,15 +352,23 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
         for name in coil_names:
             requested_v = getattr(voltages_parameter, name)
             requested_i = getattr(currents_parameter, name)
+            requested_s = getattr(switches_parameter, name)
+
+            if requested_s is None:
+                affected_v = requested_v
+                affected_i = requested_i
+            else:
+                affected_v = np.multiply(requested_v, requested_s)
+                affected_i = np.multiply(requested_i, requested_s)
 
             corrector_resistance = getattr(self.resistance_set, name)
-            corrector_i = requested_i
+            corrector_i = affected_i
             corrector_v = -corrector_resistance * corrector_i
             setattr(voltages_corrector, name, corrector_v)
             setattr(currents_corrector, name, corrector_i)
 
-            following_v = requested_v - corrector_v
-            following_i = requested_i
+            following_v = affected_v - corrector_v
+            following_i = affected_i
             setattr(voltages_following, name, following_v)
             setattr(currents_following, name, following_i)
 
@@ -546,11 +555,19 @@ class CoilSupplySystem(CoilSupplyABC):
 
         Use this method to transform objects into instances of the
         'CoilSupplyParameter' class, that have attributes that match
-        the coil names in 'inputs.config.coil_names'.
+        the coil names in 'inputs.config.coil_names', and transform
+        their values into 'numpy.ndarray' instances.
         """
         if isinstance(obj, dict):
             obj = {k: np.array(v) for k, v in obj.items()}
         return self.inputs.parameter.init_subclass(obj)
+
+    def _validate_dict_of_parameters_for_correctors(self, obj=None):
+        dict_of_parameters = {}
+        for c in self.correctors:
+            value = obj.get(c.name, None) if isinstance(obj, dict) else obj
+            dict_of_parameters[c.name] = self.validate_parameter(value)
+        return dict_of_parameters
 
     def _print_computing_message(self, verbose=False):
         if verbose:
@@ -567,26 +584,40 @@ class CoilSupplySystem(CoilSupplyABC):
         self,
         voltages_argument: Any,
         currents_argument: Any,
+        dict_of_switches_argument: Optional[Dict[str, Any]] = None,
         verbose: bool = False,
     ):
         """
         Compute power loads required by coil supply system to feed coils.
 
+        Arguments are transformed into appropriate CoilSupplyParameter
+        instances (dictionaries are distributed by coil, single values
+        are turned into arrays and copied for every coil).
+
         For each coil, voltage and current arrays must have the same
         length, and elements must be sampled at the same points in time.
 
+        The dictionary of "switches argument" should contain one key for
+        each corrector defined in the CoilSupplySystem instance. The
+        value of each key should be an array of boolean values, with
+        the same length as the voltage and current arrays, that specify
+        at what intervals the effect of that corrector is applied to the
+        voltages and currents arguments. Missing keys in this dictionary
+        are filled with False values.
+
         Parameters
         ----------
-        voltages_parameter: Any
+        voltages_argument: Any
             Array (collection) of voltages in time required by the coils. [V]
-        currents_parameter: Any
+        currents_argument: Any
             Array (collection) of currents in time required by the coils. [A]
+        dict_of_switches_argument: Dict[str,Any]
+            Arrays of
         """
-        voltages_parameter = self.validate_parameter(
-            voltages_argument,
-        )
-        currents_parameter = self.validate_parameter(
-            currents_argument,
+        voltages_parameter = self.validate_parameter(voltages_argument)
+        currents_parameter = self.validate_parameter(currents_argument)
+        all_switches = self._validate_dict_of_parameters_for_correctors(
+            dict_of_switches_argument,
         )
 
         outputs_parameter = self.validate_parameter()
@@ -608,6 +639,7 @@ class CoilSupplySystem(CoilSupplyABC):
             ) = corrector.compute_correction(
                 voltages_parameter,
                 currents_parameter,
+                all_switches[corrector.name],
             )
             outputs_parameter.absorb_parameter(
                 voltages_corrector,

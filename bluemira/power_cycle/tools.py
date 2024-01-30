@@ -136,18 +136,19 @@ def recursive_value_types_in_dict(dictionary):
         if isinstance(types_dict[key], dict):
             types_dict[key] = recursive_value_types_in_dict(types_dict[key])
         else:
-            types_dict[key] = type(value)
+            length = len(value) if hasattr(value, "__len__") else "N/A"
+            types_dict[key] = f"type = {type(value)}, length = {length}"
     return types_dict
 
 
-def pp(obj, types_only=False):
-    """Prety Printer compatible with dataclasses."""
+def pp(obj, summary=False):
+    """Prety Printer compatible with dataclasses and able to summarise."""
     kwargs = {"indent": 4}
     target = deepcopy(obj)
     if is_dataclass(target):
         kwargs["sort_dicts"] = False
         target = asdict(target)
-    if types_only and isinstance(target, dict):
+    if summary and isinstance(target, dict):
         target = recursive_value_types_in_dict(target)
     return pprint.pp(target, **kwargs)
 
