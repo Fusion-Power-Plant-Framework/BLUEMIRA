@@ -352,23 +352,19 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
         for name in coil_names:
             requested_v = getattr(voltages_parameter, name)
             requested_i = getattr(currents_parameter, name)
-            requested_s = getattr(switches_parameter, name)
-
-            if requested_s is None:
-                affected_v = requested_v
-                affected_i = requested_i
-            else:
-                affected_v = np.multiply(requested_v, requested_s)
-                affected_i = np.multiply(requested_i, requested_s)
+            corrector_s = getattr(switches_parameter, name)
 
             corrector_resistance = getattr(self.resistance_set, name)
-            corrector_i = affected_i
+            corrector_i = requested_i
             corrector_v = -corrector_resistance * corrector_i
+            if corrector_s is not None:
+                corrector_i = np.multiply(corrector_i, corrector_s)
+                corrector_v = np.multiply(corrector_v, corrector_s)
             setattr(voltages_corrector, name, corrector_v)
             setattr(currents_corrector, name, corrector_i)
 
-            following_v = affected_v - corrector_v
-            following_i = affected_i
+            following_v = requested_v - corrector_v
+            following_i = requested_i
             setattr(voltages_following, name, following_v)
             setattr(currents_following, name, following_i)
 
