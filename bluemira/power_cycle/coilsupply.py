@@ -116,7 +116,7 @@ class CoilSupplyParameterABC:
         )
 
     def __len__(self):
-        """Number of attributes in dataclass instance."""
+        """Get number of attributes in dataclass instance."""
         return len(asdict(self))
 
     def absorb_parameter(
@@ -262,6 +262,8 @@ class CoilSupplyInputs:
 
     def _create_coilsupplyparameter_dataclass(self):
         """
+        Create 'CoilSupplyParameter' specific for 'CoilSupplySystem'.
+
         Dynamically create 'CoilSupplyParameter' dataclass inheriting
         from 'CoilSupplyParameterABC' to contain attributes that match
         'config.coil_names'.
