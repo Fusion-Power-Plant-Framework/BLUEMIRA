@@ -451,7 +451,7 @@ class ThyristorBridges(CoilSupplyConverter):
         """
         loss_percentages = self.power_loss_percentages
         v_max_bridge = self.max_bridge_voltage
-        v_max_coil = np.max(voltages_array)
+        v_max_coil = np.max(np.absolute(voltages_array))
         if v_max_coil == 0:
             raise ValueError(
                 "Voltage array must contain at least one value",
@@ -463,13 +463,24 @@ class ThyristorBridges(CoilSupplyConverter):
         p_rated = v_rated * i_rated
 
         p_apparent = v_rated * currents_array
-        phase_rad = np.arccos(voltages_array / v_rated)
+        power_factor = voltages_array / v_rated
+        phase_rad = np.arccos(power_factor)
         phase_deg = phase_rad * 180 / np.pi
-        power_factor = np.cos(phase_rad)
 
-        p_reactive = p_apparent * np.sin(phase_rad)
+        """
+        pp(v_max_coil)
+        pp(number_of_bridge_units)
+        pp(v_rated)
+        pp(i_rated)
+        pp(p_rated)
+        # pp(power_factor)
+        # pp(phase_rad)
+        raise False
+        """
 
-        p_active = p_apparent * np.cos(phase_rad)
+        p_reactive = np.absolute(p_apparent * np.sin(phase_rad))  # why?
+
+        p_active = p_apparent * np.cos(phase_rad)  # why not absolute?
         p_loss_multiplier = 1
         for percentage in loss_percentages:
             p_loss_multiplier *= 1 + loss_percentages[percentage] / 100

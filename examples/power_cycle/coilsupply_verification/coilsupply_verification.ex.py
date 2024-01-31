@@ -34,7 +34,7 @@ class _PlotOptions:
     line_width = 2
     ax_left_color = "b"
     ax_right_color = "r"
-    subplots_size = 3.5
+    default_subplot_size = 4.5
     color_shade_factor = 0.5
     fancy_legend: ClassVar = {
         "loc": "upper center",
@@ -43,6 +43,7 @@ class _PlotOptions:
         "fancybox": True,
         "shadow": True,
     }
+    default_format = "svg"
 
     @property
     def _line_thin(self):
@@ -68,14 +69,33 @@ class _PlotOptions:
         ax.spines[side].set_color(color)
         ax.tick_params(axis="y", labelcolor=color)
 
-    def _constrained_fig_size(self, n_rows, n_cols):
-        return (
-            self.subplots_size * n_cols,
-            self.subplots_size * n_rows,
-        )
+    def _constrained_fig_size(
+        self,
+        n_rows,
+        n_cols,
+        row_size=None,
+        col_size=None,
+    ):
+        row_size = self.default_subplot_size if row_size is None else row_size
+        col_size = self.default_subplot_size if col_size is None else col_size
+        return (col_size * n_cols, row_size * n_rows)
 
-    def _darken_color(self, color):
-        return tuple(c * self.color_shade_factor for c in color)
+    def _darken_color(self, color, shade=None):
+        shade = self.color_shade_factor if shade is None else shade
+        return tuple(c * shade for c in color)
+
+    def _save_fig(self, fig, fname, fig_format=None):
+        if fig_format is not None:
+            fig.savefig(
+                fname=script_dir / f"{fname}.{fig_format}",
+                format=fig_format,
+                transparent=True,
+            )
+        fig.savefig(
+            fname=script_dir / f"{fname}.{self.default_format}",
+            format=self.default_format,
+            transparent=True,
+        )
 
 
 # %% [markdown]
@@ -152,12 +172,12 @@ coilsupply_inputs = CoilSupplyInputs(
 coilsupply = CoilSupplySystem(coilsupply_inputs)
 
 
-def display_inputs(coilsupply, types_only):
+def display_inputs(coilsupply, summary):
     """Print Coil Supply System inputs."""
-    pp(coilsupply.inputs, types_only)
+    pp(coilsupply.inputs, summary)
 
 
-def display_subsystems(coilsupply, types_only):
+def display_subsystems(coilsupply, summary):
     """Print summary of Coil Supply System subsystems."""
     correctors_summary = {
         c.name: {
@@ -174,8 +194,8 @@ def display_subsystems(coilsupply, types_only):
         }
         for c in [coilsupply.converter]
     }
-    pp(correctors_summary, types_only)
-    pp(converters_summary, types_only)
+    pp(correctors_summary, summary)
+    pp(converters_summary, summary)
 
 
 # %% [markdown]
@@ -243,8 +263,8 @@ def plot_breakdown_verification(breakdown):
     fig, axs = plt.subplots(
         nrows=n_rows,
         ncols=n_cols,
-        layout="constrained",
-        figsize=options._constrained_fig_size(n_rows, n_cols),
+        layout="tight",
+        figsize=options._constrained_fig_size(n_rows, n_cols, 3.5, 10.5),
     )
     plot_index = 0
     for coil in reversed(coil_names):
@@ -298,12 +318,12 @@ def plot_breakdown_verification(breakdown):
 
         plot_index += 1
 
-    plt.text(
-        15,
-        -0.01,
-        " Coil Supply System Model:\n model (dashed) X IDM (continuous) ",
+    fig.suptitle(
+        "Coil Supply System Model, Breakdown Verification:\n"
+        "original (black) X model (color)",
     )
 
+    options._save_fig(fig, "figure_breakdown_BLUEMIRA", "png")
     plt.show()
     return fig
 
@@ -372,6 +392,7 @@ def plot_pulse_verification(pulse, power):
         nrows=n_rows,
         ncols=n_cols,
         sharex=True,
+        figsize=options._constrained_fig_size(n_rows, n_cols, 2.5, 12.5),
     )
     subplots_axes = {
         "voltage": axs.flat[0],
@@ -415,12 +436,11 @@ def plot_pulse_verification(pulse, power):
                 color_computation = coil_colors(plot_index)
                 style_computation = "-"
 
-            visible_snu_switch = [
-                s * max(wallplug_info[variable]) for s in pulse["snu_switches"][coil]
-            ]
+            snu_scale = max(wallplug_info[variable])
+            snu_switch = [s * snu_scale for s in pulse["snu_switches"][coil]]
             ax.plot(
                 pulse["coil_times"][coil],
-                visible_snu_switch,
+                snu_switch,
                 ":",
                 label=f"_SNU_switch_{coil}",
                 color=color_computation,
@@ -490,16 +510,24 @@ def plot_pulse_verification(pulse, power):
         )
         ax.grid(True, axis="y", linestyle=":", color=ax_color)
         ax.grid(True, axis="x")
-    ax.set_xlabel("Time [s]")
+        ax.set_xlabel("Time [s]")
 
+    fig.suptitle(
+        "Coil Supply System Model, Pulse Verification:\n"
+        "Coil Voltages & Currents: original (continuous) X model (dashed)\n"
+        "Coil Active & Reactive Powers: model (continuous)\n"
+        "Total Powers: original (continuous) X model (dashed)\n"
+        "(SNU Switch drawn as colored dotted curves, except in Total Powers)",
+    )
+
+    options._save_fig(fig, "figure_pulse_BLUEMIRA", "png")
     plt.show()
     return fig
 
 
 # %%
 if __name__ == "__main__":
-    # display_inputs(coilsupply, types_only=False)
-    # display_subsystems(coilsupply, types_only=True)
-    # fig_breakdown = plot_breakdown_verification(breakdown)
+    display_inputs(coilsupply, summary=False)
+    display_subsystems(coilsupply, summary=True)
+    fig_breakdown = plot_breakdown_verification(breakdown)
     fig_pulse = plot_pulse_verification(pulse, power)
-    # print(pulse["wallplug_parameter"])
