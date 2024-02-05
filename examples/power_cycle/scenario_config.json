@@ -1,0 +1,399 @@
+{
+  "Power Cycle": {
+    "scenario": {
+      "name": "std_scenario",
+      "description": "Standard scenario",
+      "pulses": { "std": 1 }
+    },
+    "pulse_library": {
+      "std": {
+        "description": "Standard pulse",
+        "phases": ["dwl", "d2f", "ftt", "f2d"]
+      }
+    },
+    "phase_library": {
+      "dwl": {
+        "description": "Dwell",
+        "operation": "max",
+        "subphases": ["csr", "pmp"]
+      },
+      "d2f": {
+        "description": "Transition between dwell and flat-top",
+        "operation": "sum",
+        "subphases": ["cru", "bri"]
+      },
+      "ftt": {
+        "description": "Flat-top",
+        "operation": "sum",
+        "subphases": ["plb"]
+      },
+      "f2d": {
+        "description": "Transition between flat-top and dwell",
+        "operation": "sum",
+        "subphases": ["brt", "crd"]
+      }
+    },
+    "subphase_library": {
+      "csr": {
+        "description": "Central Solenoid recharge",
+        "duration": "$cs_recharge_time",
+        "loads": [
+          "vv",
+          "hcpb_vvps",
+          "div_lim",
+          "hcpb_bb_peak",
+          "hcpb_hirn",
+          "turb",
+          "eps_peak",
+          "eps_upk",
+          "buildings",
+          "site",
+          "sf6_air"
+        ],
+        "efficiencies": {
+          "hcpb_bb_peak": [
+            {
+              "value": { "reactive": 5, "active": 5 },
+              "description": "coolant flow to 20%"
+            }
+          ],
+          "turb": [
+            {
+              "value": { "reactive": 1.25 },
+              "description": "inverse of minimum power factor @ 0.8"
+            }
+          ]
+        }
+      },
+      "pmp": {
+        "description": "Reactor pump-down",
+        "duration": "$pumpdown_time",
+        "loads": [
+          "vv",
+          "hcpb_vvps",
+          "div_lim",
+          "hcpb_bb_peak",
+          "hcpb_hirn",
+          "turb",
+          "eps_peak",
+          "eps_upk",
+          "buildings",
+          "site",
+          "sf6_air"
+        ],
+        "efficiencies": {
+          "hcpb_bb_peak": [
+            {
+              "value": 5,
+              "description": "coolant flow to 20%"
+            }
+          ],
+          "turb": [
+            {
+              "value": { "reactive": 1.25 },
+              "description": "inverse of minimum power factor @ 0.8"
+            }
+          ]
+        }
+      },
+      "cru": {
+        "description": "Current ramp-up",
+        "duration": "$ramp_up_time",
+        "loads": [
+          "vv",
+          "hcpb_vvps",
+          "div_lim",
+          "hcpb_bb_peak",
+          "hcpb_hirn",
+          "turb",
+          "eps_peak",
+          "eps_upk",
+          "buildings",
+          "site",
+          "sf6_air"
+        ],
+        "efficiencies": {
+          "hcpb_bb_peak": [
+            {
+              "value": 5,
+              "description": "coolant flow to 20%"
+            }
+          ],
+          "turb": [
+            {
+              "value": { "reactive": 1.25 },
+              "description": "inverse of minimum power factor @ 0.8"
+            }
+          ]
+        }
+      },
+      "crd": {
+        "description": "Current ramp-down",
+        "duration": "$ramp_down_time",
+        "loads": [
+          "vv",
+          "hcpb_vvps",
+          "div_lim",
+          "hcpb_bb_peak",
+          "hcpb_hirn",
+          "turb",
+          "eps_peak",
+          "eps_upk",
+          "buildings",
+          "site",
+          "sf6_air"
+        ],
+        "efficiencies": {
+          "hcpb_bb_peak": [
+            {
+              "value": 5,
+              "description": "coolant flow to 20%"
+            }
+          ],
+          "turb": [
+            {
+              "value": { "reactive": 1.25 },
+              "description": "inverse of minimum power factor @ 0.8"
+            }
+          ],
+          "hcpb_hirn": [
+            { "value": { "reactive": 0 }, "description": "no reactive load" }
+          ]
+        }
+      },
+      "bri": {
+        "description": "Burn initiation (heat up plasma)",
+        "duration": 19,
+        "unit": "second",
+        "loads": [
+          "vv",
+          "hcpb_vvps",
+          "hcpb_vvps",
+          "div_lim",
+          "hcpb_bb_peak",
+          "hcpb_hirn",
+          "turb",
+          "eps_peak",
+          "eps_upk",
+          "buildings",
+          "site",
+          "sf6_air"
+        ],
+        "efficiencies": {
+          "hcpb_bb_peak": [
+            {
+              "value": 5,
+              "description": "coolant flow to 20%"
+            }
+          ],
+          "turb": [
+            {
+              "value": { "reactive": 1.25 },
+              "description": "inverse of minimum power factor @ 0.8"
+            }
+          ]
+        },
+        "reference": ""
+      },
+      "brt": {
+        "description": "Burn termination (cool down plasma)",
+        "duration": 123,
+        "unit": "second",
+        "loads": [
+          "vv",
+          "hcpb_vvps",
+          "div_lim",
+          "hcpb_bb_peak",
+          "hcpb_hirn",
+          "turb",
+          "eps_peak",
+          "eps_upk",
+          "buildings",
+          "site",
+          "sf6_air"
+        ],
+        "efficiencies": {
+          "hcpb_bb_peak": [
+            {
+              "value": 5,
+              "description": "coolant flow to 20%"
+            }
+          ],
+          "turb": [
+            {
+              "value": { "reactive": 1.25 },
+              "description": "inverse of minimum power factor @ 0.8"
+            }
+          ],
+          "hcpb_hirn": [
+            { "value": { "reactive": 0 }, "description": "no reactive load" }
+          ]
+        },
+        "reference": ""
+      },
+      "plb": {
+        "description": "Plasma burn",
+        "duration": 2,
+        "unit": "hour",
+        "loads": [
+          "vv",
+          "hcpb_vvps",
+          "div_lim",
+          "hcpb_bb_peak",
+          "hcpb_hirn",
+          "turb",
+          "eps_peak",
+          "eps_upk",
+          "buildings",
+          "site",
+          "sf6_air"
+        ],
+        "efficiencies": {
+          "turb": [
+            {
+              "value": { "reactive": 1.25 },
+              "description": "inverse of minimum power factor @ 0.8"
+            }
+          ]
+        },
+        "reference": ""
+      }
+    },
+    "system_library": {
+      "BOP": {
+        "description": "Magnetics (PBS = 49,50,54,58,70)",
+        "subsystems": ["PHT", "IHT", "PCS"]
+      },
+      "AUX": {
+        "description": "Auxiliaries (PBS = 80,82,83,87)",
+        "subsystems": ["EPS", "BSU", "OTR"]
+      }
+    },
+    "sub_system_library": {
+      "PHT": {
+        "description": "Primary Heat Transfer System",
+        "loads": ["vv", "hcpb_vvps", "div_lim", "hcpb_bb_peak"]
+      },
+      "IHT": {
+        "description": "Intermediate Heat Transfer System",
+        "loads": []
+      },
+      "PCS": {
+        "description": "Power Conversion System",
+        "loads": ["hcpb_hirn", "turb"]
+      },
+      "EPS": {
+        "description": "Electrical Power Supply",
+        "loads": ["eps_peak", "eps_upk"]
+      },
+      "BSU": {
+        "description": "Buildings & Site Utilities",
+        "loads": ["buildings", "site"]
+      },
+      "OTR": {
+        "description": "Other Auxiliary Systems",
+        "loads": ["sf6_air"]
+      }
+    },
+    "load_library": {
+      "vv": {
+        "time": [0, 1],
+        "data": { "reactive": [4.7, 4.7], "active": [9.7, 9.7] },
+        "unit": "MW",
+        "model": "RAMP",
+        "normalised": true,
+        "consumption": true,
+        "efficiencies": [],
+        "description": "Vacuum Vessel (VV)"
+      },
+      "hcpb_vvps": {
+        "time": { "active": [0, 1] },
+        "data": { "active": [2.3, 2.3] },
+        "unit": "MW",
+        "model": "RAMP",
+        "consumption": true,
+        "normalised": true,
+        "description": "(HCPB) Vacuum Vessel pressure suppression (VVPS)"
+      },
+      "div_lim": {
+        "time": [0, 1],
+        "data": { "reactive": [12.1, 12.1], "active": [19.5, 19.5] },
+        "unit": "MW",
+        "model": "RAMP",
+        "consumption": true,
+        "normalised": true,
+        "description": "Divertor & Limiter (DV & LM)"
+      },
+      "hcpb_bb_peak": {
+        "description": "(HCPB) Breeding Blanket (BB) - peak value",
+        "time": [0, 1],
+        "data": { "reactive": [54.4, 54.4], "active": [165.6, 165.6] },
+        "unit": "MW",
+        "model": "RAMP",
+        "normalised": true
+      },
+      "hcpb_hirn": {
+        "description": "(HCPB) Hirn Cycle components",
+        "time": [0, 1],
+        "data": { "reactive": [5.8, 5.8], "active": [12, 12] },
+        "unit": "MW",
+        "model": "RAMP",
+        "consumption": true,
+        "normalised": true
+      },
+      "turb": {
+        "description": "nominal turbine power for direct concept",
+        "time": [0, 1],
+        "data": [750, 750],
+        "unit": "MW",
+        "model": "RAMP",
+        "efficiencies": [{ "value": 0.85, "description": "indirect storage" }],
+        "consumption": false,
+        "normalised": true
+      },
+      "eps_peak": {
+        "description": "peak value extrapolated to all relevant phases",
+        "time": [0, 1],
+        "data": [300, 300],
+        "unit": "MW",
+        "model": "STEP"
+      },
+      "eps_upk": {
+        "description": "EPS upkeep",
+        "time": [0, 120],
+        "data": { "reactive": [10.2, 10.2], "active": [21, 21] },
+        "unit": "MW",
+        "model": "RAMP",
+        "consumption": true,
+        "normalised": false
+      },
+      "buildings": {
+        "description": "buildings (light/elevators/HVAC; ITER extrapolation)",
+        "time": [0, 1],
+        "data": { "reactive": [26.6, 26.6], "active": [54.8, 54.8] },
+        "unit": "MW",
+        "model": "RAMP",
+        "consumption": true,
+        "normalised": true
+      },
+      "site": {
+        "description": "site utilities",
+        "time": [0, 1],
+        "data": { "reactive": [1.9, 1.9], "active": [3.1, 3.1] },
+        "unit": "MW",
+        "model": "RAMP",
+        "consumption": true,
+        "normalised": true
+      },
+      "sf6_air": {
+        "description": "ITER extrapolation for: SF6 & compressed air distribution, CCWS, CHWS",
+        "time": [0, 1],
+        "data": { "reactive": [56.4, 56.4], "active": [90.9, 90.9] },
+        "unit": "MW",
+        "model": "RAMP",
+        "consumption": true,
+        "normalised": true
+      }
+    }
+  }
+}

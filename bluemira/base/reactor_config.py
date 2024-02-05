@@ -124,7 +124,9 @@ class ReactorConfig:
 
         self.config_data = config_data
         self.global_params = make_parameter_frame(
-            self.config_data.get(_PARAMETERS_KEY, {}),
+            self.config_data.get(
+                _PARAMETERS_KEY, None if global_params_type is None else {}
+            ),
             global_params_type,
         )
 

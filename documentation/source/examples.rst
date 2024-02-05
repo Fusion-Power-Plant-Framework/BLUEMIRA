@@ -74,6 +74,7 @@ Other Examples
 
     examples/base/units
     examples/balance_of_plant/steady_state_example
+    examples/power_cycle/simple_example
     examples/fuel_cycle/EUDEMO_fuelcycle
     examples/materials/material_definitions
     examples/mesh/mesh_tutorial
