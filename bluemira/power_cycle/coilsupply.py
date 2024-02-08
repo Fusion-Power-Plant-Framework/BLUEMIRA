@@ -9,7 +9,6 @@ Classes for computing coils active and reactive powers.
 
 TODO:
     - alter 'name' & 'description' to 'label' and 'name'?
-    - relocate `CoilSupplySystemError` to `errors.py`
     - relocate classes used by `net.py` and `coilsupply.py` to `base.py`
     - ensure every '...Config' class inherits from 'Config', and rename
       other cases as '...Inputs', '...Scheme', etc.
@@ -36,7 +35,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 import numpy as np
 
 from bluemira.base.look_and_feel import bluemira_print
-from bluemira.power_cycle.errors import PowerCycleError
+from bluemira.power_cycle.errors import CoilSupplySystemError
 from bluemira.power_cycle.net import (
     Config,
     Descriptor,
@@ -700,9 +699,3 @@ class CoilSupplySystem(CoilSupplyABC):
 
         outputs_parameter.absorb_parameter(wallplug_parameter)
         return outputs_parameter
-
-
-class CoilSupplySystemError(PowerCycleError):
-    """
-    Exception class for 'CoilSupplySystem' class of the Power Cycle module.
-    """

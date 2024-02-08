@@ -23,3 +23,9 @@ class ScenarioLoadError(PowerCycleError):
     """
     Exception class for 'ScenarioLoad' class of the Power Cycle module.
     """
+
+
+class CoilSupplySystemError(PowerCycleError):
+    """
+    Exception class for 'CoilSupplySystem' class of the Power Cycle module.
+    """
