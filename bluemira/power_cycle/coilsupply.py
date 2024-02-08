@@ -31,7 +31,7 @@ from dataclasses import (
     make_dataclass,
     replace,
 )
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 
@@ -40,7 +40,6 @@ from bluemira.power_cycle.errors import PowerCycleError
 from bluemira.power_cycle.net import (
     Config,
     Descriptor,
-    LibraryConfigDescriptor,
 )
 
 
@@ -243,6 +242,28 @@ class CoilSupplyConfigDescriptor(Descriptor):
         setattr(obj, self._name, value)
 
 
+class LibraryDescriptor(Descriptor):
+    """Descriptor to define libraries for use with dataclasses"""
+
+    def __init__(self, *, config: Type[Config]):
+        self.config = config
+
+    def __get__(self, obj: Any, _) -> Dict[str, Config]:
+        """Get all library entries"""
+        return getattr(obj, self._name)
+
+    def __set__(
+        self,
+        obj: Any,
+        value: Dict[str, Union[Config, Dict]],
+    ):
+        """Set all library entries"""
+        for k, v in value.items():
+            if not isinstance(v, self.config):
+                value[k] = self.config(name=k, **v)
+        setattr(obj, self._name, value)
+
+
 @dataclass
 class CoilSupplyInputs:
     """Values used to characterize a Coil Supply System."""
@@ -251,12 +272,12 @@ class CoilSupplyInputs:
     config: CoilSupplyConfigDescriptor = CoilSupplyConfigDescriptor()
 
     "Library of inputs for possible CoilSupplyCorrector objects."
-    corrector_library: LibraryConfigDescriptor = LibraryConfigDescriptor(
+    corrector_library: LibraryDescriptor = LibraryDescriptor(
         config=CoilSupplyCorrectorConfig,
     )
 
     "Library of inputs for possible CoilSupplyConverter objects."
-    converter_library: LibraryConfigDescriptor = LibraryConfigDescriptor(
+    converter_library: LibraryDescriptor = LibraryDescriptor(
         config=CoilSupplyConverterConfig,
     )
 
