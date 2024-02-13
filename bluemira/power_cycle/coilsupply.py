@@ -40,6 +40,7 @@ from bluemira.power_cycle.net import (
     Config,
     Descriptor,
 )
+from bluemira.power_cycle.tools import pp
 
 
 def _get_module_class_from_str(class_name):
@@ -501,8 +502,11 @@ class ThyristorBridges(CoilSupplyConverter):
         """
 
         p_reactive = np.absolute(p_apparent * np.sin(phase_rad))  # why?
+        # p_reactive = p_apparent * np.sin(phase_rad)
 
         p_active = p_apparent * np.cos(phase_rad)  # why not absolute?
+        pp(np.cos(phase_rad))
+
         p_loss_multiplier = 1
         for percentage in loss_percentages:
             p_loss_multiplier *= 1 + loss_percentages[percentage] / 100

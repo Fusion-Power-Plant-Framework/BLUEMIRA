@@ -229,7 +229,7 @@ def unique_domain(x, y, epslon=1e-10):
         x_last = x[p - 1]
         x_this = x[p]
         y_this = y[p]
-        if x_last == x_this:
+        if np.isclose(x_last, x_this, rtol=EPS):
             nudge += epslon
             x_this = x_last + nudge
         else:
@@ -243,7 +243,7 @@ def recursive_value_types_in_dict(dictionary):
     """Recursively display value types in a dictionary."""
     types_dict = dictionary.copy()
     for key, value in types_dict.items():
-        if isinstance(types_dict[key], dict):
+        if isinstance(value, dict):
             types_dict[key] = recursive_value_types_in_dict(types_dict[key])
         else:
             length = len(value) if hasattr(value, "__len__") else "N/A"
