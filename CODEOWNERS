@@ -15,6 +15,7 @@
 */fuel_cycle/ @Fusion-Power-Plant-Framework/fuel-cycle-review
 */geometry/ @Fusion-Power-Plant-Framework/geometry-review
 */magnetostatics/ @Fusion-Power-Plant-Framework/magnetostatics-review
+*/magnets/ @Fusion-Power-Plant-Framework/magnets-review
 */materials/ @Fusion-Power-Plant-Framework/materials-review
 */mesh/ @Fusion-Power-Plant-Framework/mesh-review
 */plasma_physics/ @Fusion-Power-Plant-Framework/plasma-physics-review
