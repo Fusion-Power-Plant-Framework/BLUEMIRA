@@ -174,7 +174,7 @@
       "optimisation_settings": {
         "algorithm_name": "COBYLA",
         "conditions": {
-          "max_eval": 5000,
+          "max_eval": 1000,
           "ftol_rel": 1e-10
         }
       }
