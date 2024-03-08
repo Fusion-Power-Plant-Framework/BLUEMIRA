@@ -197,19 +197,19 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         :
             Divertor target
         """
-        # # sols = self._get_sols_for_leg(leg)
+        sols = self._get_sols_for_leg(leg)
 
         # Just use the first scrape-off layer for now
-        # point = sols[0].value_at(distance=self.leg_length[leg].value)
+        point = sols[0].value_at(distance=self.leg_length[leg].value)
 
-        # # Create some vertical targets for now. Eventually the target
-        # # angle will be derived from the grazing-angle parameter
-        # target_length = self.params.div_Ltarg.value
-        # target_coords = np.array([
-        #     [point[0], point[0]],
-        #     [point[1], point[1]],
-        #     [point[2] - target_length / 2, point[2] + target_length / 2],
-        # ])
+        # Create some vertical targets for now. Eventually the target
+        # angle will be derived from the grazing-angle parameter
+        target_length = self.params.div_Ltarg.value
+        target_coords = np.array([
+            [point[0], point[0]],
+            [point[1], point[1]],
+            [point[2] - target_length / 2, point[2] + target_length / 2],
+        ])
         target_coords = self._make_angled_target(leg)
         return make_polygon(target_coords, label=label)
 

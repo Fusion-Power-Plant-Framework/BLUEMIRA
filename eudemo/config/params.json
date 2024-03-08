@@ -867,6 +867,15 @@
     "source": "Input - F. Maviglia value",
     "long_name": "Divertor target length"
   },
+  "div_Ltarg_ob": {
+    "value": 0.62,
+    "unit": "meter",
+    "source": "Input - F. Maviglia value",
+    "long_name": "Divertor target length"
+  },
+  "div_target_angle_ib": {
+
+  },
   "div_open": {
     "value": false,
     "unit": "dimensionless",
