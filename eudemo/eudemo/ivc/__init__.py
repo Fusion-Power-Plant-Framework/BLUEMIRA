@@ -69,6 +69,10 @@ def design_ivc(
         equilibrium=equilibrium,
         wall=cut_wall_boundary,
     ).execute()
+    from bluemira.display import show_cad
+
+    print(divertor_shapes)
+    show_cad(list(divertor_shapes))
     ivc_boundary = IVCBoundaryDesigner(params, wall_shape=wall_boundary).execute()
     plasma_face, divertor_face, div_wall_join_pt = PlasmaFaceDesigner(
         params,

@@ -862,9 +862,9 @@
     "long_name": "Normalised psi boundary to fit FW to"
   },
   "div_Ltarg": {
-    "value": 0.5,
+    "value": 0.62,
     "unit": "meter",
-    "source": "Input",
+    "source": "Input - F. Maviglia value",
     "long_name": "Divertor target length"
   },
   "div_open": {

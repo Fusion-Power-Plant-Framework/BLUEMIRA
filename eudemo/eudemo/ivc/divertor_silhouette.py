@@ -22,6 +22,7 @@ from bluemira.base.reactor import ComponentManager
 from bluemira.builders.divertor import DivertorBuilder
 from bluemira.equilibria.find import find_flux_surface_through_point
 from bluemira.equilibria.find_legs import LegFlux
+from bluemira.geometry.coordinates import Coordinates
 from bluemira.geometry.tools import (
     interpolate_bspline,
     make_circle,
@@ -196,20 +197,48 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         :
             Divertor target
         """
-        sols = self._get_sols_for_leg(leg)
+        # # sols = self._get_sols_for_leg(leg)
 
         # Just use the first scrape-off layer for now
-        point = sols[0].value_at(distance=self.leg_length[leg].value)
+        # point = sols[0].value_at(distance=self.leg_length[leg].value)
 
-        # Create some vertical targets for now. Eventually the target
-        # angle will be derived from the grazing-angle parameter
-        target_length = self.params.div_Ltarg.value
-        target_coords = np.array([
-            [point[0], point[0]],
-            [point[1], point[1]],
-            [point[2] - target_length / 2, point[2] + target_length / 2],
-        ])
+        # # Create some vertical targets for now. Eventually the target
+        # # angle will be derived from the grazing-angle parameter
+        # target_length = self.params.div_Ltarg.value
+        # target_coords = np.array([
+        #     [point[0], point[0]],
+        #     [point[1], point[1]],
+        #     [point[2] - target_length / 2, point[2] + target_length / 2],
+        # ])
+        target_coords = self._make_angled_target(leg)
         return make_polygon(target_coords, label=label)
+
+    def _make_angled_target(self, leg: LegPosition):
+        sol = self._get_sols_for_leg(leg)[0]
+        pre_target_point = sol.value_at(distance=self.leg_length[leg].value - 0.1)
+        target_point = sol.value_at(distance=self.leg_length[leg].value)
+        a = pre_target_point - target_point
+        a_hat = a / np.linalg.norm(a)
+
+        if LegPosition == LegPosition.INNER:
+            angle = np.deg2rad(-42)
+        else:
+            angle = np.deg2rad(-25)
+
+        b_hat = np.cos(angle) / a_hat
+
+        target_h_length = 0.5 * self.params.div_Ltarg.value
+
+        p1 = target_point - b_hat * target_h_length
+        p2 = target_point + b_hat * target_h_length
+        p1[1] = 0.0
+        p2[1] = 0.0
+        print(p1)
+        print(p2)
+
+        target_coords = np.array([p1, p2]).T
+        print(target_coords)
+        return target_coords
 
     def make_dome(
         self, start: Sequence[float], end: Sequence[float], label: str
@@ -242,6 +271,9 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
             start[1],
             psi_start,
         )
+        flux_surface = Coordinates(flux_surface)
+        flux_surface.set_ccw([0, -1, 0])
+        flux_surface = flux_surface.xyz
 
         # Get the indices of the closest points on the flux surface to
         # the input start and end points
@@ -370,7 +402,7 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         return make_circle(
             radius=radius_t,
             center=(ox, 0, oz),
-            axis=(0, -1, 0),
+            axis=(0, 1, 0),
             start_angle=start_angle,
             end_angle=end_angle,
             label=label,

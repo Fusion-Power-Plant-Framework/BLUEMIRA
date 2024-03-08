@@ -16,9 +16,15 @@ from bluemira.base.parameter_frame import Parameter, ParameterFrame
 from bluemira.equilibria import Equilibrium
 from bluemira.equilibria.find import find_OX_points
 from bluemira.equilibria.find_legs import LegFlux
+from bluemira.geometry.face import BluemiraFace
 from bluemira.geometry.optimisation import KeepOutZone, optimise_geometry
 from bluemira.geometry.parameterisations import GeometryParameterisation, PolySpline
-from bluemira.geometry.tools import convex_hull_wires_2d, make_polygon, offset_wire
+from bluemira.geometry.tools import (
+    boolean_cut,
+    convex_hull_wires_2d,
+    make_polygon,
+    offset_wire,
+)
 from bluemira.geometry.wire import BluemiraWire
 from bluemira.utilities.tools import get_class_from_module
 
@@ -247,13 +253,34 @@ class WallSilhouetteDesigner(Designer[GeometryParameterisation]):
         geom_offset = 0.2  # TODO: Unpin
         psi_n = 1.05  # TODO: Unpin
         geom_offset_zone = self._make_geometric_keep_out_zone(geom_offset)
+        stability_zone = self._make_stability_keep_out_zone()
         flux_surface_zone = self._make_flux_surface_keep_out_zone(psi_n)
         leg_zone = self._make_divertor_leg_keep_out_zone(
             self.params.div_L2D_ib.value, self.params.div_L2D_ob.value
         )
         return convex_hull_wires_2d(
-            [geom_offset_zone, flux_surface_zone, leg_zone], ndiscr=200, plane="xz"
+            [geom_offset_zone, stability_zone, flux_surface_zone, leg_zone],
+            ndiscr=200,
+            plane="xz",
         )
+
+    def _make_stability_keep_out_zone(self) -> BluemiraWire:
+        a = self.params.R_0.value / self.params.A.value
+        # Francesco Maviglia's approach
+        dz_max = 1.1 * (0.3 * a)
+        lcfs = BluemiraFace(make_polygon(self.equilibrium.get_LCFS().xyz, closed=True))
+        half_plane = BluemiraFace(
+            make_polygon({"x": [0, 20, 20, 0, 0], "z": [0, 0, -20, -20, 0]}, closed=True)
+        )
+        upper = boolean_cut(lcfs, half_plane)[0]
+        upper = upper.boundary[0].discretize(ndiscr=200, byedges=True)
+        x_min = min(upper.x)
+        z_max = max(upper.z)
+        factor = (z_max + dz_max) / z_max
+        coords = upper.xyz
+        coords[0] = x_min + (upper.x - x_min) * 0.9
+        coords[2] = upper.z * factor
+        return make_polygon(upper, closed=True)
 
     def _make_geometric_keep_out_zone(self, offset: float) -> BluemiraWire:
         """
