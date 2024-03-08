@@ -127,8 +127,8 @@ converter_library = coilsupply_data["converter_library"]
 # %% [markdown]
 # # Import setup data
 #
-# Design data relevant for EU-DEMO Coil Supply System, taken from IDM,
-# can be found in the `data_setup.json` file.
+# Design data relevant for EU-DEMO Coil Supply System design, taken from
+# IDM, can be found in the `data_design.json` file.
 
 # For this simple example, we import the resistances that characterize
 # the SNU for each coil circuit. This data is added to the appropriate
@@ -136,14 +136,14 @@ converter_library = coilsupply_data["converter_library"]
 #
 
 # %%
-setup_path = script_dir / "data_setup.json"
-setup_data = read_json(setup_path)
+design_path = script_dir / "data_design.json"
+design_data = read_json(design_path)
 
 snu_resistances = {}
 coil_times = {}
-for coil in setup_data:
-    snu_resistances[coil] = setup_data[coil]["resistance_SNU"]
-coil_names = list(setup_data.keys())
+for coil in design_data:
+    snu_resistances[coil] = design_data[coil]["resistance_SNU"]
+coil_names = list(design_data.keys())
 
 coilsupply_config["coil_names"] = coil_names
 corrector_library["SNU"]["resistance_set"] = snu_resistances
@@ -267,7 +267,7 @@ def plot_breakdown_verification(breakdown):
         figsize=options._constrained_fig_size(n_rows, n_cols, 3.5, 10.5),
     )
     plot_index = 0
-    for coil in reversed(coil_names):
+    for coil in coil_names:
         wallplug_info = getattr(breakdown["wallplug_parameter"], coil)
 
         ax_left = axs.flat[plot_index]
@@ -416,7 +416,7 @@ def plot_pulse_verification(pulse, power):
         ylabel = settings[1]
         verification_available = settings[2]
 
-        for coil in reversed(coil_names):
+        for coil in coil_names:
             wallplug_info = getattr(pulse["wallplug_parameter"], coil)
             plot_index = plot_index + 1
             if verification_available:
