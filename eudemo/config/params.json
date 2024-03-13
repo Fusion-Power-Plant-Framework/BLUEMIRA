@@ -861,11 +861,29 @@
     "source": "Input",
     "long_name": "Normalised psi boundary to fit FW to"
   },
-  "div_Ltarg": {
+  "div_Ltarg_ib": {
     "value": 0.62,
     "unit": "meter",
     "source": "Input - F. Maviglia value",
-    "long_name": "Divertor target length"
+    "long_name": "Divertor inboard target length"
+  },
+  "div_Ltarg_ob": {
+    "value": 0.62,
+    "unit": "meter",
+    "source": "Input - F. Maviglia value",
+    "long_name": "Divertor outboard target length"
+  },
+  "div_targ_angle_ib": {
+    "value": 42,
+    "unit": "degrees",
+    "source": "Input - F. Maviglia value",
+    "long_name": "Divertor inboard target ccw angle"
+  },
+  "div_targ_angle_ob": {
+    "value": -25,
+    "unit": "degrees",
+    "source": "Input - F. Maviglia value",
+    "long_name": "Divertor outboard target ccw angle"
   },
   "div_open": {
     "value": false,
