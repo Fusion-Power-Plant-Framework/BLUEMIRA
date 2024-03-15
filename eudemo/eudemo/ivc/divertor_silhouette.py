@@ -263,7 +263,10 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         """
         # Get the flux surface that crosses the through the start or end point.
         # We can use this surface to guide the shape of the dome.
-        psi_start = self.equilibrium.psi(*(start if start[1] < end[1] else end))
+        start_picked = start[1] < end[1]
+        pick_point = start if start_picked else end
+
+        psi_start = self.equilibrium.psi(*pick_point)
         flux_surface = find_flux_surface_through_point(
             self.equilibrium.x,
             self.equilibrium.z,
@@ -275,26 +278,37 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
 
         # Get the indices of the closest points on the flux surface to
         # the input start and end points
-        start_coord = np.array([[start[0]], [start[1]]])  # [[x], [z]]
-        end_coord = np.array([[end[0]], [end[1]]])
+        start_coord = start.reshape((2, 1))
+        end_coord = end.reshape((2, 1))
         idx = np.array([
             np.argmin(np.hypot(*(flux_surface - start_coord))),
             np.argmin(np.hypot(*(flux_surface - end_coord))),
         ])
 
         # Make sure the start and end are in the right order
+        # idx[0] should be smaller than idx[1]
         if idx[0] > idx[1]:
+            # swap
             idx = idx[::-1]
+            # cut
             dome_contour = flux_surface[:, idx[0] + 1 : idx[1]]
+            # reverse, so that the dome ends at the end point
             dome_contour = dome_contour[:, ::-1]
         else:
             dome_contour = flux_surface[:, idx[0] + 1 : idx[1]]
 
         # Build the coords of the dome in 3D (all(y == 0))
-        dome = np.zeros((3, dome_contour.shape[1] + 2))
-        dome[(0, 2), 0] = start_coord.T
-        dome[(0, 2), 1:-1] = dome_contour
-        dome[(0, 2), -1] = end_coord.T
+        dome = np.zeros((3, dome_contour.shape[1] + 1))
+        if start_picked:
+            dome[(0, 2), 0] = start
+            dome[(0, 2), 1:] = dome_contour
+            # replace last point with end
+            dome[(0, 2), -1] = end
+        else:
+            dome[(0, 2), 0:-1] = dome_contour
+            dome[(0, 2), -1] = end
+            # replace first point with start
+            dome[(0, 2), 0] = start
 
         return interpolate_bspline(dome, label=label)
 

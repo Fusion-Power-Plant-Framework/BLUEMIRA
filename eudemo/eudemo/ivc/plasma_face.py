@@ -92,23 +92,29 @@ class PlasmaFaceDesigner(
         # wire should be at the same z. But take the minimum z value of
         # the start and end points.
         # Note we do not use bounding_box here due to a bug: 34228d3
-        min_z = min(
-            self.wall_boundary.start_point().z, self.wall_boundary.end_point().z
-        )[0]
+        baffel_z = np.min([
+            self.wall_boundary.start_point().z,
+            self.wall_boundary.end_point().z,
+        ])
         # This is the x the outer baffle connects to the wall
-        max_x = max(
-            self.wall_boundary.start_point().x, self.wall_boundary.end_point().x
-        )[0]
+        baffel_ib_start_x = np.min([
+            self.wall_boundary.start_point().x,
+            self.wall_boundary.end_point().x,
+        ])
+        baffel_ob_end_x = np.max([
+            self.wall_boundary.start_point().x,
+            self.wall_boundary.end_point().x,
+        ])
 
         rm_clearance_face = _make_clearance_face(
             vessel_bbox.x_min,
-            vessel_bbox.x_max,
-            min_z,
+            (baffel_ib_start_x + baffel_ob_end_x) / 2,
+            baffel_z,
             self.params.c_rm.value,
         )
         rm_outer_clearance_face = _angled_wall_cutter(
-            max_x,
-            min_z,
+            baffel_ob_end_x,
+            baffel_z,
             self.params.c_rm.value,
             self.params.lower_port_angle.value,
         )
@@ -117,7 +123,7 @@ class PlasmaFaceDesigner(
             in_vessel_face, [rm_clearance_face, rm_outer_clearance_face]
         )
 
-        div_wall_join_pt = (max_x, min_z)
+        div_wall_join_pt = (baffel_ob_end_x, baffel_z)
 
         return blanket_face, divertor_face, div_wall_join_pt
 
@@ -145,7 +151,7 @@ def _angled_wall_cutter(
 
 
 def _make_clearance_face(
-    x_min: float, x_max: float, z: float, thickness: float
+    x_start: float, x_end: float, z: float, thickness: float
 ) -> BluemiraFace:
     """
     Makes a rectangular face in xz with the given thickness in z.
@@ -159,9 +165,8 @@ def _make_clearance_face(
         Clearance face
     """
     x_coords = np.zeros(4)
-    x_coords[:2] = x_min
-    # will be smaller than the full length of the vessel
-    x_coords[2:] = (x_max + x_min) / 2
+    x_coords[:2] = x_start
+    x_coords[2:] = x_end
 
     y_coords = np.zeros(4)
 
