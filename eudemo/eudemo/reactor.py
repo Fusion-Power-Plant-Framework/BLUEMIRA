@@ -278,7 +278,7 @@ def build_tf_coils(params, build_config, separatrix, vvts_cross_section) -> TFCo
     builder = TFCoilBuilder(
         params, build_config, centreline.create_shape(), wp_cross_section
     )
-    return TFCoil(builder.build(), builder._make_field_solver())
+    return TFCoil(builder.build(), builder._make_field_solver()), centreline
 
 
 def build_pf_coils(
@@ -604,14 +604,12 @@ if __name__ == "__main__":
         reactor.vacuum_vessel.xz_boundary,
     )
 
-    reactor.tf_coils = build_tf_coils(
+    reactor.tf_coils, tf_centreline = build_tf_coils(
         reactor_config.params_for("TF coils"),
         reactor_config.config_for("TF coils"),
         reactor.plasma.lcfs(),
         vv_thermal_shield.xz_boundary,
     )
-    reactor.plot()
-    plt.show()
 
     eq_port_designer = EquatorialPortKOZDesigner(
         reactor_config.params_for("Equatorial Port"),

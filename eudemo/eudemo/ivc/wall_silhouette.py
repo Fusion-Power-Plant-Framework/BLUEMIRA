@@ -267,7 +267,7 @@ class WallSilhouetteDesigner(Designer[GeometryParameterisation]):
     def _make_stability_keep_out_zone(self) -> BluemiraWire:
         a = self.params.R_0.value / self.params.A.value
         # Francesco Maviglia's approach
-        dz_max = 1.1 * (0.3 * a)
+        dz_max = 1.0 * (0.3 * a)
         lcfs = BluemiraFace(make_polygon(self.equilibrium.get_LCFS().xyz, closed=True))
         half_plane = BluemiraFace(
             make_polygon({"x": [0, 20, 20, 0, 0], "z": [0, 0, -20, -20, 0]}, closed=True)
