@@ -136,13 +136,13 @@ converter_library = coilsupply_data["converter_library"]
 #
 
 # %%
-design_path = script_dir / "data_design.json"
+design_path = script_dir / "css_data_design.json"
 design_data = read_json(design_path)
 
 snu_resistances = {}
 coil_times = {}
 for coil in design_data:
-    snu_resistances[coil] = design_data[coil]["resistance_SNU"]
+    snu_resistances[coil] = design_data[coil]["SNU_resistance"]
 coil_names = list(design_data.keys())
 
 coilsupply_config["coil_names"] = coil_names
@@ -217,16 +217,16 @@ def display_subsystems(coilsupply, summary):
 #
 
 # %%
-breakdown_path = script_dir / "data_breakdown.json"
+breakdown_path = script_dir / "css_data_breakdown.json"
 breakdown_data = read_json(breakdown_path)
 
 breakdown = {}
 breakdown_reorder_keys = {
-    "SNU_voltages": "voltage_SNU",
-    "THY_voltages": "voltage_THY",
-    "coil_voltages": "voltage_coil",
-    "coil_currents": "current_coil",
-    "coil_times": "time_coil",
+    "SNU_voltages": "SNU_voltage",
+    "THY_voltages": "THY_voltage",
+    "coil_voltages": "coil_voltage",
+    "coil_currents": "coil_current",
+    "coil_times": "coil_time",
 }
 duration_breakdown = []
 for new_key, old_key in breakdown_reorder_keys.items():
@@ -344,17 +344,18 @@ def plot_breakdown_verification(breakdown):
 #
 
 # %%
-pulse_path = script_dir / "data_pulse.json"
+pulse_path = script_dir / "css_data_pulse_partial.json"
+# pulse_path = script_dir / "css_data_pulse_full.json"
 pulse_data = read_json(pulse_path)
 
 power = pulse_data["power"]
 
 pulse = {}
 pulse_reorder_keys = {
-    "coil_voltages": "voltage_coil",
-    "coil_currents": "current_coil",
-    "coil_times": "time_coil",
-    "snu_switches": "time_coil",
+    "coil_voltages": "coil_voltages",
+    "coil_currents": "coil_currents",
+    "coil_times": "coil_times",
+    "SNU_switches": "coil_times",
 }
 t_start_breakdown = 500
 t_end_breakdown = t_start_breakdown + duration_breakdown
@@ -363,7 +364,7 @@ for new_key, old_key in pulse_reorder_keys.items():
     pulse[new_key] = {}
     for coil in pulse_data["coils"]:
         old_value = pulse_data["coils"][coil][old_key]
-        if new_key == "snu_switches":
+        if new_key == "SNU_switches":
             t_after_start = [t >= t_start_breakdown for t in old_value]
             t_before_end = [t <= t_end_breakdown for t in old_value]
             new_value = [a and b for a, b in zip(t_after_start, t_before_end)]
@@ -375,7 +376,7 @@ for new_key, old_key in pulse_reorder_keys.items():
 pulse["wallplug_parameter"] = coilsupply.compute_wallplug_loads(
     pulse["coil_voltages"],
     pulse["coil_currents"],
-    {"SNU": pulse["snu_switches"]},
+    {"SNU": pulse["SNU_switches"]},
 )
 
 
@@ -437,7 +438,7 @@ def plot_pulse_verification(pulse, power):
                 style_computation = "-"
 
             snu_scale = max(wallplug_info[variable])
-            snu_switch = [s * snu_scale for s in pulse["snu_switches"][coil]]
+            snu_switch = [s * snu_scale for s in pulse["SNU_switches"][coil]]
             ax.plot(
                 pulse["coil_times"][coil],
                 snu_switch,
@@ -477,6 +478,7 @@ def plot_pulse_verification(pulse, power):
         ylabel = settings[1]
         ax_color = options._side_color(side)
         load_type = key.split("_")[1]
+        load_type = f"total_{load_type}"
 
         for coil in reversed(coil_names):
             wallplug_info = getattr(pulse["wallplug_parameter"], coil)

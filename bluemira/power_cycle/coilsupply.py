@@ -243,13 +243,14 @@ class CoilSupplyConfigDescriptor(Descriptor):
 
 
 class LibraryDescriptor(Descriptor):
-    """Descriptor to define libraries for use with dataclasses"""
+    """Descriptor to define libraries for use with dataclasses."""
 
     def __init__(self, *, config: Type[Config]):
+        """See class docstring."""
         self.config = config
 
     def __get__(self, obj: Any, _) -> Dict[str, Config]:
-        """Get all library entries"""
+        """Get all library entries."""
         return getattr(obj, self._name)
 
     def __set__(
@@ -257,7 +258,7 @@ class LibraryDescriptor(Descriptor):
         obj: Any,
         value: Dict[str, Union[Config, Dict]],
     ):
-        """Set all library entries"""
+        """Set all library entries."""
         for k, v in value.items():
             if not isinstance(v, self.config):
                 value[k] = self.config(name=k, **v)
@@ -335,6 +336,7 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
     """
 
     def __init__(self, config: CoilSupplyCorrectorConfig):
+        """See class docstring."""
         self.name = config.name
         self.description = config.description
         all_resistances = asdict(config.resistance_set).values()
@@ -453,6 +455,7 @@ class ThyristorBridges(CoilSupplyConverter):
     _config = ThyristorBridgesConfig
 
     def __init__(self, config: ThyristorBridgesConfig):
+        """See class docstring."""
         self.name = config.name
         self.description = config.description
         self.max_bridge_voltage = config.max_bridge_voltage
@@ -553,6 +556,7 @@ class CoilSupplySystem(CoilSupplyABC):
         pass
 
     def __init__(self, inputs: CoilSupplyInputs):
+        """See class docstring."""
         self.inputs = inputs
         self.correctors = self._build_correctors()
         self.converter = self._build_converter()
