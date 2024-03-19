@@ -86,7 +86,7 @@ template_builder.add_variable("rmajor", 9.2901, upper_bound=13.0)
 template_builder.add_variable("te", 12.33, upper_bound=150.0)
 template_builder.add_variable("beta", 3.4421e-2)
 template_builder.add_variable("dene", 7.4321e19)
-template_builder.add_variable("q", 3.5, lower_bound=3.5)
+template_builder.add_variable("q95", 3.5, lower_bound=3.5)
 template_builder.add_variable("pheat", 50.0)
 template_builder.add_variable("ralpne", 6.8940e-02)
 template_builder.add_variable("bore", 2.3322, lower_bound=0.1)
@@ -310,8 +310,8 @@ def apply_specific_interface_rules(params: _PfT):
     that relate to the EU-DEMO design parameterisation
     """
     # Apply q_95 as a boundary on the iteration vector rather than a fixed input
-    q_95_min = params.q_95.value
-    template_builder.adjust_variable("q", value=q_95_min, lower_bound=q_95_min)
+    q_95_min = params.q95.value
+    template_builder.adjust_variable("q95", value=q_95_min, lower_bound=q_95_min)
 
     # Apply thermal shield thickness to all values in PROCESS
     tk_ts = params.tk_ts.value

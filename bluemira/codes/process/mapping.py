@@ -127,12 +127,7 @@ NONE_mappings = {
     "tk_ts": ("thshield_ib", "m"),
     # "tk_ts": ("thshield_ob", "m"),
     # "tk_ts": ("thshield_vb", "m"),
-    # TODO: q is not properly put in the MFILE output
-    # This should be ok OK most of the time as q_95 is input and then
-    # used as the lower bound of the q iteration variable, but this
-    # should be fixed as soon as PROCESS deal with this issue on
-    # their side
-    "q_95": ("q", "dimensionless"),
+    "q_95": ("q95", "dimensionless"),
 }
 
 mappings = create_mapping(IN_mappings, OUT_mappings, IO_mappings, NONE_mappings)

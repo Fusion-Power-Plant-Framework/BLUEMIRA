@@ -676,7 +676,7 @@ class ProcessInputs:
     kappa95: Optional[float] = None
     m_s_limit: Optional[float] = None
     ilhthresh: Optional[int] = None
-    q: Optional[float] = None
+    q95: Optional[float] = None
     q0: Optional[float] = None
     tauratio: Optional[float] = None
     rad_fraction_sol: Optional[float] = None
