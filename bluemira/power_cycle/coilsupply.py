@@ -40,7 +40,6 @@ from bluemira.power_cycle.net import (
     Config,
     Descriptor,
 )
-from bluemira.power_cycle.tools import pp
 
 
 def _get_module_class_from_str(class_name):
@@ -486,7 +485,7 @@ class ThyristorBridges(CoilSupplyConverter):
         number_of_bridge_units = np.ceil(v_max_coil / v_max_bridge)
         v_rated = number_of_bridge_units * v_max_bridge
         i_rated = max(currents_array)
-        p_rated = v_rated * i_rated
+        p_rated = v_rated * i_rated  # Probably wrong (maxV * maxI ≠ max power)
 
         p_apparent = v_rated * currents_array
         power_factor = voltages_array / v_rated
@@ -494,6 +493,7 @@ class ThyristorBridges(CoilSupplyConverter):
         phase_deg = phase_rad * 180 / np.pi
 
         """
+        from bluemira.power_cycle.tools import pp
         pp(v_max_coil)
         pp(number_of_bridge_units)
         pp(v_rated)
@@ -503,12 +503,14 @@ class ThyristorBridges(CoilSupplyConverter):
         # pp(phase_rad)
         raise False
         """
+        # p_active = voltages_array * currents_array
+        # p_reactive = np.sqrt(np.square(p_apparent) - np.square(p_active))
 
         p_reactive = np.absolute(p_apparent * np.sin(phase_rad))  # why?
         # p_reactive = p_apparent * np.sin(phase_rad)
 
         p_active = p_apparent * np.cos(phase_rad)  # why not absolute?
-        pp(np.cos(phase_rad))
+        # pp(np.cos(phase_rad))
 
         p_loss_multiplier = 1
         for percentage in loss_percentages:
