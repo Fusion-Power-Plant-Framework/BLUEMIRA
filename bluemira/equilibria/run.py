@@ -412,10 +412,7 @@ class PulsedCoilsetDesign(ABC):
             self.params.l_i.value,
             self.params.C_Ejima.value,
         )
-        psi_eof = (
-            psi_sof - 0.7 * self.params.tau_flattop.value * self.params.v_burn.value
-        )
-        # TODO: TOTAL HACK
+        psi_eof = psi_sof - self.params.tau_flattop.value * self.params.v_burn.value
 
         return psi_sof, psi_eof
 
