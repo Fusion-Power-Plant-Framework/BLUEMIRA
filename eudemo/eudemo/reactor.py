@@ -30,7 +30,7 @@ from bluemira.base.components import Component
 from bluemira.base.designer import run_designer
 from bluemira.base.file import get_bluemira_path, make_bluemira_path
 from bluemira.base.logs import set_log_level
-from bluemira.base.look_and_feel import bluemira_print_clean
+from bluemira.base.look_and_feel import bluemira_print, bluemira_print_clean
 from bluemira.base.parameter_frame import ParameterFrame
 from bluemira.base.reactor import Reactor
 from bluemira.base.reactor_config import ReactorConfig
@@ -520,20 +520,18 @@ def save_reactor(reactor, folder_name):
     """
     Save a reactor to a folder data-structure
     """
+    bluemira_print(f"Saving reactor to {folder_name}")
     config_folder = get_bluemira_path("config", subfolder="eudemo")
     root = make_bluemira_path(folder_name, subfolder="eudemo")
-    process_folder = make_bluemira_path(Path(folder_name, "PROCESS"), subfolder="eudemo")
-    cad_folder = make_bluemira_path(Path(folder_name, "CAD"), subfolder="eudemo")
+    process_folder = make_bluemira_path(f"{folder_name}/PROCESS", subfolder="eudemo")
+    cad_folder = make_bluemira_path(f"{folder_name}/CAD", subfolder="eudemo")
     equilibria_folder = make_bluemira_path(
-        Path(folder_name, "equilibria"), subfolder="eudemo"
+        f"{folder_name}/equilibria", subfolder="eudemo"
     )
-    tf_folder = make_bluemira_path(Path(folder_name, "TF_coil"), subfolder="eudemo")
+    tf_folder = make_bluemira_path(f"{folder_name}/TF_coil", subfolder="eudemo")
     # Copy across PROCESS outputs
-    shutil.copyfile(Path(config_folder, "OUT.DAT"), Path(process_folder, "OUT.DAT"))
-    shutil.copyfile(
-        Path(config_folder, "MFILE.DAT"),
-        Path(process_folder, "MFILE.DAT"),
-    )
+    for fn in ["OUT.DAT", "MFILE.DAT"]:
+        shutil.copyfile(f"{config_folder}/{fn}", f"{process_folder}/{fn}")
     # Save equilibria
     sof: Equilibrium = reactor.equilibria.get_state(reactor.equilibria.SOF).eq
     eof: Equilibrium = reactor.equilibria.get_state(reactor.equilibria.EOF).eq
@@ -550,30 +548,30 @@ def save_reactor(reactor, folder_name):
         qpsi_calcmode=1,
     )
     df = reactor.equilibria.summary()
-    filename = Path(equilibria_folder, "BLUEMIRA_equilibria_summary.xlsx")
+    filename = f"{equilibria_folder}/BLUEMIRA_equilibria_summary.xlsx"
     df.to_excel(filename, index=False)
     # Save TF coils
-    filename = Path(tf_folder, "BLUEMIRA_TF_3D_CAD.STP")
+    filename = f"{tf_folder}/BLUEMIRA_TF_3D_CAD.STP"
     reactor.save_cad(
         n_sectors=1,
         with_components=[reactor.tf_coils, reactor.coil_structures],
         filename=filename,
     )
-    filename = Path(tf_folder, "BLUEMIRA_TF_centreline.STP")
+    filename = f"{tf_folder}/BLUEMIRA_TF_centreline.STP"
     save_cad(
         reactor.tf_coils.centreline.create_shape(), filename=filename, cad_format="stp"
     )
     # Save CAD
-    filename = Path(cad_folder, "BLUEMIRA_full_3D_CAD.STP")
+    filename = f"{cad_folder}/BLUEMIRA_full_3D_CAD.STP"
     reactor.save_cad(n_sectors=2, filename=filename)
     # Save figures
     reactor.plot("xz", show=False)
     f = plt.gcf()
-    filename = Path(root, "BLUEMIRA_reactor_xz.pdf")
+    filename = f"{root}/BLUEMIRA_reactor_xz.pdf"
     f.savefig(filename, dpi=600, format="pdf")
     reactor.plot("xy", show=False)
     f = plt.gcf()
-    filename = Path(root, "BLUEMIRA_reactor_xy.pdf")
+    filename = f"{root}/BLUEMIRA_reactor_xy.pdf"
     f.savefig(filename, dpi=600, format="pdf")
 
 
@@ -812,7 +810,7 @@ if __name__ == "__main__":
     # include coil XS.
     show_cad(debug)
 
-    reactor.show_cad("xz")
+    reactor.plot("xz")
     reactor.show_cad(n_sectors=2)
 
     sspc_solver = SteadyStatePowerCycleSolver(reactor_config.global_params)
