@@ -371,7 +371,7 @@
     "long_name": "95th percentile plasma elongation"
   },
   "m_s_limit": {
-    "value": 0.1,
+    "value": 0.2,
     "unit": "dimensionless",
     "source": "Input",
     "long_name": "Margin to vertical stability criterion"
@@ -695,7 +695,7 @@
     "long_name": "TF coil ground insulation thickness"
   },
   "tk_tf_insgap": {
-    "value": 0.1,
+    "value": 0.01,
     "unit": "meter",
     "source": "Input",
     "long_name": "TF coil WP insertion gap",

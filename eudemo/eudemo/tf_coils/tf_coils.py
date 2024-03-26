@@ -58,9 +58,10 @@ class TFCoil(ComponentManager):
     Wrapper around the TF Coil component tree.
     """
 
-    def __init__(self, component, field_solver):
+    def __init__(self, component, field_solver, centreline):
         super().__init__(component)
         self._field_solver = field_solver
+        self._centreline = centreline
 
     def field(
         self,
@@ -86,6 +87,11 @@ class TFCoil(ComponentManager):
             The magnetic field vector {Bx, By, Bz} in [T]
         """
         return self._field_solver.field(x, y, z)
+
+    @property
+    def centreline(self) -> BluemiraWire:
+        """Return the centreline"""
+        return self._centreline
 
     @property
     def xz_outer_boundary(self) -> BluemiraWire:
