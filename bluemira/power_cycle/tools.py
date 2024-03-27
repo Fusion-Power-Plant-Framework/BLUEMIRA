@@ -9,12 +9,12 @@ Utility functions for the power cycle model.
 """
 
 import json
-from typing import Any, Dict
+from typing import Any
 
 import matplotlib.pyplot as plt
 
 
-def read_json(file_path) -> Dict[str, Any]:
+def read_json(file_path) -> dict[str, Any]:
     """
     Returns the contents of a 'json' file.
     """

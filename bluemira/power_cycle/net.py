@@ -12,16 +12,7 @@ from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
     TypedDict,
-    Union,
 )
 
 import numpy as np
@@ -33,6 +24,7 @@ from bluemira.base.look_and_feel import bluemira_debug
 from bluemira.power_cycle.tools import read_json
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
     from pathlib import Path
 
     import numpy.typing as npt
@@ -52,16 +44,14 @@ class LoadType(Enum):
     REACTIVE = auto()
 
     @classmethod
-    def from_str(cls, load_type: Union[str, LoadType, None]) -> Union[LoadType, None]:
+    def from_str(cls, load_type: str | LoadType | None) -> LoadType | None:
         """Create loadtype from str"""
         if isinstance(load_type, str):
             return cls[load_type.upper()]
         return load_type
 
     @classmethod
-    def check(
-        cls, load_type: Union[str, LoadType, None]
-    ) -> Union[Type[LoadType], Set[LoadType]]:
+    def check(cls, load_type: str | LoadType | None) -> type[LoadType] | set[LoadType]:
         """Check for all loadtypes or specific loadtype"""
         return (
             cls
@@ -85,7 +75,7 @@ class LoadModel(Enum):
 class Efficiency:
     """Efficiency data container"""
 
-    value: Union[float, Dict[str, float], Dict[LoadType, float]]
+    value: float | dict[str, float] | dict[LoadType, float]
     description: str = ""
 
     def __post_init__(self):
@@ -96,7 +86,7 @@ class Efficiency:
 class EfficiencyDictType(TypedDict):
     """Typing for efficiency object"""
 
-    value: Dict[Union[LoadType, str], float]
+    value: dict[LoadType | str, float]
     description: NotRequired[str]
 
 
@@ -116,7 +106,7 @@ class ActiveReactiveDescriptor(Descriptor):
 
     def __get__(
         self, obj: Any, _
-    ) -> Union[Callable[[], Dict[LoadType, np.ndarray]], Dict[LoadType, np.ndarray]]:
+    ) -> Callable[[], dict[LoadType, np.ndarray]] | dict[LoadType, np.ndarray]:
         """Get the config"""
         if obj is None:
             return lambda: {
@@ -128,17 +118,15 @@ class ActiveReactiveDescriptor(Descriptor):
     def __set__(
         self,
         obj: Any,
-        value: Union[
-            Callable[[], Dict[LoadType, np.ndarray]],
-            Dict[Union[LoadType, str], Union[np.ndarray, list]],
-            np.ndarray,
-        ],
+        value: Callable[[], dict[LoadType, np.ndarray]]
+        | dict[LoadType | str, np.ndarray | list]
+        | np.ndarray,
     ):
         """Setup the config"""
         if callable(value):
             value = value()
 
-        if isinstance(value, (np.ndarray, list)):
+        if isinstance(value, np.ndarray | list):
             value = {
                 LoadType.ACTIVE: np.asarray(value),
                 LoadType.REACTIVE: np.asarray(value).copy(),
@@ -157,10 +145,10 @@ class ActiveReactiveDescriptor(Descriptor):
 
 
 def efficiency_type(
-    value: Union[float, Dict[str, float], Dict[LoadType, float]],
-) -> Dict[LoadType, float]:
+    value: float | dict[str, float] | dict[LoadType, float],
+) -> dict[LoadType, float]:
     """Convert efficiency value to the correct structure"""
-    if isinstance(value, (float, int)):
+    if isinstance(value, float | int):
         value = {LoadType.ACTIVE: value, LoadType.REACTIVE: value}
     else:
         ld_t = {LoadType.ACTIVE, LoadType.REACTIVE}
@@ -178,9 +166,7 @@ def efficiency_type(
 class PhaseEfficiencyDescriptor(Descriptor):
     """Efficiency descriptor for use with dataclasses"""
 
-    def __get__(
-        self, obj: Any, _
-    ) -> Union[Callable[[], Dict], Dict[str, List[Efficiency]]]:
+    def __get__(self, obj: Any, _) -> Callable[[], dict] | dict[str, list[Efficiency]]:
         """Get the config"""
         if obj is None:
             return dict
@@ -189,9 +175,7 @@ class PhaseEfficiencyDescriptor(Descriptor):
     def __set__(
         self,
         obj: Any,
-        value: Union[
-            Callable[[], Dict], Dict[str, List[Union[Efficiency, EfficiencyDictType]]]
-        ],
+        value: Callable[[], dict] | dict[str, list[Efficiency | EfficiencyDictType]],
     ):
         """Setup the config"""
         if callable(value):
@@ -208,7 +192,7 @@ class PhaseEfficiencyDescriptor(Descriptor):
 class LoadEfficiencyDescriptor(Descriptor):
     """Efficiency descriptor for use with dataclasses"""
 
-    def __get__(self, obj: Any, _) -> Union[Callable[[], list], List[Efficiency]]:
+    def __get__(self, obj: Any, _) -> Callable[[], list] | list[Efficiency]:
         """Get the config"""
         if obj is None:
             return list
@@ -217,7 +201,7 @@ class LoadEfficiencyDescriptor(Descriptor):
     def __set__(
         self,
         obj: Any,
-        value: Union[Callable[[], list], List[Union[EfficiencyDictType, Efficiency]]],
+        value: Callable[[], list] | list[EfficiencyDictType | Efficiency],
     ):
         """Setup the config"""
         if callable(value):
@@ -259,7 +243,7 @@ class PhaseConfig(Config):
 class SubPhaseConfig(Config):
     """SubPhase Config"""
 
-    duration: Union[float, str]
+    duration: float | str
     loads: list[str] = field(default_factory=list)
     efficiencies: PhaseEfficiencyDescriptor = PhaseEfficiencyDescriptor()
     unit: str = "s"
@@ -268,7 +252,7 @@ class SubPhaseConfig(Config):
 
     def __post_init__(self):
         """Enforce unit conversion"""
-        if isinstance(self.duration, (float, int)):
+        if isinstance(self.duration, float | int):
             self.duration = raw_uc(self.duration, self.unit, "second")
             self.unit = "s"
 
@@ -277,7 +261,7 @@ class SubPhaseConfig(Config):
 class SystemConfig(Config):
     """Power cycle system config"""
 
-    subsystems: List[str]
+    subsystems: list[str]
     description: str = ""
 
 
@@ -285,7 +269,7 @@ class SystemConfig(Config):
 class SubSystemConfig(Config):
     """Power cycle sub system config"""
 
-    loads: List[str]
+    loads: list[str]
     description: str = ""
 
 
@@ -296,7 +280,7 @@ class LoadConfig(Config):
     time: ActiveReactiveDescriptor = ActiveReactiveDescriptor()
     data: ActiveReactiveDescriptor = ActiveReactiveDescriptor()
     efficiencies: LoadEfficiencyDescriptor = LoadEfficiencyDescriptor()
-    model: Union[LoadModel, str] = LoadModel.RAMP
+    model: LoadModel | str = LoadModel.RAMP
     unit: str = "W"
     description: str = ""
     normalised: bool = True
@@ -321,8 +305,8 @@ class LoadConfig(Config):
     def interpolate(
         self,
         time: npt.ArrayLike,
-        end_time: Optional[float] = None,
-        load_type: Union[str, LoadType] = LoadType.ACTIVE,
+        end_time: float | None = None,
+        load_type: str | LoadType = LoadType.ACTIVE,
     ) -> np.ndarray:
         """
         Interpolate load for a given time vector
@@ -361,8 +345,8 @@ def interpolate_extra(vector: npt.NDArray, n_points: int):
 
 def _normalise_timeseries(
     time: npt.ArrayLike,
-    end_time: Optional[float] = None,
-) -> Tuple[np.ndarray, Optional[float]]:
+    end_time: float | None = None,
+) -> tuple[np.ndarray, float | None]:
     time = np.asarray(time)
     if min(time) < 0:
         raise NotImplementedError("Negative time not supported")
@@ -378,23 +362,23 @@ class LoadSet:
 
     def __init__(
         self,
-        loads: Dict[str, LoadConfig],
+        loads: dict[str, LoadConfig],
     ):
         self._loads = loads
 
     @staticmethod
-    def _consumption_flag(consumption: Optional[bool] = None) -> Set[bool]:
+    def _consumption_flag(*, consumption: bool | None = None) -> set[bool]:
         return {True, False} if consumption is None else {consumption}
 
     def get_load_data_with_efficiencies(
         self,
         timeseries: np.ndarray,
-        load_type: Union[str, LoadType],
-        unit: Optional[str] = None,
-        end_time: Optional[float] = None,
+        load_type: str | LoadType,
+        unit: str | None = None,
+        end_time: float | None = None,
         *,
-        consumption: Optional[bool] = None,
-    ) -> Dict[str, np.ndarray]:
+        consumption: bool | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         Get load data taking into account efficiencies and consumption
 
@@ -428,12 +412,12 @@ class LoadSet:
     def get_explicit_data_consumption(
         self,
         timeseries: np.ndarray,
-        load_type: Union[str, LoadType],
-        unit: Optional[str] = None,
-        end_time: Optional[float] = None,
+        load_type: str | LoadType,
+        unit: str | None = None,
+        end_time: float | None = None,
         *,
-        consumption: Optional[bool] = None,
-    ) -> Dict[str, np.ndarray]:
+        consumption: bool | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         Get data with consumption resulting in an oppositely signed load
 
@@ -461,16 +445,16 @@ class LoadSet:
 
     def build_timeseries(
         self,
-        load_type: Optional[Union[str, LoadType]] = None,
-        end_time: Optional[float] = None,
+        load_type: str | LoadType | None = None,
+        end_time: float | None = None,
         *,
-        consumption: Optional[bool] = None,
+        consumption: bool | None = None,
     ) -> np.ndarray:
         """Build a combined time series based on loads"""
         times = []
         for load in self._loads.values():
             for time in self._gettime(
-                load, load_type, self._consumption_flag(consumption)
+                load, load_type, self._consumption_flag(consumption=consumption)
             ):
                 if load.normalised:
                     times.append(time)
@@ -479,9 +463,7 @@ class LoadSet:
         return np.unique(np.concatenate(times))
 
     @staticmethod
-    def _gettime(
-        load, load_type: Optional[Union[str, LoadType]], consumption_check: Set[bool]
-    ):
+    def _gettime(load, load_type: str | LoadType | None, consumption_check: set[bool]):
         load_type = LoadType.from_str(load_type)
         if load.consumption in consumption_check:
             if load_type is None:
@@ -492,12 +474,12 @@ class LoadSet:
     def get_interpolated_loads(
         self,
         timeseries: np.ndarray,
-        load_type: Union[str, LoadType],
-        unit: Optional[str] = None,
-        end_time: Optional[float] = None,
+        load_type: str | LoadType,
+        unit: str | None = None,
+        end_time: float | None = None,
         *,
-        consumption: Optional[bool] = None,
-    ) -> Dict[str, np.ndarray]:
+        consumption: bool | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         Get loads for a given time series
 
@@ -517,7 +499,7 @@ class LoadSet:
         """
         timeseries, end_time = _normalise_timeseries(timeseries, end_time)
         load_type = LoadType.from_str(load_type)
-        _cnsmptn = self._consumption_flag(consumption)
+        _cnsmptn = self._consumption_flag(consumption=consumption)
 
         return {
             load.name: load.interpolate(timeseries, end_time, load_type)
@@ -534,11 +516,11 @@ class LoadSet:
     def load_total(
         self,
         timeseries: np.ndarray,
-        load_type: Union[str, LoadType],
-        unit: Optional[str] = None,
-        end_time: Optional[float] = None,
+        load_type: str | LoadType,
+        unit: str | None = None,
+        end_time: float | None = None,
         *,
-        consumption: Optional[bool] = None,
+        consumption: bool | None = None,
     ) -> np.ndarray:
         """Total load for each timeseries point for a given load_type
 
@@ -571,7 +553,7 @@ class Phase:
     """Phase container"""
 
     config: PhaseConfig
-    subphases: Dict[str, SubPhaseConfig]
+    subphases: dict[str, SubPhaseConfig]
     loads: LoadSet
 
     def __post_init__(self):
@@ -589,7 +571,7 @@ class Phase:
         ])
 
     def _process_phase_efficiencies(
-        self, loads: Dict[str, np.ndarray], load_type: Union[str, LoadType]
+        self, loads: dict[str, np.ndarray], load_type: str | LoadType
     ):
         load_check = LoadType.check(load_type)
         for subphase in self.subphases.values():
@@ -602,7 +584,7 @@ class Phase:
         return loads
 
     @staticmethod
-    def _find_duplicate_loads(subphase: SubPhaseConfig, loads: Dict[str, np.ndarray]):
+    def _find_duplicate_loads(subphase: SubPhaseConfig, loads: dict[str, np.ndarray]):
         """Add duplication efficiency.
 
         If a load is duplicated in subphase.loads,
@@ -618,9 +600,9 @@ class Phase:
 
     def build_timeseries(
         self,
-        load_type: Optional[Union[str, LoadType]] = None,
+        load_type: str | LoadType | None = None,
         *,
-        consumption: Optional[bool] = None,
+        consumption: bool | None = None,
     ) -> np.ndarray:
         """Build a combined time series based on loads"""
         return (
@@ -633,10 +615,10 @@ class Phase:
     def load_total(
         self,
         timeseries: np.ndarray,
-        load_type: Union[str, LoadType],
-        unit: Optional[str] = None,
+        load_type: str | LoadType,
+        unit: str | None = None,
         *,
-        consumption: Optional[bool] = None,
+        consumption: bool | None = None,
     ) -> np.ndarray:
         """Total load for each timeseries point for a given load_type
 
@@ -664,11 +646,11 @@ class Phase:
     def get_load_data_with_efficiencies(
         self,
         timeseries: np.ndarray,
-        load_type: Union[str, LoadType],
-        unit: Optional[str] = None,
+        load_type: str | LoadType,
+        unit: str | None = None,
         *,
-        consumption: Optional[bool] = None,
-    ) -> Dict[str, np.ndarray]:
+        consumption: bool | None = None,
+    ) -> dict[str, np.ndarray]:
         """
         Get load data taking into account efficiencies and consumption
 
@@ -700,7 +682,7 @@ class PulseDictType(TypedDict):
     """Pulse dictionary typing"""
 
     repeat: int
-    data: Dict[str, Phase]
+    data: dict[str, Phase]
 
 
 class LibraryConfig:
@@ -709,13 +691,13 @@ class LibraryConfig:
     def __init__(
         self,
         scenario: ScenarioConfig,
-        pulse: Dict[str, PulseConfig],
-        phase: Dict[str, PhaseConfig],
-        subphase: Dict[str, SubPhaseConfig],
-        system: Dict[str, SystemConfig],
-        subsystem: Dict[str, SubSystemConfig],
-        loads: Dict[str, LoadConfig],
-        durations: Optional[Dict[str, float]] = None,
+        pulse: dict[str, PulseConfig],
+        phase: dict[str, PhaseConfig],
+        subphase: dict[str, SubPhaseConfig],
+        system: dict[str, SystemConfig],
+        subsystem: dict[str, SubSystemConfig],
+        loads: dict[str, LoadConfig],
+        durations: dict[str, float] | None = None,
     ):
         self.scenario = scenario
         self.pulse = pulse
@@ -758,7 +740,7 @@ class LibraryConfig:
                 raise ValueError(f"Unknown loads {unknown_load}")
 
     def _import_subphase_duration(
-        self, subphase_duration_params: Optional[Dict[str, float]] = None
+        self, subphase_duration_params: dict[str, float] | None = None
     ):
         """Import subphase data"""
         for s_ph in self.subphase.values():
@@ -771,8 +753,8 @@ class LibraryConfig:
     def add_load_config(
         self,
         load: LoadConfig,
-        subphases: Optional[Union[str, Iterable[str]]] = None,
-        subphase_efficiency: Optional[List[Efficiency]] = None,
+        subphases: str | Iterable[str] | None = None,
+        subphase_efficiency: list[Efficiency] | None = None,
     ):
         """Add load config"""
         self.loads[load.name] = load
@@ -781,8 +763,8 @@ class LibraryConfig:
     def link_load_to_subphase(
         self,
         load_name: str,
-        subphases: Union[str, Iterable[str]],
-        subphase_efficiency: Optional[List[Efficiency]] = None,
+        subphases: str | Iterable[str],
+        subphase_efficiency: list[Efficiency] | None = None,
     ):
         """Link a load to a specific subphase"""
         if isinstance(subphases, str):
@@ -795,16 +777,14 @@ class LibraryConfig:
     @classmethod
     def from_json(
         cls,
-        manager_config_path: Union[Path, str],
-        durations: Optional[Dict[str, float]] = None,
+        manager_config_path: Path | str,
+        durations: dict[str, float] | None = None,
     ):
         """Create configuration from pure json"""
         return cls.from_dict(read_json(manager_config_path), durations)
 
     @classmethod
-    def from_dict(
-        cls, data: Dict[str, Any], durations: Optional[Dict[str, float]] = None
-    ):
+    def from_dict(cls, data: dict[str, Any], durations: dict[str, float] | None = None):
         """Create configuration from dictionary"""
         return cls(
             scenario=ScenarioConfig(**data["scenario"]),
@@ -847,7 +827,7 @@ class LibraryConfig:
             }),
         )
 
-    def get_pulse(self, pulse: str, *, check=True) -> Dict[str, Phase]:
+    def get_pulse(self, pulse: str, *, check=True) -> dict[str, Phase]:
         """Create a pulse dictionary"""
         if check:
             self.check_config()
@@ -856,7 +836,7 @@ class LibraryConfig:
             for phase in self.pulse[pulse].phases
         }
 
-    def get_scenario(self) -> Dict[str, PulseDictType]:
+    def get_scenario(self) -> dict[str, PulseDictType]:
         """Create a scenario dictionary"""
         self.check_config()
         return {
