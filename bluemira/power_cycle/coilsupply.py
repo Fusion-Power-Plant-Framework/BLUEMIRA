@@ -69,12 +69,21 @@ class CoilSupplyParameterABC:
     single_value_types = (bool, int, float, list, tuple, np.ndarray)
 
     @classmethod
-    def validate_parameter(cls, obj):
+    def is_parameter(cls, obj):
         """
-        Validate 'obj' to be of the same class as the object testing it.
+        Check if the given object is an instance of 'CoilSupplyParameter'.
 
-        Substitute method for 'isinstance', since it fails in this
-        implementation.
+        This method is a substitute for 'isinstance', which fails in this
+        implementation. It compares the name of the class of the object with
+        the name of the class that is calling this method.
+
+        Parameters
+        ----------
+        obj (Any): The object to check.
+
+        Returns
+        -------
+        bool: True if 'obj' is a 'CoilSupplyParameter', False otherwise.
         """
         return obj.__class__.__name__ == cls.__name__
 
@@ -94,7 +103,7 @@ class CoilSupplyParameterABC:
         """
         if argument is None:
             return cls()
-        if cls.validate_parameter(argument):
+        if cls.is_parameter(argument):
             return argument
         if isinstance(argument, dict):
             return cls(**argument)
@@ -144,7 +153,7 @@ class CoilSupplyParameterABC:
         all_fields = fields(self)
         for one_field in all_fields:
             self_value = getattr(self, one_field.name)
-            if self.validate_parameter(other):
+            if self.is_parameter(other):
                 other_value = getattr(other, one_field.name)
             elif isinstance(other, (dict, self.single_value_types)):
                 other_value = other
