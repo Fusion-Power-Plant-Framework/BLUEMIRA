@@ -1,0 +1,43 @@
+{
+  "coilsupply_config": {
+    "description": "Coil Supply System",
+    "coil_names": [],
+    "corrector_technologies": ["FDU", "SNU", "PMS"],
+    "converter_technology": "THY"
+  },
+  "corrector_library": {
+    "PMS": {
+      "description": "Protective Make Switch",
+      "resistance_set": 0
+    },
+    "FDU": {
+      "description": "Fast Discharging Unit",
+      "resistance_set": 0
+    },
+    "SNU": {
+      "description": "Switiching Network Unit",
+      "resistance_set": 0
+    }
+  },
+  "converter_library": {
+    "THY": {
+      "class_name": "ThyristorBridges",
+      "class_args": {
+        "description": "Thyristor Bridges (ITER-like)",
+        "max_bridge_voltage": 1.6e3,
+        "power_loss_percentages": {
+          "bridge losses": 1.5,
+          "step-down transformer": 1,
+          "output busbars": 0.5
+        }
+      }
+    },
+    "NEW": {
+      "class_name": null,
+      "class_args": {
+        "description": "New technology (?)",
+        "...": "..."
+      }
+    }
+  }
+}

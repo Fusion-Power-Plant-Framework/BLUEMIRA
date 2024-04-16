@@ -92,7 +92,7 @@ class TestLoadSet:
     @classmethod
     def setup_class(cls):
         reactor_config = ReactorConfig(
-            Path(__file__).parent / "test_data" / "scenario_config.json", None
+            Path(__file__).parent / "test_data" / "config_scenario.json", None
         )
         cls._config = LibraryConfig.from_dict(
             reactor_config.config_for("Power Cycle"),
