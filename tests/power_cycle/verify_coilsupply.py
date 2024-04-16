@@ -31,6 +31,7 @@ data_dir = script_dir / "test_data"
 
 
 class _PlotOptions:
+    title_figure = "coilsupply_verification"
     title_time = "Time [s]"
     title_voltage = "Voltage [V]"
     title_current = "Current [A]"
@@ -92,14 +93,15 @@ class _PlotOptions:
         return tuple(c * shade for c in color)
 
     def _save_fig(self, fig, fname, fig_format=None):
+        fig_name = f"{self.title_figure}_{fname}"
         if fig_format is not None:
             fig.savefig(
-                fname=script_dir / f"{fname}.{fig_format}",
+                fname=script_dir / f"{fig_name}.{fig_format}",
                 format=fig_format,
                 transparent=True,
             )
         fig.savefig(
-            fname=script_dir / f"{fname}.{self.default_format}",
+            fname=script_dir / f"{fig_name}.{self.default_format}",
             format=self.default_format,
             transparent=True,
         )
@@ -331,7 +333,7 @@ def plot_breakdown_verification():
         "original (black) X model (color)",
     )
 
-    options._save_fig(fig, "figure_breakdown_BLUEMIRA", "png")
+    options._save_fig(fig, "breakdown_BLUEMIRA", "png")
     plt.show()
     return fig
 
@@ -586,7 +588,7 @@ def plot_pulse_verification():
     for fig_ind, fig in all_figs.items():
         fig.suptitle("MATLAB Original (continuous) X BLUEMIRA Model (dashed)")
         data = "VI" if fig_ind == 1 else "PQ"
-        options._save_fig(fig, f"figure_pulse_BLUEMIRA_{data}", "png")
+        options._save_fig(fig, f"pulse_BLUEMIRA_{data}", "png")
     plt.show()
     return all_figs
 
