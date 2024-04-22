@@ -4,7 +4,12 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-"""Verification of Coil Supply System classes with EU-DEMO IDM data."""
+"""
+Verification of Coil Supply System classes with EU-DEMO data associated
+with the results in the following IDM report:
+A. Ferro, Update of the ITER-like design of CS-PF power supplies and FDU,
+EUROfusion, 2022. https://idm.euro-fusion.org/?uid=2Q6988.
+"""
 
 # %%
 from pathlib import Path
