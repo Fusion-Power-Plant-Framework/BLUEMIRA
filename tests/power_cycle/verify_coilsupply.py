@@ -139,7 +139,7 @@ converter_library = coilsupply_data["converter_library"]
 # # Import setup data
 #
 # Design data relevant for EU-DEMO Coil Supply System design, taken from
-# IDM, can be found in the `data_design.json` file.
+# IDM, can be found in the `coilsupply_data_design.json` file.
 
 # For this simple example, we import the resistances that characterize
 # the SNU for each coil circuit. This data is added to the appropriate
@@ -213,8 +213,8 @@ def display_subsystems(coilsupply, summary):
 # # Verification with breakdown data
 #
 # The IDM data for the behavior of correctors and converters during
-# breakdown is stored in the `data_breakdown.json` file. We import it
-# to use:
+# breakdown is stored in the `coilsupply_data_breakdown.json` file. We
+# import it to use:
 #   - coil voltages and currents as simulation inputs;
 #   - SNU and THY voltages as output verification.
 #
@@ -276,8 +276,7 @@ def plot_breakdown_verification():
         layout="tight",
         figsize=options._constrained_fig_size(n_rows, n_cols, 3.5, 10.5),
     )
-    plot_index = 0
-    for coil in coil_names:
+    for plot_index, coil in enumerate(coil_names, start=0):
         wallplug_info = getattr(breakdown_wallplug, coil)
 
         ax_left = axs.flat[plot_index]
@@ -326,8 +325,6 @@ def plot_breakdown_verification():
         ax_left.legend(loc="upper right")
         ax_left.title.set_text(coil)
 
-        plot_index += 1
-
     fig.suptitle(
         "Coil Supply System Model, Breakdown Verification:\n"
         "original (black) X model (color)",
@@ -343,9 +340,10 @@ def plot_breakdown_verification():
 #
 # A downsampled version of the IDM data for the total active and reactive
 # powers, consumed during a full pulse by the Coil Supply System, is stored
-# in the `data_pulse.json` file. We import it to use:
+# in the `coilsupply_data_pulse.json` file. We import it to use:
 #   - coil voltages and currents as simulation inputs;
-#   - active and reactive powers consumed by the system as output verification.
+#   - active and reactive powers consumed by each coil and the full system
+#     as output verification.
 #
 # Voltages, currents are first re-ordered and later used as arguments.
 # Returned power values are summed and compared against the original results.
