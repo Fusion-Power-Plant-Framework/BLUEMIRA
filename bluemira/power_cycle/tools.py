@@ -191,7 +191,8 @@ def match_domains(
 
     Then, for each pair (x,y), values in every 'y' vector are interpolated,
     to ensure that all of them have one element associated to every element
-    of the union of all distinct 'x' vectors.
+    of the union of all distinct 'x' vectors. Values defined before and after
+    the original domain 'x' of the image 'y' are set to zero.
     """
     n_vectors = len(x_set)
     for v in range(n_vectors):
@@ -204,7 +205,7 @@ def match_domains(
         x = x_set[v]
         y = y_set[v]
 
-        y = np.interp(matched_x, x, y)
+        y = np.interp(matched_x, x, y, left=0, right=0)
         y_set[v] = y
 
     return matched_x, y_set
@@ -225,7 +226,8 @@ def unique_domain(x, y, epslon=1e-10, mode="careful"):
     Fast mode:
     ---------
     Nudge forward every element in x by (N * epslon), with N being the index
-    of that element in x.
+    of that element in x. More prone to errors if the number of elements in
+    x is large.
     """
     n_points = len(x)
     if len(y) != n_points:

@@ -72,18 +72,17 @@ def test_unique_domain(epsilon):
     with pytest.raises(ValueError, match="Maximum number of iterations"):
         unique_domain(x, max_iterations=max_iterations)
 
-
 def test_match_domains():
-    all_x = [np.array([1, 2, 3]), np.array([2, 3, 4])]
-    all_y = [np.array([1, 2, 3]), np.array([4, 6, 8])]
+    x_set = [np.array([1, 2, 3]), np.array([2, 3, 4])]
+    y_set = [np.array([1, 2, 3]), np.array([4, 6, 8])]
     out_of_bounds_value = 0
 
-    x_expected = np.array([1, 2, 3, 4])
-    all_y_expected = [
+    expected_x = np.array([1, 2, 3, 4])
+    expected_y_set = [
         np.array([1, 2, 3, out_of_bounds_value]),
         np.array([out_of_bounds_value, 4, 6, 8]),
     ]
-    x_matched, all_y_matched = match_domains(all_x, all_y)
-    assert np.array_equal(x_matched, x_expected)
-    assert np.array_equal(all_y_matched[0], all_y_expected[0])
-    assert np.array_equal(all_y_matched[1], all_y_expected[1])
+    matched_x, matched_y_set = match_domains(x_set, y_set)
+    assert np.array_equal(matched_x, expected_x)
+    assert np.array_equal(matched_y_set[0], expected_y_set[0])
+    assert np.array_equal(matched_y_set[1], expected_y_set[1])
