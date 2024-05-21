@@ -33,6 +33,9 @@ from dataclasses import (
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
+from matplotlib import (
+    pyplot as plt,
+)
 
 from bluemira.base.look_and_feel import bluemira_print
 from bluemira.power_cycle.errors import CoilSupplySystemError
@@ -40,6 +43,7 @@ from bluemira.power_cycle.net import (
     Config,
     Descriptor,
 )
+from bluemira.power_cycle.tools import pp
 
 
 def _get_module_class_from_str(class_name):
@@ -512,13 +516,13 @@ class ThyristorBridges(CoilSupplyConverter):
         # pp(phase_rad)
         raise False
         """
-        # p_active = voltages_array * currents_array
+        p_active = voltages_array * currents_array
         # p_reactive = np.sqrt(np.square(p_apparent) - np.square(p_active))
 
-        p_reactive = np.absolute(p_apparent * np.sin(phase_rad))  # why?
-        # p_reactive = p_apparent * np.sin(phase_rad)
+        # p_reactive = np.absolute(p_apparent * np.sin(phase_rad))  # why?
+        p_reactive = np.absolute(p_apparent) * np.sin(phase_rad)
 
-        p_active = p_apparent * np.cos(phase_rad)  # why not absolute?
+        # p_active = p_apparent * np.cos(phase_rad)  # why not absolute?
         # pp(np.cos(phase_rad))
 
         p_loss_multiplier = 1
@@ -677,7 +681,6 @@ class CoilSupplySystem(CoilSupplyABC):
             currents_parameter,
             other_key="coil_currents",
         )
-
         for corrector in self.correctors:
             (
                 voltages_parameter,
@@ -698,8 +701,8 @@ class CoilSupplySystem(CoilSupplyABC):
                     currents_corrector,
                     other_key=f"{corrector.name}_currents",
                 )
-
         wallplug_parameter = self.validate_parameter()
+
         for name in self.inputs.config.coil_names:
             voltages_array = getattr(voltages_parameter, name)
             currents_array = getattr(currents_parameter, name)
@@ -715,6 +718,24 @@ class CoilSupplySystem(CoilSupplyABC):
             wallplug_info["active_load"] = active_load
             wallplug_info["reactive_load"] = reactive_load
             setattr(wallplug_parameter, name, wallplug_info)
-
         outputs_parameter.absorb_parameter(wallplug_parameter)
+
+        # """
+        plt.figure()
+        ax = plt.axes()
+        for name in self.inputs.config.coil_names:
+            pp(name)
+            wallplug_info = getattr(wallplug_parameter, name)
+            # pp(wallplug_info, summary=True)
+            n_units = wallplug_info["number_of_bridge_units"]
+            phase_deg = wallplug_info["phase_degrees"]
+            ax.plot(phase_deg, label=f"{name} ({n_units} bridge units)")
+            pp(name + " number of bridge units: " + str(n_units))
+            pp(" ")
+        plt.legend()
+        ax.grid(True)
+        ax.set_ylabel("Phase (phi) [°]")
+        ax.set_xlabel("Vector index [-]")
+        # """
+
         return outputs_parameter

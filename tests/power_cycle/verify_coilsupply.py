@@ -257,14 +257,13 @@ for new_key, old_key in breakdown_reorder_keys.items():
             duration_breakdown.append(max(old_value))
         breakdown_per_coil[new_key][coil] = old_value
 duration_breakdown = max(duration_breakdown)
-
 breakdown_wallplug = coilsupply.compute_wallplug_loads(
     breakdown_per_coil["coil_voltages"],
     breakdown_per_coil["coil_currents"],
 )
 
 
-def plot_breakdown_verification():
+def plot_breakdown_verification(breakdown_wallplug):
     """Plot Coil Supply System verification for breakdown data."""
     n_plots = len(breakdown_wallplug)
     n_rows, n_cols = symmetrical_subplot_distribution(
@@ -452,7 +451,7 @@ for key in pulse_totals:
     total_subplots_settings[key]["sum_power"] = []
 
 
-def plot_pulse_verification():
+def plot_pulse_verification(pulse_wallplug):
     """Plot Coil Supply System verification for pulse data."""
     n_coils = len(pulse_wallplug)
     coil_colors = options._make_colormap(n_coils)
@@ -597,12 +596,65 @@ def plot_pulse_verification():
         data = "VI" if fig_ind == 1 else "PQ"
         options._save_fig(fig, f"pulse_BLUEMIRA_{data}", "png")
     plt.show()
-    return all_figs
+    return all_figs, all_axes
+
+
+def plot_standalone_fig(all_axes, fig_index, subplot_index):
+    """
+    Extract single subplot from the verification for pulse data.
+
+    Parameters
+    ----------
+    all_axes: dict
+        Dictionary with all axes, produced by 'plot_pulse_verification'.
+    fig_index: int
+        Index of figure from which to extract subplot.
+        Subplot in figures: V,I (1); P,Q (2).
+    subplot_index: int
+        Index of subplot to be extracted.
+        Subplots: CS coils (0-4); PF coils (5-10); totals (11).
+    """
+    n_coils = len(all_axes[fig_index]["left"]) - 1
+    coil_colors = options._make_colormap(n_coils)
+
+    standalone_fig = plt.figure()
+
+    standalone_axes = {"left": plt.axes()}
+    standalone_axes["right"] = standalone_axes["left"].twinx()
+    for side in ["left", "right"]:
+        standalone_ax = standalone_axes[side]
+        ax = all_axes[fig_index][side][subplot_index]
+        ax_title = ax.title.get_text()
+        ax_ylabel = ax.get_ylabel()
+        ax_color = options._side_color(side)
+        if side == "left":
+            color_verification = (
+                ax_color if subplot_index == 11 else coil_colors(subplot_index)
+            )
+        else:
+            color_verification = ax_color
+        color_computation = options._darken_color(color_verification)
+        for c, line in enumerate(ax.get_lines()):
+            lt = options._line_thin if c == 1 else options._line_thick
+            ls = "--" if c == 1 else "-"
+            lc = color_computation if c == 1 else color_verification
+            line_data = line.get_data()
+            standalone_ax.plot(*line_data, ls, color=lc, linewidth=lt)
+        options._color_yaxis(standalone_ax, side)
+        standalone_ax.grid(True, axis="x")
+        standalone_ax.grid(True, axis="y", linestyle=":", color=ax_color)
+        standalone_ax.set_ylabel(ax_ylabel)
+    standalone_ax.title.set_text(ax_title)
+    standalone_ax.set_xlabel(options.title_time)
+    plt.show()
+
+    return standalone_fig
 
 
 # %%
 if __name__ == "__main__":
     display_inputs(coilsupply, summary=False)
     display_subsystems(coilsupply, summary=True)
-    fig_breakdown = plot_breakdown_verification()
-    figs_pulse = plot_pulse_verification()
+    fig_breakdown = plot_breakdown_verification(breakdown_wallplug)
+    figs_pulse, axes_pulse = plot_pulse_verification(pulse_wallplug)
+    standalone_pulse = plot_standalone_fig(axes_pulse, fig_index=1, subplot_index=11)
