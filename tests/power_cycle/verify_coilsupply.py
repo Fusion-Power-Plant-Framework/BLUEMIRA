@@ -247,12 +247,15 @@ breakdown_reorder_keys = {
     "coil_voltages": "coil_voltage",
     "coil_currents": "coil_current",
     "coil_times": "coil_time",
+    "SNU_switches": "coil_time",  # use time vector to build switch
 }
 duration_breakdown = []
 for new_key, old_key in breakdown_reorder_keys.items():
     breakdown_per_coil[new_key] = {}
     for coil in breakdown_data:
         old_value = breakdown_data[coil][old_key]
+        if new_key == "SNU_switches":
+            old_value = [1 for t in old_value]  # SNU always on
         if new_key == "coil_times":
             duration_breakdown.append(max(old_value))
         breakdown_per_coil[new_key][coil] = old_value
@@ -260,6 +263,7 @@ duration_breakdown = max(duration_breakdown)
 breakdown_wallplug = coilsupply.compute_wallplug_loads(
     breakdown_per_coil["coil_voltages"],
     breakdown_per_coil["coil_currents"],
+    {"SNU": breakdown_per_coil["SNU_switches"]},
 )
 
 
@@ -657,4 +661,4 @@ if __name__ == "__main__":
     display_subsystems(coilsupply, summary=True)
     fig_breakdown = plot_breakdown_verification(breakdown_wallplug)
     figs_pulse, axes_pulse = plot_pulse_verification(pulse_wallplug)
-    standalone_pulse = plot_standalone_fig(axes_pulse, fig_index=1, subplot_index=11)
+    # standalone_pulse = plot_standalone_fig(axes_pulse, fig_index=1, subplot_index=1)

@@ -405,6 +405,41 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
             setattr(voltages_following, name, following_v)
             setattr(currents_following, name, following_i)
 
+        # """
+        plt.figure()
+        ax = plt.axes()
+        prop_cycle = plt.rcParams["axes.prop_cycle"]
+        colors = prop_cycle.by_key()["color"]
+        colors.append("k")
+        colors = iter(colors)
+        for name in coil_names:
+            pp(name)
+            color = next(colors)
+            corrector_resistance = getattr(self.resistance_set, name)
+            requested_i = getattr(currents_parameter, name)
+            corrector_i = requested_i
+            resistance_v = -corrector_resistance * corrector_i
+            # requested_v = getattr(voltages_parameter, name)
+            corrector_v = getattr(voltages_corrector, name)
+            # following_v = getattr(voltages_following, name)
+            """
+            corrector_s = getattr(switches_parameter, name)
+            if corrector_s is None:
+                corrector_s = [0 for v in corrector_v]
+            """
+            # ax.plot(requested_v, "-", color=color, label=f"{name} (V requested)")
+            ax.plot(resistance_v, "-", color=color, label=f"{name} (V resistance)")
+            ax.plot(corrector_v, "--", color=color, label=f"{name} (V corrector)")
+            # ax.plot(following_v, ":", color=color, label=f"{name} (V following)")
+            # ax.plot(corrector_s, "-", color=color, label=f"{name} (corrector switch)")
+        plt.legend()
+        ax.grid(True)
+        ax.title.set_text(f"Corrector: {self.name}")
+        # ax.set_ylabel("Switch [-]")
+        ax.set_ylabel("Voltage [V]")
+        ax.set_xlabel("Vector index [-]")
+        # """
+
         return (
             voltages_following,
             currents_following,
@@ -664,7 +699,9 @@ class CoilSupplySystem(CoilSupplyABC):
         currents_argument: Any
             Array (collection) of currents in time required by the coils. [A]
         dict_of_switches_argument: Dict[str,Any]
-            Arrays of
+            Arrays of...
+        verbose: bool
+            Print extra information and converter power factor angles.
         """
         voltages_parameter = self.validate_parameter(voltages_argument)
         currents_parameter = self.validate_parameter(currents_argument)
@@ -720,22 +757,21 @@ class CoilSupplySystem(CoilSupplyABC):
             setattr(wallplug_parameter, name, wallplug_info)
         outputs_parameter.absorb_parameter(wallplug_parameter)
 
-        # """
-        plt.figure()
-        ax = plt.axes()
-        for name in self.inputs.config.coil_names:
-            pp(name)
-            wallplug_info = getattr(wallplug_parameter, name)
-            # pp(wallplug_info, summary=True)
-            n_units = wallplug_info["number_of_bridge_units"]
-            phase_deg = wallplug_info["phase_degrees"]
-            ax.plot(phase_deg, label=f"{name} ({n_units} bridge units)")
-            pp(name + " number of bridge units: " + str(n_units))
-            pp(" ")
-        plt.legend()
-        ax.grid(True)
-        ax.set_ylabel("Phase (phi) [°]")
-        ax.set_xlabel("Vector index [-]")
-        # """
+        if verbose:
+            plt.figure()
+            ax = plt.axes()
+            for name in self.inputs.config.coil_names:
+                pp(name)
+                wallplug_info = getattr(wallplug_parameter, name)
+                # pp(wallplug_info, summary=True)
+                n_units = wallplug_info["number_of_bridge_units"]
+                phase_deg = wallplug_info["phase_degrees"]
+                ax.plot(phase_deg, label=f"{name} ({n_units} bridge units)")
+                pp(name + " number of bridge units: " + str(n_units))
+                pp(" ")
+            plt.legend()
+            ax.grid(True)
+            ax.set_ylabel("Phase (phi) [°]")
+            ax.set_xlabel("Vector index [-]")
 
         return outputs_parameter
