@@ -130,6 +130,10 @@ class CoilSupplyParameterABC:
         """Get number of attributes in dataclass instance."""
         return len(asdict(self))
 
+    def duplicate(self):
+        """Create a duplicate of the dataclass instance."""
+        return replace(self)
+
     def absorb_parameter(
         self,
         other,
@@ -379,11 +383,11 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
         resistance of corrector device, and reduce total voltage
         by contribution to resistance connected in series.
         """
-        voltages_corrector = replace(voltages_parameter)
-        currents_corrector = replace(currents_parameter)
+        voltages_corrector = voltages_parameter.duplicate()
+        currents_corrector = currents_parameter.duplicate()
 
-        voltages_following = replace(voltages_parameter)
-        currents_following = replace(currents_parameter)
+        voltages_following = voltages_parameter.duplicate()
+        currents_following = currents_parameter.duplicate()
 
         coil_names = list(asdict(self.resistance_set).keys())
         for name in coil_names:
@@ -405,7 +409,7 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
             setattr(voltages_following, name, following_v)
             setattr(currents_following, name, following_i)
 
-        # """
+        '''
         plt.figure()
         ax = plt.axes()
         prop_cycle = plt.rcParams["axes.prop_cycle"]
@@ -438,7 +442,7 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
         # ax.set_ylabel("Switch [-]")
         ax.set_ylabel("Voltage [V]")
         ax.set_xlabel("Vector index [-]")
-        # """
+        '''
 
         return (
             voltages_following,
@@ -636,7 +640,7 @@ class CoilSupplySystem(CoilSupplyABC):
             )
         return converter_class(converter_config)
 
-    def validate_parameter(self, obj=None):
+    def create_parameter(self, obj=None):
         """
         Create parameter compatible with this 'CoilSupplySystem' instance.
 
@@ -653,7 +657,7 @@ class CoilSupplySystem(CoilSupplyABC):
         dict_of_parameters = {}
         for c in self.correctors:
             value = obj.get(c.name, None) if isinstance(obj, dict) else obj
-            dict_of_parameters[c.name] = self.validate_parameter(value)
+            dict_of_parameters[c.name] = self.create_parameter(value)
         return dict_of_parameters
 
     def _print_computing_message(self, verbose=False):
@@ -671,9 +675,11 @@ class CoilSupplySystem(CoilSupplyABC):
         self,
         voltages_argument: Any,
         currents_argument: Any,
+        times_argument: Optional[Any] = None,
         dict_of_switches_argument: Optional[Dict[str, Any]] = None,
+        *,
         verbose: bool = False,
-    ):
+    ) -> CoilSupplyParameterABC:
         """
         Compute power loads required by coil supply system to feed coils.
 
@@ -703,21 +709,28 @@ class CoilSupplySystem(CoilSupplyABC):
         verbose: bool
             Print extra information and converter power factor angles.
         """
-        voltages_parameter = self.validate_parameter(voltages_argument)
-        currents_parameter = self.validate_parameter(currents_argument)
-        all_switches = self._validate_dict_of_parameters_for_correctors(
-            dict_of_switches_argument,
-        )
+        outputs_parameter = self.create_parameter()
 
-        outputs_parameter = self.validate_parameter()
+        voltages_parameter = self.create_parameter(voltages_argument)
         outputs_parameter.absorb_parameter(
             voltages_parameter,
             other_key="coil_voltages",
         )
+        currents_parameter = self.create_parameter(currents_argument)
         outputs_parameter.absorb_parameter(
             currents_parameter,
             other_key="coil_currents",
         )
+        if times_argument:
+            times_parameter = self.create_parameter(times_argument)
+            outputs_parameter.absorb_parameter(
+                times_parameter,
+                other_key="coil_times",
+            )
+        all_switches = self._validate_dict_of_parameters_for_correctors(
+            dict_of_switches_argument,
+        )
+
         for corrector in self.correctors:
             (
                 voltages_parameter,
@@ -738,7 +751,7 @@ class CoilSupplySystem(CoilSupplyABC):
                     currents_corrector,
                     other_key=f"{corrector.name}_currents",
                 )
-        wallplug_parameter = self.validate_parameter()
+        wallplug_parameter = self.create_parameter()
 
         for name in self.inputs.config.coil_names:
             voltages_array = getattr(voltages_parameter, name)
@@ -763,7 +776,6 @@ class CoilSupplySystem(CoilSupplyABC):
             for name in self.inputs.config.coil_names:
                 pp(name)
                 wallplug_info = getattr(wallplug_parameter, name)
-                # pp(wallplug_info, summary=True)
                 n_units = wallplug_info["number_of_bridge_units"]
                 phase_deg = wallplug_info["phase_degrees"]
                 ax.plot(phase_deg, label=f"{name} ({n_units} bridge units)")
@@ -773,5 +785,46 @@ class CoilSupplySystem(CoilSupplyABC):
             ax.grid(True)
             ax.set_ylabel("Phase (phi) [°]")
             ax.set_xlabel("Vector index [-]")
+
+        if verbose:
+            prop_cycle = plt.rcParams["axes.prop_cycle"]
+            colors_cycle = prop_cycle.by_key()["color"]
+            for name in self.inputs.config.coil_names:
+                plt.figure()
+                ax = plt.axes()
+                ax.title.set_text(name)
+                colors = iter(colors_cycle)
+                coil_parameter = getattr(outputs_parameter, name)
+                coil_t = coil_parameter["coil_times"] if times_argument else None
+                coil_v = coil_parameter["coil_voltages"]
+                converter_v = coil_parameter["THY_voltages"]
+                ax.plot(
+                    coil_t,
+                    coil_v,
+                    color=next(colors),
+                    label=f"coil: {name}",
+                )
+                for corrector in self.correctors:
+                    color = next(colors)
+                    pp(f"{name}: {corrector.name}")
+                    corrector_v = coil_parameter[f"{corrector.name}_voltages"]
+                    # corrector_i = coil_parameter[f"{corrector.name}_currents"]
+                    ax.plot(
+                        coil_t,
+                        corrector_v,
+                        color=color,
+                        label=f"corrector: {corrector.name}",
+                    )
+                ax.plot(
+                    coil_t,
+                    converter_v,
+                    color=next(colors),
+                    label=f"converter: {self.converter.name}",
+                )
+                plt.legend()
+                ax.grid(True)
+                x_label = "Time [s]" if times_argument else "Vector index [-]"
+                ax.set_xlabel(x_label)
+                ax.set_ylabel("Voltage [V]")
 
         return outputs_parameter
