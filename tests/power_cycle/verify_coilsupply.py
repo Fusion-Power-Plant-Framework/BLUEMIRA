@@ -61,6 +61,7 @@ class _PlotOptions:
         "shadow": True,
     }
     default_format = "svg"
+    show_block = False
 
     @property
     def _line_thin(self):
@@ -239,36 +240,53 @@ def display_subsystems(coilsupply, summary):
 # %%
 breakdown_path = data_dir / "coilsupply_data_breakdown.json"
 breakdown_data = read_json(breakdown_path)
-
-breakdown_per_coil = {}
-breakdown_reorder_keys = {
-    "SNU_voltages": "SNU_voltage",
-    "THY_voltages": "THY_voltage",
-    "coil_voltages": "coil_voltage",
-    "coil_currents": "coil_current",
-    "coil_times": "coil_time",
-    "SNU_switches": "coil_time",  # use time vector to build switch
-}
-duration_breakdown = []
-for new_key, old_key in breakdown_reorder_keys.items():
-    breakdown_per_coil[new_key] = {}
-    for coil in breakdown_data:
-        old_value = breakdown_data[coil][old_key]
-        if new_key == "SNU_switches":
-            old_value = [1 for t in old_value]  # SNU always on
-        if new_key == "coil_times":
-            duration_breakdown.append(max(old_value))
-        breakdown_per_coil[new_key][coil] = old_value
-duration_breakdown = max(duration_breakdown)
-breakdown_wallplug = coilsupply.compute_wallplug_loads(
-    breakdown_per_coil["coil_voltages"],
-    breakdown_per_coil["coil_currents"],
-    {"SNU": breakdown_per_coil["SNU_switches"]},
-)
+t_start_breakdown = 500
 
 
-def plot_breakdown_verification(breakdown_wallplug):
+def prepare_breakdown_verification(breakdown_data, t_start_breakdown):
+    """Prepare Coil Supply System breakdown data for verification."""
+    breakdown_per_coil = {}
+    breakdown_reorder_keys = {
+        "SNU_voltages": "SNU_voltage",
+        "THY_voltages": "THY_voltage",
+        "coil_voltages": "coil_voltage",
+        "coil_currents": "coil_current",
+        "coil_times": "coil_time",
+        "SNU_switches": "coil_time",  # use time vector to build switch
+    }
+    duration_breakdown = []
+    for new_key, old_key in breakdown_reorder_keys.items():
+        breakdown_per_coil[new_key] = {}
+        for coil in breakdown_data:
+            old_value = breakdown_data[coil][old_key]
+            if new_key == "SNU_switches":
+                old_value = [1 for t in old_value]  # SNU always on
+            if new_key == "coil_times":
+                duration_breakdown.append(max(old_value))
+            breakdown_per_coil[new_key][coil] = old_value
+    duration_breakdown = max(duration_breakdown)
+    breakdown_wallplug = coilsupply.compute_wallplug_loads(
+        breakdown_per_coil["coil_voltages"],
+        breakdown_per_coil["coil_currents"],
+        breakdown_per_coil["coil_times"],
+        {"SNU": breakdown_per_coil["SNU_switches"]},
+        verbose=False,
+    )
+    t_range_breakdown = (
+        t_start_breakdown,
+        t_start_breakdown + duration_breakdown,
+    )
+    return breakdown_per_coil, breakdown_wallplug, t_range_breakdown
+
+
+def plot_breakdown_verification(breakdown_data, t_start_breakdown):
     """Plot Coil Supply System verification for breakdown data."""
+    (
+        breakdown_per_coil,
+        breakdown_wallplug,
+        t_range_breakdown,
+    ) = prepare_breakdown_verification(breakdown_data, t_start_breakdown)
+
     n_plots = len(breakdown_wallplug)
     n_rows, n_cols = symmetrical_subplot_distribution(
         n_plots,
@@ -341,10 +359,18 @@ def plot_breakdown_verification(breakdown_wallplug):
         "Coil Supply System Model, Breakdown Verification:\n"
         "original (black) X model (color)",
     )
+    return fig, t_range_breakdown
 
+
+def save_breakdown_verification(breakdown_data, t_start_breakdown):
+    """Save Coil Supply System verification plots for breakdown data."""
+    fig, t_range_breakdown = plot_breakdown_verification(
+        breakdown_data,
+        t_start_breakdown,
+    )
     options._save_fig(fig, "breakdown_BLUEMIRA", "png")
-    plt.show()
-    return fig
+    plt.show(block=options.show_block)
+    return t_range_breakdown
 
 
 # %% [markdown]
@@ -368,95 +394,117 @@ def plot_breakdown_verification(breakdown_wallplug):
 pulse_path = data_dir / "coilsupply_data_pulse_full.json"
 pulse_data = read_json(pulse_path)
 
-pulse_totals = pulse_data["power"]
 
-pulse_per_coil = {}
-pulse_reorder_keys = {
-    "coil_times": "coil_time",
-    "coil_voltages": "coil_voltage",
-    "coil_currents": "coil_current",
-    "coil_active": "coil_active",
-    "coil_reactive": "coil_reactive",
-    "SNU_switches": "coil_time",
-}
+def prepare_pulse_verification(pulse_data, t_range_breakdown):
+    """Prepare Coil Supply System pulse data for verification."""
+    t_start_breakdown = t_range_breakdown[0]
+    t_end_breakdown = t_range_breakdown[1]
 
-t_start_breakdown = 500
-t_end_breakdown = t_start_breakdown + duration_breakdown
+    pulse_totals = pulse_data["power"]
+    pulse_per_coil = {}
+    pulse_reorder_keys = {
+        "coil_times": "coil_time",
+        "coil_voltages": "coil_voltage",
+        "coil_currents": "coil_current",
+        "coil_active": "coil_active",
+        "coil_reactive": "coil_reactive",
+        "SNU_switches": "coil_time",
+    }
 
-for new_key, old_key in pulse_reorder_keys.items():
-    pulse_per_coil[new_key] = {}
-    for coil in pulse_data["coils"]:
-        old_value = pulse_data["coils"][coil].get(old_key, None)
-        if new_key == "SNU_switches":
-            t_after_start = [t >= t_start_breakdown for t in old_value]
-            t_before_end = [t <= t_end_breakdown for t in old_value]
-            new_value = [a and b for a, b in zip(t_after_start, t_before_end)]
+    for new_key, old_key in pulse_reorder_keys.items():
+        pulse_per_coil[new_key] = {}
+        for coil in pulse_data["coils"]:
+            old_value = pulse_data["coils"][coil].get(old_key, None)
+            if new_key == "SNU_switches":
+                t_after_start = [t >= t_start_breakdown for t in old_value]
+                t_before_end = [t <= t_end_breakdown for t in old_value]
+                new_value = [a and b for a, b in zip(t_after_start, t_before_end)]
+            else:
+                new_value = old_value
+
+            if old_value is not None:
+                pulse_per_coil[new_key][coil] = new_value
+
+    pulse_wallplug = coilsupply.compute_wallplug_loads(
+        pulse_per_coil["coil_voltages"],
+        pulse_per_coil["coil_currents"],
+        pulse_per_coil["coil_times"],
+        {"SNU": pulse_per_coil["SNU_switches"]},
+        verbose=False,
+    )
+
+    per_coil_keys_to_plot = pulse_per_coil.keys() - {"coil_times", "SNU_switches"}
+    coil_subplots_settings = {}
+    for key in per_coil_keys_to_plot:
+        coil_subplots_settings[key] = {}
+        if key in {"coil_voltages", "THY_voltages"}:
+            coil_subplots_settings[key]["fig_ind"] = 1
+            coil_subplots_settings[key]["side"] = "left"
+            coil_subplots_settings[key]["y_title"] = options.title_voltage
+            coil_subplots_settings[key]["plot_color"] = "map"
+            coil_subplots_settings[key]["variable"] = key
+        elif key == "coil_currents":
+            coil_subplots_settings[key]["fig_ind"] = 1
+            coil_subplots_settings[key]["side"] = "right"
+            coil_subplots_settings[key]["y_title"] = options.title_current
+            coil_subplots_settings[key]["plot_color"] = "side"
+            coil_subplots_settings[key]["variable"] = key
+        elif key == "coil_active":
+            coil_subplots_settings[key]["fig_ind"] = 2
+            coil_subplots_settings[key]["side"] = "left"
+            coil_subplots_settings[key]["y_title"] = options.title_active
+            coil_subplots_settings[key]["plot_color"] = "map"
+            coil_subplots_settings[key]["variable"] = "power_active"
+        elif key == "coil_reactive":
+            coil_subplots_settings[key]["fig_ind"] = 2
+            coil_subplots_settings[key]["side"] = "right"
+            coil_subplots_settings[key]["y_title"] = options.title_reactive
+            coil_subplots_settings[key]["plot_color"] = "side"
+            coil_subplots_settings[key]["variable"] = "power_reactive"
         else:
-            new_value = old_value
+            raise ValueError(f"Unknown subplot settings for: {key}")
 
-        if old_value is not None:
-            pulse_per_coil[new_key][coil] = new_value
+    total_subplots_settings = {}
+    for key in pulse_totals:
+        total_subplots_settings[key] = {}
+        if key == "total_active":
+            total_subplots_settings[key]["side"] = "left"
+            total_subplots_settings[key]["y_title"] = options.title_active
+            total_subplots_settings[key]["plot_color"] = "side"
+            total_subplots_settings[key]["variable"] = "power_active"
+        elif key == "total_reactive":
+            total_subplots_settings[key]["side"] = "right"
+            total_subplots_settings[key]["y_title"] = options.title_reactive
+            total_subplots_settings[key]["plot_color"] = "side"
+            total_subplots_settings[key]["variable"] = "power_reactive"
+        else:
+            raise ValueError(f"Unknown subplot settings for: {key}")
+        total_subplots_settings[key]["sum_time"] = []
+        total_subplots_settings[key]["sum_power"] = []
 
-pulse_wallplug = coilsupply.compute_wallplug_loads(
-    pulse_per_coil["coil_voltages"],
-    pulse_per_coil["coil_currents"],
-    {"SNU": pulse_per_coil["SNU_switches"]},
-)
-
-coil_times = pulse_per_coil.pop("coil_times")
-snu_switches = pulse_per_coil.pop("SNU_switches")
-
-coil_subplots_settings = {}
-for key in pulse_per_coil:
-    coil_subplots_settings[key] = {}
-    if key in {"coil_voltages", "THY_voltages"}:
-        coil_subplots_settings[key]["fig_ind"] = 1
-        coil_subplots_settings[key]["side"] = "left"
-        coil_subplots_settings[key]["y_title"] = options.title_voltage
-        coil_subplots_settings[key]["plot_color"] = "map"
-        coil_subplots_settings[key]["variable"] = key
-    elif key == "coil_currents":
-        coil_subplots_settings[key]["fig_ind"] = 1
-        coil_subplots_settings[key]["side"] = "right"
-        coil_subplots_settings[key]["y_title"] = options.title_current
-        coil_subplots_settings[key]["plot_color"] = "side"
-        coil_subplots_settings[key]["variable"] = key
-    elif key == "coil_active":
-        coil_subplots_settings[key]["fig_ind"] = 2
-        coil_subplots_settings[key]["side"] = "left"
-        coil_subplots_settings[key]["y_title"] = options.title_active
-        coil_subplots_settings[key]["plot_color"] = "map"
-        coil_subplots_settings[key]["variable"] = "power_active"
-    elif key == "coil_reactive":
-        coil_subplots_settings[key]["fig_ind"] = 2
-        coil_subplots_settings[key]["side"] = "right"
-        coil_subplots_settings[key]["y_title"] = options.title_reactive
-        coil_subplots_settings[key]["plot_color"] = "side"
-        coil_subplots_settings[key]["variable"] = "power_reactive"
-    else:
-        raise ValueError(f"Unknown subplot settings for: {key}")
-
-total_subplots_settings = {}
-for key in pulse_totals:
-    total_subplots_settings[key] = {}
-    if key == "total_active":
-        total_subplots_settings[key]["side"] = "left"
-        total_subplots_settings[key]["y_title"] = options.title_active
-        total_subplots_settings[key]["plot_color"] = "side"
-        total_subplots_settings[key]["variable"] = "power_active"
-    elif key == "total_reactive":
-        total_subplots_settings[key]["side"] = "right"
-        total_subplots_settings[key]["y_title"] = options.title_reactive
-        total_subplots_settings[key]["plot_color"] = "side"
-        total_subplots_settings[key]["variable"] = "power_reactive"
-    else:
-        raise ValueError(f"Unknown subplot settings for: {key}")
-    total_subplots_settings[key]["sum_time"] = []
-    total_subplots_settings[key]["sum_power"] = []
+    return (
+        per_coil_keys_to_plot,
+        pulse_per_coil,
+        coil_subplots_settings,
+        pulse_totals,
+        total_subplots_settings,
+        pulse_wallplug,
+    )
 
 
-def plot_pulse_verification(pulse_wallplug):
+def plot_pulse_verification(pulse_data, t_range_breakdown):
     """Plot Coil Supply System verification for pulse data."""
+    (
+        per_coil_keys_to_plot,
+        pulse_per_coil,
+        coil_subplots_settings,
+        pulse_totals,
+        total_subplots_settings,
+        pulse_wallplug,
+    ) = prepare_pulse_verification(pulse_data, t_range_breakdown)
+    coil_times = pulse_per_coil["coil_times"]
+    snu_switches = pulse_per_coil["SNU_switches"]
+
     n_coils = len(pulse_wallplug)
     coil_colors = options._make_colormap(n_coils)
     n_plots = n_coils + 1  # last subplot for total powers
@@ -467,7 +515,7 @@ def plot_pulse_verification(pulse_wallplug):
 
     all_figs = {}
     all_axes = {}
-    for key in pulse_per_coil:
+    for key in per_coil_keys_to_plot:
         fig_ind = coil_subplots_settings[key]["fig_ind"]
         side = coil_subplots_settings[key]["side"]
         y_title = coil_subplots_settings[key]["y_title"]
@@ -595,11 +643,8 @@ def plot_pulse_verification(pulse_wallplug):
             )
             ax.grid(True, axis="y", linestyle=":", color=ax_color)
 
-    for fig_ind, fig in all_figs.items():
+    for fig in all_figs.values():
         fig.suptitle("MATLAB Original (continuous) X BLUEMIRA Model (dashed)")
-        data = "VI" if fig_ind == 1 else "PQ"
-        options._save_fig(fig, f"pulse_BLUEMIRA_{data}", "png")
-    plt.show()
     return all_figs, all_axes
 
 
@@ -650,15 +695,66 @@ def plot_standalone_fig(all_axes, fig_index, subplot_index):
         standalone_ax.set_ylabel(ax_ylabel)
     standalone_ax.title.set_text(ax_title)
     standalone_ax.set_xlabel(options.title_time)
-    plt.show()
 
+    standalone_fig.suptitle("MATLAB Original (continuous) X BLUEMIRA Model (dashed)")
     return standalone_fig
+
+
+def save_pulse_verification(
+    pulse_wallplug,
+    t_range_breakdown,
+    fig_index=None,
+    subplot_index=None,
+    zoom_time_range=None,
+):
+    """Save Coil Supply System verification plots for pulse data."""
+
+    def fig_name(fig_index):
+        fig_type = "VI" if fig_index == 1 else "PQ"
+        return f"pulse_BLUEMIRA_{fig_type}"
+
+    figs_normal, axes_normal = plot_pulse_verification(
+        pulse_wallplug,
+        t_range_breakdown,
+    )
+    for fig_ind, fig in figs_normal.items():
+        options._save_fig(fig, fig_name(fig_ind), "png")
+    plt.show(block=options.show_block)
+
+    if fig_index and subplot_index:
+        standalone_fig = plot_standalone_fig(axes_normal, fig_index, subplot_index)
+        data = f"fig{fig_index}_sub{subplot_index}"
+        options._save_fig(standalone_fig, f"{fig_name(fig_ind)}_STANDALONE", "png")
+        plt.show(block=options.show_block)
+
+    if not zoom_time_range:
+        zoom_time_range = t_range_breakdown
+    figs_zoom, axes_zoom = plot_pulse_verification(
+        pulse_wallplug.copy(),
+        t_range_breakdown,
+    )
+    for fig_ind, fig in figs_zoom.items():
+        last_ax = axes_zoom[fig_ind]["left"][-1]
+        dx = 0.05 * np.diff(zoom_time_range)
+        zoom_limits = [zoom_time_range[0] - dx, zoom_time_range[1] + dx]
+        last_ax.set_xlim(zoom_limits)
+        options._save_fig(fig, f"{fig_name(fig_ind)}_ZOOM", "png")
+    plt.show(block=options.show_block)
 
 
 # %%
 if __name__ == "__main__":
     display_inputs(coilsupply, summary=False)
     display_subsystems(coilsupply, summary=True)
-    fig_breakdown = plot_breakdown_verification(breakdown_wallplug)
-    figs_pulse, axes_pulse = plot_pulse_verification(pulse_wallplug)
-    # standalone_pulse = plot_standalone_fig(axes_pulse, fig_index=1, subplot_index=1)
+    t_range_breakdown = save_breakdown_verification(
+        breakdown_data,
+        t_start_breakdown,
+    )
+    save_pulse_verification(
+        pulse_data,
+        t_range_breakdown,
+        fig_index=1,
+        subplot_index=11,
+        zoom_time_range=None,
+    )
+    plt.show()
