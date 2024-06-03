@@ -6,13 +6,17 @@
 
 """
 Verification of Coil Supply System classes with downsampled data associated
-with the results for EU-DEMO presented in the following IDM report and
-thesis:
-- A. Ferro, Update of the ITER-like design of CS-PF power supplies and
-  FDU, EUROfusion, 2022. https://idm.euro-fusion.org/?uid=2Q6988.
-- F. Lunardon, Studies on the reactive power demand in DEMO and
-  mitigation strategies, Università degli Studi di Padova, 2018.
-  http://hdl.handle.net/20.500.12608/27012.
+with the results for EU-DEMO that is found in the following IDM link:
+    - T. Pomella Lobo, Original and processed power profiles in JSON format
+      for baseline DEMO1 2017 (for use in Bluemira & PowerFactory), EUROfusion,
+      2024. https://idm.euro-fusion.org/?uid=2RRCMT.
+
+and discussed in more details in the following IDM report and thesis:
+    - A. Ferro, Update of the ITER-like design of CS-PF power supplies
+      and FDU, EUROfusion, 2022. https://idm.euro-fusion.org/?uid=2Q6988.
+    - F. Lunardon, Studies on the reactive power demand in DEMO and
+      mitigation strategies, Università degli Studi di Padova, 2018.
+      http://hdl.handle.net/20.500.12608/27012.
 """
 
 # %%
