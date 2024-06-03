@@ -8,8 +8,6 @@
 Tools for simple solenoid calculations.
 """
 
-from typing import Tuple
-
 import numpy as np
 
 from bluemira.magnetostatics.semianalytic_2d import semianalytic_Bx, semianalytic_Bz
@@ -60,7 +58,7 @@ def calculate_hoop_radial_stress(
     r_outer: float,
     r: float,
     poisson_ratio: float = 0.3,
-) -> Tuple[float]:
+) -> tuple[float]:
     """
     Calculate the hoop and radial stress at a radial location in a solenoid
 
