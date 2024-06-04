@@ -398,6 +398,7 @@ def save_breakdown_verification(breakdown_data, t_start_breakdown):
 # pulse_path = data_dir / "coilsupply_data_pulse_partial.json"
 pulse_path = data_dir / "coilsupply_data_pulse_full.json"
 pulse_data = read_json(pulse_path)
+t_end_rampdown = 7890
 
 
 def prepare_pulse_verification(pulse_data, t_range_breakdown):
@@ -497,7 +498,7 @@ def prepare_pulse_verification(pulse_data, t_range_breakdown):
     )
 
 
-def plot_pulse_verification(pulse_data, t_range_breakdown):
+def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
     """Plot Coil Supply System verification for pulse data."""
     (
         per_coil_keys_to_plot,
@@ -507,6 +508,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
         total_subplots_settings,
         pulse_wallplug,
     ) = prepare_pulse_verification(pulse_data, t_range_breakdown)
+    rms_range = (t_range_breakdown[0], t_end_rampdown)
 
     n_coils = len(pulse_wallplug)
     coil_colors = options._make_colormap(n_coils)
@@ -565,6 +567,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
             rms, _ = rms_deviation(
                 [pulse_per_coil["coil_times"][coil], pulse_per_coil[key][coil]],
                 [pulse_per_coil["coil_times"][coil], wallplug_info[variable]],
+                x_range=rms_range,
             )
             ax.plot(
                 pulse_per_coil["coil_times"][coil],
@@ -636,6 +639,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
             rms, _ = rms_deviation(
                 [pulse_totals[key]["time"], pulse_totals[key]["power"]],
                 [sum_time, sum_power],
+                x_range=rms_range,
             )
             ax.plot(
                 pulse_totals[key]["time"],
@@ -716,6 +720,7 @@ def plot_standalone_fig(all_axes, fig_index, subplot_index):
 def save_pulse_verification(
     pulse_wallplug,
     t_range_breakdown,
+    t_end_rampdown,
     fig_index=None,
     subplot_index=None,
     zoom_time_range=None,
@@ -729,6 +734,7 @@ def save_pulse_verification(
     figs_normal, axes_normal = plot_pulse_verification(
         pulse_wallplug,
         t_range_breakdown,
+        t_end_rampdown,
     )
     for fig_ind, fig in figs_normal.items():
         options._save_fig(fig, fig_name(fig_ind), "png")
@@ -745,6 +751,7 @@ def save_pulse_verification(
     figs_zoom, axes_zoom = plot_pulse_verification(
         pulse_wallplug.copy(),
         t_range_breakdown,
+        t_end_rampdown,
     )
     for fig_ind, fig in figs_zoom.items():
         last_ax = axes_zoom[fig_ind]["left"][-1]
@@ -766,6 +773,7 @@ if __name__ == "__main__":
     save_pulse_verification(
         pulse_data,
         t_range_breakdown,
+        t_end_rampdown,
         fig_index=1,
         subplot_index=11,
         zoom_time_range=None,
