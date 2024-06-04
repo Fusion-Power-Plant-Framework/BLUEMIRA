@@ -57,7 +57,10 @@ class _PlotOptions:
     ax_left_color = (0.0, 0.0, 1.0)
     ax_right_color = (1.0, 0.0, 0.0)
     default_subplot_size = 4.5
-    color_shade_factor = 0.5
+    shade_color_factor = 0.5
+    shade_alpha = 0.2
+    shade_zorder = -100
+    shade_hatch = "/" * 3
     fancy_legend: ClassVar = {
         "loc": "upper center",
         "bbox_to_anchor": (0.5, 1.2),
@@ -92,6 +95,13 @@ class _PlotOptions:
         ax.spines[side].set_color(color)
         ax.tick_params(axis="y", labelcolor=color)
 
+    def _prepare_sub_ax(self, ax, title, side):
+        ax.grid(True, axis="x")
+        ax.set_xlabel(options.title_time)
+        ax.title.set_text(title)
+        options._color_yaxis(ax, side)
+        return ax
+
     def _constrained_fig_size(
         self,
         n_rows,
@@ -104,8 +114,26 @@ class _PlotOptions:
         return (col_size * n_cols, row_size * n_rows)
 
     def _darken_color(self, color, shade=None):
-        shade = self.color_shade_factor if shade is None else shade
+        shade = self.shade_color_factor if shade is None else shade
         return tuple(c * shade for c in color)
+
+    def _shade_background(self, ax, x_vector, x_range, hatch=False, label=None):
+        ind_in_range = [
+            i for i, x in enumerate(x_vector) if x_range[0] <= x <= x_range[1]
+        ]
+        ind_first = ind_in_range[0]
+        ind_last = ind_in_range[-1]
+        ax.axvspan(
+            x_vector[ind_first],
+            x_vector[ind_last],
+            facecolor=str(self.shade_color_factor),
+            edgecolor="k",
+            alpha=self.shade_alpha,
+            zorder=self.shade_zorder,
+            hatch=self.shade_hatch if hatch else None,
+            label=label,
+        )
+        return ax
 
     def _save_fig(self, fig, fname, fig_format=None):
         fig_name = f"{self.title_figure}_{fname}"
@@ -552,11 +580,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
         plot_index = 0
         for coil in coil_names:
             ax = axs[plot_index]
-            ax.grid(True, axis="x")
-            ax.set_xlabel(options.title_time)
-            ax.title.set_text(coil)
-            options._color_yaxis(ax, side)
-
+            ax = options._prepare_sub_ax(ax, title=coil, side=side)
             ax_color = options._side_color(side)
             color_verification = (
                 ax_color if plot_color == "side" else coil_colors(plot_index)
@@ -587,20 +611,21 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
             )
 
             if side == "right":
-                # correct background color only for SNU switching on/off once
-                switch = np.array(pulse_per_coil["SNU_switches"][coil])
-                first_true = np.argmax(switch)
-                last_true = switch.size - np.argmax(switch[::-1]) - 1
-                ax.axvspan(
-                    pulse_per_coil["coil_times"][coil][first_true],
-                    pulse_per_coil["coil_times"][coil][last_true],
-                    facecolor=str(options.color_shade_factor),
-                    alpha=0.2,
-                    zorder=-100,
+                ax = options._shade_background(
+                    ax,
+                    x_vector=pulse_per_coil["coil_times"][coil],
+                    x_range=rms_range,
+                    label="Counts towards RMS deviation",
                 )
-
+                ax = options._shade_background(
+                    ax,
+                    x_vector=pulse_per_coil["coil_times"][coil],
+                    x_range=t_range_breakdown,
+                    hatch=True,
+                    label="Breakdown",
+                )
             if y_title is not None:
-                ax.set_ylabel(f"{y_title} (RMS deviation: {rms:.0%})")
+                ax.set_ylabel(f"{y_title} (RMS dev.: {rms:.0%})")
             ax.grid(True, axis="y", linestyle=":", color=ax_color)
 
             plot_index += 1
@@ -629,19 +654,15 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
         color_computation = options._darken_color(color_verification)
 
         for fig_ind in all_figs:
-            axs = all_axes[fig_ind][side]
-            ax = axs[-1]
-            ax.grid(True, axis="x")
-            ax.set_xlabel(options.title_time)
-            ax.title.set_text("Totals")
-            options._color_yaxis(ax, side)
+            last_ax = all_axes[fig_ind][side][-1]
+            last_ax = options._prepare_sub_ax(last_ax, title="Totals", side=side)
 
             rms, _ = rms_deviation(
                 [pulse_totals[key]["time"], pulse_totals[key]["power"]],
                 [sum_time, sum_power],
                 x_range=rms_range,
             )
-            ax.plot(
+            last_ax.plot(
                 pulse_totals[key]["time"],
                 pulse_totals[key]["power"],
                 "-",
@@ -649,7 +670,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
                 color=color_verification,
                 label=f"_{key}_verification",
             )
-            ax.plot(
+            last_ax.plot(
                 sum_time,
                 sum_power,
                 "--",
@@ -657,11 +678,29 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
                 color=color_computation,
                 label=f"_{key}_computation",
             )
-            ax.set_ylabel(f"{y_title} (RMS deviation: {rms:.0%})")
-            ax.grid(True, axis="y", linestyle=":", color=ax_color)
+            if side == "right":
+                last_ax = options._shade_background(
+                    last_ax,
+                    x_vector=sum_time,
+                    x_range=rms_range,
+                    label="Counts towards RMS deviation",
+                )
+                last_ax = options._shade_background(
+                    last_ax,
+                    x_vector=sum_time,
+                    x_range=t_range_breakdown,
+                    hatch=True,
+                    label="Breakdown",
+                )
+            last_ax.set_ylabel(f"{y_title} (RMS dev.: {rms:.0%})")
+            last_ax.grid(True, axis="y", linestyle=":", color=ax_color)
 
     for fig in all_figs.values():
-        fig.suptitle("MATLAB Original (continuous) X BLUEMIRA Model (dashed)")
+        fig.suptitle(
+            "Coil Supply System Model, Pulse Verification:\n"
+            "original (continuous) X model (dashed)\n"
+            "breakdown (hatched region), normalized RMS deviation (shaded region)",
+        )
     return all_figs, all_axes
 
 
@@ -713,7 +752,10 @@ def plot_standalone_fig(all_axes, fig_index, subplot_index):
     standalone_ax.title.set_text(ax_title)
     standalone_ax.set_xlabel(options.title_time)
 
-    standalone_fig.suptitle("MATLAB Original (continuous) X BLUEMIRA Model (dashed)")
+    standalone_fig.suptitle(
+        "Coil Supply System Model, Pulse Verification:\n"
+        "original (continuous) X model (dashed)",
+    )
     return standalone_fig
 
 

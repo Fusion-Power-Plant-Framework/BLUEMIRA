@@ -150,11 +150,8 @@ def rms_deviation(
     The range of evaluation 'x_range' can be provided as a pair of x values.
     If so, deviation is calculated only between those values.
 
-    Flag 'normalize' indicates whether deviation at each point is normalized:
-        - by the range (max-min) of all reference values, if the reference
-          value for that point is zero;
-        - by the reference value itself, if the reference value for that point
-          is different than zero.
+    Flag 'normalize' indicates whether deviation at each point is normalized
+    by the range (max-min) of all reference values.
     """
     x_ref = np.array(fun_ref[0])
     y_ref = np.array(fun_ref[1])
@@ -184,9 +181,7 @@ def rms_deviation(
     dev = np.subtract(ty_ref, ty_est)
     if normalize:
         s = np.max(y_ref) - np.min(y_ref)
-        dev = [d / s if r == 0 else d / r for d, r in zip(dev, ty_ref)]
-        dev = np.array(dev)
-
+        dev = np.array([d / s for d in dev])
     mean_squared_dev = np.square(dev).mean()
     rms_dev = np.sqrt(mean_squared_dev)
     return rms_dev, (tx, ty_ref, ty_est)
