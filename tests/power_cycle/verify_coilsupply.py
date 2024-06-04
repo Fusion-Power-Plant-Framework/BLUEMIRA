@@ -43,6 +43,16 @@ script_dir = Path(__file__).resolve().parent
 data_dir = script_dir / "test_data"
 
 
+def rms_deviation(vec_actual, vec_predicted):
+    arr_actual = np.array(vec_actual)
+    arr_predicted = np.array(vec_predicted)
+    error = np.subtract(arr_actual, arr_predicted)
+    sa = max(arr_actual) - min(arr_actual)
+    deviation = [e / sa if a == 0 else e / a for e, a in zip(error, arr_actual)]
+    mean_squared_deviation = np.square(deviation).mean()
+    return np.sqrt(mean_squared_deviation)
+
+
 class _PlotOptions:
     title_figure = "coilsupply_verification"
     title_time = "Time [s]"
@@ -553,8 +563,6 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
             ax = axs[plot_index]
             ax.grid(True, axis="x")
             ax.set_xlabel(options.title_time)
-            if y_title is not None:
-                ax.set_ylabel(y_title)
             ax.title.set_text(coil)
             options._color_yaxis(ax, side)
 
@@ -564,6 +572,8 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
             )
             color_computation = options._darken_color(color_verification)
 
+            wallplug_info = getattr(pulse_wallplug, coil)
+            rms = rms_deviation(pulse_per_coil[key][coil], wallplug_info[variable])
             ax.plot(
                 coil_times[coil],
                 pulse_per_coil[key][coil],
@@ -572,7 +582,6 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
                 color=color_verification,
                 label=f"_{key}_verification",
             )
-            wallplug_info = getattr(pulse_wallplug, coil)
             ax.plot(
                 coil_times[coil],
                 wallplug_info[variable],
@@ -581,6 +590,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
                 color=color_computation,
                 label=f"_{key}_computation",
             )
+
             if side == "right":
                 # correct background color only for SNU switching on/off once
                 switch = np.array(snu_switches[coil])
@@ -593,6 +603,9 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
                     alpha=0.2,
                     zorder=-100,
                 )
+
+            if y_title is not None:
+                ax.set_ylabel(f"{y_title} (RMS deviation: {rms:.0%})")
             ax.grid(True, axis="y", linestyle=":", color=ax_color)
 
             plot_index += 1
@@ -625,7 +638,6 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
             ax = axs[-1]
             ax.grid(True, axis="x")
             ax.set_xlabel(options.title_time)
-            ax.set_ylabel(y_title)
             ax.title.set_text("Totals")
             options._color_yaxis(ax, side)
 
@@ -645,6 +657,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
                 color=color_computation,
                 label=f"_{key}_computation",
             )
+            ax.set_ylabel(f"{y_title} (RMS deviation: 'not-computed') %)")
             ax.grid(True, axis="y", linestyle=":", color=ax_color)
 
     for fig in all_figs.values():
