@@ -36,21 +36,12 @@ from bluemira.power_cycle.tools import (
     match_domains,
     pp,
     read_json,
+    rms_deviation,
     symmetrical_subplot_distribution,
 )
 
 script_dir = Path(__file__).resolve().parent
 data_dir = script_dir / "test_data"
-
-
-def rms_deviation(vec_actual, vec_predicted):
-    arr_actual = np.array(vec_actual)
-    arr_predicted = np.array(vec_predicted)
-    error = np.subtract(arr_actual, arr_predicted)
-    sa = max(arr_actual) - min(arr_actual)
-    deviation = [e / sa if a == 0 else e / a for e, a in zip(error, arr_actual)]
-    mean_squared_deviation = np.square(deviation).mean()
-    return np.sqrt(mean_squared_deviation)
 
 
 class _PlotOptions:
@@ -516,8 +507,6 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
         total_subplots_settings,
         pulse_wallplug,
     ) = prepare_pulse_verification(pulse_data, t_range_breakdown)
-    coil_times = pulse_per_coil["coil_times"]
-    snu_switches = pulse_per_coil["SNU_switches"]
 
     n_coils = len(pulse_wallplug)
     coil_colors = options._make_colormap(n_coils)
@@ -573,9 +562,12 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
             color_computation = options._darken_color(color_verification)
 
             wallplug_info = getattr(pulse_wallplug, coil)
-            rms = rms_deviation(pulse_per_coil[key][coil], wallplug_info[variable])
+            rms, _ = rms_deviation(
+                [pulse_per_coil["coil_times"][coil], pulse_per_coil[key][coil]],
+                [pulse_per_coil["coil_times"][coil], wallplug_info[variable]],
+            )
             ax.plot(
-                coil_times[coil],
+                pulse_per_coil["coil_times"][coil],
                 pulse_per_coil[key][coil],
                 "-",
                 linewidth=options._line_thick,
@@ -583,7 +575,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
                 label=f"_{key}_verification",
             )
             ax.plot(
-                coil_times[coil],
+                pulse_per_coil["coil_times"][coil],
                 wallplug_info[variable],
                 "--",
                 linewidth=options._line_thin,
@@ -593,12 +585,12 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
 
             if side == "right":
                 # correct background color only for SNU switching on/off once
-                switch = np.array(snu_switches[coil])
+                switch = np.array(pulse_per_coil["SNU_switches"][coil])
                 first_true = np.argmax(switch)
                 last_true = switch.size - np.argmax(switch[::-1]) - 1
                 ax.axvspan(
-                    coil_times[coil][first_true],
-                    coil_times[coil][last_true],
+                    pulse_per_coil["coil_times"][coil][first_true],
+                    pulse_per_coil["coil_times"][coil][last_true],
                     facecolor=str(options.color_shade_factor),
                     alpha=0.2,
                     zorder=-100,
@@ -620,7 +612,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
 
         for coil in coil_names:
             wallplug_info = getattr(pulse_wallplug, coil)
-            sum_time.append(coil_times[coil])
+            sum_time.append(pulse_per_coil["coil_times"][coil])
             sum_power.append(wallplug_info[variable])
         sum_time, sum_power = match_domains(sum_time, sum_power)
         sum_power = np.add.reduce(sum_power)
@@ -641,6 +633,10 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
             ax.title.set_text("Totals")
             options._color_yaxis(ax, side)
 
+            rms, _ = rms_deviation(
+                [pulse_totals[key]["time"], pulse_totals[key]["power"]],
+                [sum_time, sum_power],
+            )
             ax.plot(
                 pulse_totals[key]["time"],
                 pulse_totals[key]["power"],
@@ -657,7 +653,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown):
                 color=color_computation,
                 label=f"_{key}_computation",
             )
-            ax.set_ylabel(f"{y_title} (RMS deviation: 'not-computed') %)")
+            ax.set_ylabel(f"{y_title} (RMS deviation: {rms:.0%})")
             ax.grid(True, axis="y", linestyle=":", color=ax_color)
 
     for fig in all_figs.values():
