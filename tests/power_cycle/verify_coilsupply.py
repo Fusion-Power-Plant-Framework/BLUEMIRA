@@ -95,11 +95,42 @@ class _PlotOptions:
         ax.spines[side].set_color(color)
         ax.tick_params(axis="y", labelcolor=color)
 
-    def _prepare_sub_ax(self, ax, title, side):
-        ax.grid(True, axis="x")
-        ax.set_xlabel(options.title_time)
-        ax.title.set_text(title)
-        options._color_yaxis(ax, side)
+    def _create_twin_ax(self, axs):
+        both_axs = {}
+        both_axs["left"] = axs.flatten()
+        both_axs["right"] = []
+        for ax in both_axs["left"]:
+            both_axs["right"].append(ax.twinx())
+        return both_axs
+
+    def _prepare_ax(
+        self,
+        ax=None,
+        *,
+        title=None,
+        x_title=None,
+        y_title=None,
+        side=None,
+    ):
+        if ax is None:
+            ax = plt.axes()
+
+        if side:
+            ax.grid(True, axis="x")
+            self._color_yaxis(ax, side)
+        else:
+            ax.grid(True)
+
+        if y_title:
+            ax.set_ylabel(y_title)
+
+        if x_title:
+            ax.set_xlabel(x_title)
+        else:
+            ax.set_xlabel(self.title_time)
+
+        if title:
+            ax.title.set_text(title)
         return ax
 
     def _constrained_fig_size(
@@ -526,7 +557,12 @@ def prepare_pulse_verification(pulse_data, t_range_breakdown):
     )
 
 
-def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
+def plot_pulse_verification(
+    pulse_data,
+    t_range_breakdown,
+    t_end_rampdown,
+    phase_plot=False,
+):
     """Plot Coil Supply System verification for pulse data."""
     (
         per_coil_keys_to_plot,
@@ -545,9 +581,9 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
         n_plots,
         direction="col",
     )
-
     all_figs = {}
     all_axes = {}
+
     for key in per_coil_keys_to_plot:
         fig_ind = coil_subplots_settings[key]["fig_ind"]
         side = coil_subplots_settings[key]["side"]
@@ -569,18 +605,13 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
                 ),
             )
             all_figs[fig_ind] = fig
-            all_axes[fig_ind] = {}
-            all_axes[fig_ind]["left"] = axs.flatten()
-            all_axes[fig_ind]["right"] = []
-            for ax in all_axes[fig_ind]["left"]:
-                all_axes[fig_ind]["right"].append(ax.twinx())
+            all_axes[fig_ind] = options._create_twin_ax(axs)
         fig = all_figs[fig_ind]
         axs = all_axes[fig_ind][side]
 
         plot_index = 0
         for coil in coil_names:
-            ax = axs[plot_index]
-            ax = options._prepare_sub_ax(ax, title=coil, side=side)
+            ax = options._prepare_ax(axs[plot_index], title=coil, side=side)
             ax_color = options._side_color(side)
             color_verification = (
                 ax_color if plot_color == "side" else coil_colors(plot_index)
@@ -655,7 +686,7 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
 
         for fig_ind in all_figs:
             last_ax = all_axes[fig_ind][side][-1]
-            last_ax = options._prepare_sub_ax(last_ax, title="Totals", side=side)
+            last_ax = options._prepare_ax(last_ax, title="Totals", side=side)
 
             rms, _ = rms_deviation(
                 [pulse_totals[key]["time"], pulse_totals[key]["power"]],
@@ -701,6 +732,27 @@ def plot_pulse_verification(pulse_data, t_range_breakdown, t_end_rampdown):
             "original (continuous) X model (dashed)\n"
             "breakdown (hatched region), normalized RMS deviation (shaded region)",
         )
+
+    if phase_plot:
+        fig = plt.figure()
+        ax = options._prepare_ax(
+            ax=None,
+            title=None,
+            x_title="Vector index [-]",
+            y_title="Phase (phi) [°]",
+            side=None,
+        )
+        for coil in coil_names:
+            wallplug_info = getattr(pulse_wallplug, coil)
+            n_units = wallplug_info["number_of_bridge_units"]
+            ax.plot(
+                wallplug_info["phase_degrees"],
+                label=f"{coil} ({n_units} bridge units)",
+            )
+        plt.legend()
+        all_figs["phase"] = fig
+        all_axes["phase"] = ax
+
     return all_figs, all_axes
 
 
@@ -770,13 +822,21 @@ def save_pulse_verification(
     """Save Coil Supply System verification plots for pulse data."""
 
     def fig_name(fig_index):
-        fig_type = "VI" if fig_index == 1 else "PQ"
+        if fig_index == 1:
+            fig_type = "VI"
+        elif fig_index == 2:
+            fig_type = "PQ"
+        elif fig_index == "phase":
+            fig_type = "phase"
+        else:
+            raise ValueError(f"Unknown figure index: {fig_index}")
         return f"pulse_BLUEMIRA_{fig_type}"
 
     figs_normal, axes_normal = plot_pulse_verification(
         pulse_wallplug,
         t_range_breakdown,
         t_end_rampdown,
+        phase_plot=True,
     )
     for fig_ind, fig in figs_normal.items():
         options._save_fig(fig, fig_name(fig_ind), "png")
@@ -794,13 +854,16 @@ def save_pulse_verification(
         pulse_wallplug.copy(),
         t_range_breakdown,
         t_end_rampdown,
+        phase_plot=False,
     )
     for fig_ind, fig in figs_zoom.items():
-        last_ax = axes_zoom[fig_ind]["left"][-1]
-        dx = 0.05 * np.diff(zoom_time_range)
-        zoom_limits = [zoom_time_range[0] - dx, zoom_time_range[1] + dx]
-        last_ax.set_xlim(zoom_limits)
-        options._save_fig(fig, f"{fig_name(fig_ind)}_ZOOM", "png")
+        not_phase_fig = isinstance(fig_ind, int)
+        if not_phase_fig:
+            last_ax = axes_zoom[fig_ind]["left"][-1]
+            dx = 0.05 * np.diff(zoom_time_range)
+            zoom_limits = [zoom_time_range[0] - dx, zoom_time_range[1] + dx]
+            last_ax.set_xlim(zoom_limits)
+            options._save_fig(fig, f"{fig_name(fig_ind)}_ZOOM", "png")
     plt.show(block=options.show_block)
 
 

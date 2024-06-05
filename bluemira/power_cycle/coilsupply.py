@@ -33,9 +33,6 @@ from dataclasses import (
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
-from matplotlib import (
-    pyplot as plt,
-)
 
 from bluemira.base.look_and_feel import bluemira_print
 from bluemira.power_cycle.errors import CoilSupplySystemError
@@ -409,41 +406,6 @@ class CoilSupplyCorrector(CoilSupplySubSystem):
             setattr(voltages_following, name, following_v)
             setattr(currents_following, name, following_i)
 
-        '''
-        plt.figure()
-        ax = plt.axes()
-        prop_cycle = plt.rcParams["axes.prop_cycle"]
-        colors = prop_cycle.by_key()["color"]
-        colors.append("k")
-        colors = iter(colors)
-        for name in coil_names:
-            pp(name)
-            color = next(colors)
-            corrector_resistance = getattr(self.resistance_set, name)
-            requested_i = getattr(currents_parameter, name)
-            corrector_i = requested_i
-            resistance_v = -corrector_resistance * corrector_i
-            # requested_v = getattr(voltages_parameter, name)
-            corrector_v = getattr(voltages_corrector, name)
-            # following_v = getattr(voltages_following, name)
-            """
-            corrector_s = getattr(switches_parameter, name)
-            if corrector_s is None:
-                corrector_s = [0 for v in corrector_v]
-            """
-            # ax.plot(requested_v, "-", color=color, label=f"{name} (V requested)")
-            ax.plot(resistance_v, "-", color=color, label=f"{name} (V resistance)")
-            ax.plot(corrector_v, "--", color=color, label=f"{name} (V corrector)")
-            # ax.plot(following_v, ":", color=color, label=f"{name} (V following)")
-            # ax.plot(corrector_s, "-", color=color, label=f"{name} (corrector switch)")
-        plt.legend()
-        ax.grid(True)
-        ax.title.set_text(f"Corrector: {self.name}")
-        # ax.set_ylabel("Switch [-]")
-        ax.set_ylabel("Voltage [V]")
-        ax.set_xlabel("Vector index [-]")
-        '''
-
         return (
             voltages_following,
             currents_following,
@@ -515,7 +477,7 @@ class ThyristorBridges(CoilSupplyConverter):
     def _convert(self):
         pass
 
-    def compute_conversion(self, voltages_array, currents_array):
+    def compute_conversion(self, voltages_array, currents_array, debug=False):
         """
         Compute power loads required by converter to feed coils.
 
@@ -544,25 +506,20 @@ class ThyristorBridges(CoilSupplyConverter):
         phase_rad = np.arccos(power_factor)
         phase_deg = phase_rad * 180 / np.pi
 
-        """
-        from bluemira.power_cycle.tools import pp
-        pp(v_max_coil)
-        pp(number_of_bridge_units)
-        pp(v_rated)
-        pp(i_rated)
-        pp(p_rated)
-        # pp(power_factor)
-        # pp(phase_rad)
-        raise False
-        """
+        if debug:
+            pp(v_max_coil)
+            pp(number_of_bridge_units)
+            pp(v_rated)
+            pp(i_rated)
+            pp(p_rated)
+            pp(power_factor)
+            pp(phase_rad)
+
         p_active = voltages_array * currents_array
-        # p_reactive = np.sqrt(np.square(p_apparent) - np.square(p_active))
+        # p_active = p_apparent * np.cos(phase_rad)
 
-        # p_reactive = np.absolute(p_apparent * np.sin(phase_rad))  # why?
         p_reactive = np.absolute(p_apparent) * np.sin(phase_rad)
-
-        # p_active = p_apparent * np.cos(phase_rad)  # why not absolute?
-        # pp(np.cos(phase_rad))
+        # p_reactive = np.sqrt(np.square(p_apparent) - np.square(p_active))
 
         p_loss_multiplier = 1
         for percentage in loss_percentages:
@@ -707,7 +664,7 @@ class CoilSupplySystem(CoilSupplyABC):
         dict_of_switches_argument: Dict[str,Any]
             Arrays of...
         verbose: bool
-            Print extra information and converter power factor angles.
+            Build a complete output parameter (with redundant information).
         """
         outputs_parameter = self.create_parameter()
 
@@ -769,62 +726,5 @@ class CoilSupplySystem(CoilSupplyABC):
             wallplug_info["reactive_load"] = reactive_load
             setattr(wallplug_parameter, name, wallplug_info)
         outputs_parameter.absorb_parameter(wallplug_parameter)
-
-        if verbose:
-            plt.figure()
-            ax = plt.axes()
-            for name in self.inputs.config.coil_names:
-                pp(name)
-                wallplug_info = getattr(wallplug_parameter, name)
-                n_units = wallplug_info["number_of_bridge_units"]
-                phase_deg = wallplug_info["phase_degrees"]
-                ax.plot(phase_deg, label=f"{name} ({n_units} bridge units)")
-                pp(name + " number of bridge units: " + str(n_units))
-                pp(" ")
-            plt.legend()
-            ax.grid(True)
-            ax.set_ylabel("Phase (phi) [°]")
-            ax.set_xlabel("Vector index [-]")
-
-        if verbose:
-            prop_cycle = plt.rcParams["axes.prop_cycle"]
-            colors_cycle = prop_cycle.by_key()["color"]
-            for name in self.inputs.config.coil_names:
-                plt.figure()
-                ax = plt.axes()
-                ax.title.set_text(name)
-                colors = iter(colors_cycle)
-                coil_parameter = getattr(outputs_parameter, name)
-                coil_t = coil_parameter["coil_times"] if times_argument else None
-                coil_v = coil_parameter["coil_voltages"]
-                converter_v = coil_parameter["THY_voltages"]
-                ax.plot(
-                    coil_t,
-                    coil_v,
-                    color=next(colors),
-                    label=f"coil: {name}",
-                )
-                for corrector in self.correctors:
-                    color = next(colors)
-                    pp(f"{name}: {corrector.name}")
-                    corrector_v = coil_parameter[f"{corrector.name}_voltages"]
-                    # corrector_i = coil_parameter[f"{corrector.name}_currents"]
-                    ax.plot(
-                        coil_t,
-                        corrector_v,
-                        color=color,
-                        label=f"corrector: {corrector.name}",
-                    )
-                ax.plot(
-                    coil_t,
-                    converter_v,
-                    color=next(colors),
-                    label=f"converter: {self.converter.name}",
-                )
-                plt.legend()
-                ax.grid(True)
-                x_label = "Time [s]" if times_argument else "Vector index [-]"
-                ax.set_xlabel(x_label)
-                ax.set_ylabel("Voltage [V]")
 
         return outputs_parameter
