@@ -166,16 +166,18 @@ class _PlotOptions:
         )
         return ax
 
-    def _save_fig(self, fig, fname, fig_format=None):
+    def _save_fig(self, fig, fname, fpath=None, extra_format=None):
         fig_name = f"{self.title_figure}_{fname}"
-        if fig_format is not None:
+        save_path = script_dir / "test_figures" if fpath is None else fpath
+        save_path.mkdir(exist_ok=True)
+        if extra_format is not None:
             fig.savefig(
-                fname=script_dir / f"{fig_name}.{fig_format}",
-                format=fig_format,
+                fname=save_path / f"{fig_name}.{extra_format}",
+                format=extra_format,
                 transparent=True,
             )
         fig.savefig(
-            fname=script_dir / f"{fig_name}.{self.default_format}",
+            fname=save_path / f"{fig_name}.{self.default_format}",
             format=self.default_format,
             transparent=True,
         )
@@ -426,13 +428,18 @@ def plot_breakdown_verification(breakdown_data, t_start_breakdown):
     return fig, t_range_breakdown
 
 
-def save_breakdown_verification(breakdown_data, t_start_breakdown):
+def save_breakdown_verification(breakdown_data, t_start_breakdown, fpath=None):
     """Save Coil Supply System verification plots for breakdown data."""
     fig, t_range_breakdown = plot_breakdown_verification(
         breakdown_data,
         t_start_breakdown,
     )
-    options._save_fig(fig, "breakdown_BLUEMIRA", "png")
+    options._save_fig(
+        fig=fig,
+        fname="breakdown_BLUEMIRA",
+        fpath=fpath,
+        extra_format="png",
+    )
     plt.show(block=options.show_block)
     return t_range_breakdown
 
@@ -814,11 +821,12 @@ def plot_standalone_fig(all_axes, fig_index, subplot_index):
 
 
 def save_pulse_verification(
-    pulse_wallplug,
+    pulse_data,
     t_range_breakdown,
     t_end_rampdown,
     standalone_indexes=None,
     zoom_time_range=None,
+    fpath=None,
 ):
     """Save Coil Supply System verification plots for pulse data."""
 
@@ -833,27 +841,39 @@ def save_pulse_verification(
             raise ValueError(f"Unknown figure index: {fig_index}")
         return f"pulse_BLUEMIRA_{fig_type}"
 
+    extra_format = "png"
+
     figs_normal, axes_normal, totals_rms = plot_pulse_verification(
-        pulse_wallplug,
+        pulse_data,
         t_range_breakdown,
         t_end_rampdown,
         phase_plot=True,
     )
     for fig_ind, fig in figs_normal.items():
-        options._save_fig(fig, fig_name(fig_ind), "png")
+        options._save_fig(
+            fig=fig,
+            fname=fig_name(fig_ind),
+            fpath=fpath,
+            extra_format=extra_format,
+        )
     plt.show(block=options.show_block)
 
     fig_index, subplot_index = standalone_indexes
     if fig_index and subplot_index:
         standalone_fig = plot_standalone_fig(axes_normal, fig_index, subplot_index)
         data = f"fig{fig_index}_sub{subplot_index}"
-        options._save_fig(standalone_fig, f"{fig_name(fig_ind)}_STANDALONE", "png")
+        options._save_fig(
+            fig=standalone_fig,
+            fname=f"{fig_name(fig_ind)}_STANDALONE",
+            fpath=fpath,
+            extra_format=extra_format,
+        )
         plt.show(block=options.show_block)
 
     if not zoom_time_range:
         zoom_time_range = t_range_breakdown
     figs_zoom, axes_zoom, _ = plot_pulse_verification(
-        pulse_wallplug.copy(),
+        pulse_data.copy(),
         t_range_breakdown,
         t_end_rampdown,
         phase_plot=False,
@@ -865,7 +885,12 @@ def save_pulse_verification(
             dx = 0.05 * np.diff(zoom_time_range)
             zoom_limits = [zoom_time_range[0] - dx, zoom_time_range[1] + dx]
             last_ax.set_xlim(zoom_limits)
-            options._save_fig(fig, f"{fig_name(fig_ind)}_ZOOM", "png")
+            options._save_fig(
+                fig=fig,
+                fname=f"{fig_name(fig_ind)}_ZOOM",
+                fpath=fpath,
+                extra_format=extra_format,
+            )
     plt.show(block=options.show_block)
 
     return totals_rms
@@ -876,12 +901,13 @@ def save_pulse_verification(
 #
 
 
-def test_CoilSupplySystem():
+def test_CoilSupplySystem(tmp_path):
     display_inputs(coilsupply, summary=False)
     display_subsystems(coilsupply, summary=True)
     t_range_breakdown = save_breakdown_verification(
         breakdown_data,
         t_start_breakdown,
+        fpath=tmp_path,
     )
     totals_rms = save_pulse_verification(
         pulse_data,
@@ -889,6 +915,7 @@ def test_CoilSupplySystem():
         t_end_rampdown,
         standalone_indexes=(1, 11),
         zoom_time_range=None,
+        fpath=tmp_path,
     )
     assert totals_rms["total_active"] < 0.78
     assert totals_rms["total_reactive"] < 0.1
@@ -896,4 +923,4 @@ def test_CoilSupplySystem():
 
 
 if __name__ == "__main__":
-    test_CoilSupplySystem()
+    test_CoilSupplySystem(None)
