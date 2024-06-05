@@ -107,15 +107,15 @@ def test_rms_deviation():
     rms, _ = rms_deviation(fun_square, fun_linear, normalize=False)
     assert np.isclose(rms, expected_rms)
 
-    with np.errstate(divide="ignore", invalid="ignore"):
-        expected_dev = np.divide(expected_err, abscissa_sqr)
-        expected_dev[np.isnan(expected_dev)] = 0
+    norm = np.ptp(abscissa_sqr)
+    expected_dev = expected_err / norm
     expected_rms = np.sqrt(np.mean(np.square(expected_dev)))
     rms, _ = rms_deviation(fun_square, fun_linear, normalize=True)
     assert np.isclose(rms, expected_rms)
 
+    norm = np.ptp(abscissa_sqr[2:5])
     expected_err = np.subtract(abscissa_sqr[2:5], abscissa_lin[2:5])
-    expected_dev = np.divide(expected_err, abscissa_sqr[2:5])
+    expected_dev = expected_err / norm
     expected_rms = np.sqrt(np.mean(np.square(expected_dev)))
     rms, trim = rms_deviation(fun_square, fun_linear, x_range=[2, 4])
     assert np.isclose(rms, expected_rms)

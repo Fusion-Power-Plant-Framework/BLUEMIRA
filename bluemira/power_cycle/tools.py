@@ -75,7 +75,7 @@ def unique_domain(x: np.ndarray, epsilon: float = 1e-10, max_iterations=500):
     x = nb.typed.List(x)
     new_x = nb.typed.List()
     validate_monotonic_increase(x, strict_flag=False)
-    new_x.append(x[0])
+    new_x.append(float(x[0]))
     if len(x) > 1:
         for x_this in x[1:]:
             nudge = 0
@@ -180,7 +180,7 @@ def rms_deviation(
 
     dev = np.subtract(ty_ref, ty_est)
     if normalize:
-        s = np.max(y_ref) - np.min(y_ref)
+        s = np.ptp(ty_ref)
         dev = np.array([d / s for d in dev])
     mean_squared_dev = np.square(dev).mean()
     rms_dev = np.sqrt(mean_squared_dev)
