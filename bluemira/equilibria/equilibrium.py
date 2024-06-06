@@ -1079,7 +1079,9 @@ class Equilibrium(CoilSetMHDState):
 
         return self
 
-    def to_dict(self, qpsi_calcmode: int = 0) -> dict[str, Any]:
+    def to_dict(
+        self, qpsi_calcmode: int | QpsiCalcMode = QpsiCalcMode.NO_CALC
+    ) -> dict[str, Any]:
         """
         Creates dictionary for equilibrium object, in preparation for saving
         to a file format
@@ -1167,14 +1169,15 @@ class Equilibrium(CoilSetMHDState):
         header: str = "bluemira_equilibria",
         directory: str | None = None,
         filetype: str = "json",
-        qpsi_calcmode: int = 0,
+        qpsi_calcmode: int | QpsiCalcMode = QpsiCalcMode.NO_CALC,
         **kwargs,
     ):
         """
         Writes the Equilibrium Object to an eqdsk file
         """
-        if "eqdsk" in filetype and qpsi_calcmode == 0:
-            qpsi_calcmode = 2
+        qpsi_calcmode = QpsiCalcMode(qpsi_calcmode)
+        if "eqdsk" in filetype and qpsi_calcmode is QpsiCalcMode.NO_CALC:
+            qpsi_calcmode = QpsiCalcMode.ZEROS
 
         super().to_eqdsk(
             self.to_dict(qpsi_calcmode),
