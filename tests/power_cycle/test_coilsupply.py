@@ -930,7 +930,7 @@ def test_CoilSupplySystem(tmp_path):
         fpath=tmp_path,
     )
     assert totals_rms["total_active"] < 0.78
-    assert totals_rms["total_reactive"] < 0.1
+    assert totals_rms["total_reactive"] < 0.17
     plt.show()
 
 

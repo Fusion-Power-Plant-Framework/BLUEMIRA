@@ -115,9 +115,10 @@ def match_domains(
     of the union of all distinct 'x' vectors. Values defined before and after
     the original domain 'x' of the image 'y' are set to zero.
     """
+    all_x = np.array(all_x, dtype=float)
     n_vectors = len(all_x)
     for v in range(n_vectors):
-        numba_safe_x = nb.typed.List([float(x.item()) for x in all_x[v]])
+        numba_safe_x = nb.typed.List(all_x[v])
         all_x[v] = unique_domain(numba_safe_x, epsilon=epsilon)
     x_matched = np.unique(np.concatenate(all_x))
 
