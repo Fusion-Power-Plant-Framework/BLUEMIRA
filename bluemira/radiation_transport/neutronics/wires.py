@@ -93,7 +93,9 @@ class WireInfoList:
     def __init__(self, info_list: Iterable[WireInfo]):
         self.info_list = list(info_list)
         for i, (prev_wire, curr_wire) in enumerate(pairwise(self.info_list)):
-            if not np.array_equal(prev_wire.key_points[1], curr_wire.key_points[0]):
+            if not np.array_equal(
+                prev_wire.key_points[1], curr_wire.key_points[0]
+            ):  # cannot be mixed type wires: either all Coordinates or all NDArray.
                 raise GeometryError(f"wire {i + 1} must start where the wire {i} stops.")
 
     def __len__(self) -> int:
@@ -114,11 +116,11 @@ class WireInfoList:
 
     def get_3D_coordinates(self) -> npt.NDArray:
         """
-        Get of the entire wire.
+        Get all vertices (i.e. joining points between different segments) along the wire.
+        shape = (N+1, 3)
         """
         # assume continuity, which is already enforced during initialisation, so we
         # should be fine.
-        # shape = (N+1, 3)
         return np.array(
             [
                 self.info_list[0].key_points[0],

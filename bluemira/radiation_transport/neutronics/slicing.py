@@ -68,7 +68,7 @@ def cut_curve(
         A list of at least 3 points, presumed to be lying on the wire, that we want to
         cut the wire at.
     wire:
-        The wire that we want to cut up.
+        The wire that we want to cut up into multiple pieces (at the cut_points).
     discretisation_level:
         We yield a list of points of len==discretisation_level, such that we can build a
         wire made of (discretisation_level-1) straight lines to approximate each segment.
