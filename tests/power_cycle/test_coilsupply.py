@@ -11,6 +11,12 @@ with the results for EU-DEMO that is found in the following IDM link:
       for baseline DEMO1 2017 (for use in Bluemira & PowerFactory), EUROfusion,
       2024. https://idm.euro-fusion.org/?uid=2RRCMT.
 
+stored in the working directory as:
+    - coilsupply_data_design.json
+    - coilsupply_data_breakdown.json
+    - coilsupply_data_pulse_full.json
+    - coilsupply_data_pulse_partial.json
+
 and discussed in more details in the following IDM report and thesis:
     - A. Ferro, Update of the ITER-like design of CS-PF power supplies
       and FDU, EUROfusion, 2022. https://idm.euro-fusion.org/?uid=2Q6988.
