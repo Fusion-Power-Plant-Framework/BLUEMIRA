@@ -4,11 +4,13 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-"""
-Utility functions for the power cycle model.
-"""
+"""Utility functions for the power cycle model."""
 
 import json
+import sys
+from copy import deepcopy
+from dataclasses import asdict, is_dataclass
+from pprint import PrettyPrinter
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -115,7 +117,7 @@ def match_domains(
     """
     n_vectors = len(all_x)
     for v in range(n_vectors):
-        numba_safe_x = nb.typed.List([float(x.item()) for x in all_x[v]])
+        numba_safe_x = nb.typed.List(np.array(all_x[v], dtype=float))
         all_x[v] = unique_domain(numba_safe_x, epsilon=epsilon)
     x_matched = np.unique(np.concatenate(all_x))
 
@@ -129,3 +131,123 @@ def match_domains(
             right=0,
         )
     return x_matched, all_y_matched
+
+
+def rms_deviation(
+    fun_ref: list[list] | list[np.ndarray],
+    fun_est: list[list] | list[np.ndarray],
+    *,
+    x_range: None | list[float] | np.ndarray[float] = None,
+    normalize: bool = True,
+):
+    """
+    Calculate the Root Mean Squared Deviation between two functions.
+
+    Functions are defined by a pair of vectors (x,y). The first function is
+    considered the reference, the second function is considered an estimate
+    to be evaluated.
+
+    The range of evaluation 'x_range' can be provided as a pair of x values.
+    If so, deviation is calculated only between those values.
+
+    Flag 'normalize' indicates whether deviation at each point is normalized
+    by the range (max-min) of all reference values.
+    """
+    x_ref = np.array(fun_ref[0])
+    y_ref = np.array(fun_ref[1])
+    x_est = np.array(fun_est[0])
+    y_est = np.array(fun_est[1])
+    x_matched, both_y_matched = match_domains([x_ref, x_est], [y_ref, y_est])
+    y_ref = both_y_matched[0]
+    y_est = both_y_matched[1]
+
+    if x_range is not None:
+        tx = []
+        ty_ref = []
+        ty_est = []
+        for x, yr, ye in zip(x_matched, y_ref, y_est, strict=False):
+            if x_range[0] <= x <= x_range[1]:
+                tx.append(x)
+                ty_ref.append(yr)
+                ty_est.append(ye)
+        tx = np.array(tx)
+        ty_ref = np.array(ty_ref)
+        ty_est = np.array(ty_est)
+    else:
+        tx = x_matched
+        ty_ref = y_ref
+        ty_est = y_est
+
+    dev = np.subtract(ty_ref, ty_est)
+    if normalize:
+        s = np.ptp(ty_ref)
+        dev = np.array([d / s for d in dev])
+    mean_squared_dev = np.square(dev).mean()
+    rms_dev = np.sqrt(mean_squared_dev)
+    return rms_dev, (tx, ty_ref, ty_est)
+
+
+def symmetrical_subplot_distribution(n_plots, direction="row"):
+    """Create a symmetrical (squared) distribution for subplots."""
+    n_primary = np.ceil(np.sqrt(n_plots))
+    n_secondary = np.ceil(n_plots / n_primary)
+
+    valid_row_args = {"row", "rows", "r", "R"}
+    valid_col_args = {"col", "cols", "c", "C"}
+    if direction in valid_row_args:
+        n_rows = int(n_primary)
+        n_cols = int(n_secondary)
+    elif direction in valid_col_args:
+        n_rows = int(n_secondary)
+        n_cols = int(n_primary)
+    else:
+        raise ValueError(
+            f"Invalid argument: '{direction}'. The parameter"
+            "'direction' can only assume one of the following values:"
+            "'row' or 'col'."
+        )
+    return n_rows, n_cols
+
+
+def recursive_value_types_in_dict(dictionary):
+    """Recursively display value types in a dictionary."""
+    types_dict = dictionary.copy()
+    for key, value in types_dict.items():
+        if isinstance(value, dict):
+            types_dict[key] = recursive_value_types_in_dict(types_dict[key])
+        else:
+            length = len(value) if hasattr(value, "__len__") else "N/A"
+            types_dict[key] = f"type = {type(value)}, length = {length}"
+    return types_dict
+
+
+def pp(obj, *, summary=False):
+    """Prety Printer compatible with dataclasses and able to summarise."""
+    kwargs = {"indent": 4, "compact": True}
+    target = deepcopy(obj)
+    if is_dataclass(target):
+        kwargs["sort_dicts"] = False
+        target = asdict(target)
+    if summary and isinstance(target, dict):
+        target = recursive_value_types_in_dict(target)
+    pp = LongStringPP(**kwargs)
+    return pp.pprint(target)
+
+
+class LongStringPP(PrettyPrinter):
+    """
+    Prety Printer that does not break strings.
+
+    Based on: https://stackoverflow.com/questions/31485402/can-i-make-pprint-in-python3-not-split-strings-like-in-python2
+    """
+
+    def _format(self, obj, *args):
+        if isinstance(obj, str):
+            width = self._width
+            self._width = sys.maxsize
+            try:
+                super()._format(obj, *args)
+            finally:
+                self._width = width
+        else:
+            super()._format(obj, *args)
