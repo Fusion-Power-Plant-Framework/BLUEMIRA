@@ -115,10 +115,9 @@ def match_domains(
     of the union of all distinct 'x' vectors. Values defined before and after
     the original domain 'x' of the image 'y' are set to zero.
     """
-    all_x = np.array(all_x, dtype=float)
     n_vectors = len(all_x)
     for v in range(n_vectors):
-        numba_safe_x = nb.typed.List(all_x[v])
+        numba_safe_x = nb.typed.List(np.array(all_x[v], dtype=float))
         all_x[v] = unique_domain(numba_safe_x, epsilon=epsilon)
     x_matched = np.unique(np.concatenate(all_x))
 
@@ -166,7 +165,7 @@ def rms_deviation(
         tx = []
         ty_ref = []
         ty_est = []
-        for x, yr, ye in zip(x_matched, y_ref, y_est):
+        for x, yr, ye in zip(x_matched, y_ref, y_est, strict=False):
             if x_range[0] <= x <= x_range[1]:
                 tx.append(x)
                 ty_ref.append(yr)
@@ -222,7 +221,7 @@ def recursive_value_types_in_dict(dictionary):
     return types_dict
 
 
-def pp(obj, summary=False):
+def pp(obj, *, summary=False):
     """Prety Printer compatible with dataclasses and able to summarise."""
     kwargs = {"indent": 4, "compact": True}
     target = deepcopy(obj)
