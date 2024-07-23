@@ -116,10 +116,10 @@ class _PlotOptions:
             ax = plt.axes()
 
         if side:
-            ax.grid(True, axis="x")
+            ax.grid(visible=True, axis="x")
             self._color_yaxis(ax, side)
         else:
-            ax.grid(True)
+            ax.grid(visible=True)
 
         if y_title:
             ax.set_ylabel(y_title)
@@ -148,7 +148,7 @@ class _PlotOptions:
         shade = self.shade_color_factor if shade is None else shade
         return tuple(c * shade for c in color)
 
-    def _shade_background(self, ax, x_vector, x_range, hatch=False, label=None):
+    def _shade_background(self, ax, x_vector, x_range, *, hatch=False, label=None):
         ind_in_range = [
             i for i, x in enumerate(x_vector) if x_range[0] <= x <= x_range[1]
         ]
@@ -261,7 +261,7 @@ coilsupply = CoilSupplySystem(coilsupply_inputs)
 
 def display_inputs(coilsupply, summary):
     """Print Coil Supply System inputs."""
-    pp(coilsupply.inputs, summary)
+    pp(coilsupply.inputs, summary=summary)
 
 
 def display_subsystems(coilsupply, summary):
@@ -281,8 +281,8 @@ def display_subsystems(coilsupply, summary):
         }
         for c in [coilsupply.converter]
     }
-    pp(correctors_summary, summary)
-    pp(converters_summary, summary)
+    pp(correctors_summary, summary=summary)
+    pp(converters_summary, summary=summary)
 
 
 # %% [markdown]
@@ -502,7 +502,9 @@ def prepare_pulse_verification(pulse_data, t_range_breakdown):
             if new_key == "SNU_switches":
                 t_after_start = [t >= t_start_breakdown for t in old_value]
                 t_before_end = [t <= t_end_breakdown for t in old_value]
-                new_value = [a and b for a, b in zip(t_after_start, t_before_end)]
+                new_value = [
+                    a and b for a, b in zip(t_after_start, t_before_end, strict=False)
+                ]
             else:
                 new_value = old_value
 
@@ -580,6 +582,7 @@ def plot_pulse_verification(
     pulse_data,
     t_range_breakdown,
     t_end_rampdown,
+    *,
     phase_plot=False,
 ):
     """Plot Coil Supply System verification for pulse data."""
@@ -676,7 +679,7 @@ def plot_pulse_verification(
                 )
             if y_title is not None:
                 ax.set_ylabel(f"{y_title} (RMS dev.: {rms:.0%})")
-            ax.grid(True, axis="y", linestyle=":", color=ax_color)
+            ax.grid(visible=True, axis="y", linestyle=":", color=ax_color)
 
             plot_index += 1
 
@@ -744,7 +747,7 @@ def plot_pulse_verification(
                     label="Breakdown",
                 )
             last_ax.set_ylabel(f"{y_title} (RMS dev.: {totals_rms[key]:.0%})")
-            last_ax.grid(True, axis="y", linestyle=":", color=ax_color)
+            last_ax.grid(visible=True, axis="y", linestyle=":", color=ax_color)
 
     for fig in all_figs.values():
         fig.suptitle(
@@ -818,8 +821,8 @@ def plot_standalone_fig(all_axes, fig_index, subplot_index):
             line_data = line.get_data()
             standalone_ax.plot(*line_data, ls, color=lc, linewidth=lt)
         options._color_yaxis(standalone_ax, side)
-        standalone_ax.grid(True, axis="x")
-        standalone_ax.grid(True, axis="y", linestyle=":", color=ax_color)
+        standalone_ax.grid(visible=True, axis="x")
+        standalone_ax.grid(visible=True, axis="y", linestyle=":", color=ax_color)
         standalone_ax.set_ylabel(ax_ylabel)
     standalone_ax.title.set_text(ax_title)
     standalone_ax.set_xlabel(options.title_time)
