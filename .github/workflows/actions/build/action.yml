@@ -26,7 +26,7 @@ runs:
         path: "./bluemira-private-data"
 
     - name: Move bluemira-private-data
-      working-directory: "/home/runner/work/"
+      working-directory: "../../"
       if: ${{ !github.event.pull_request.head.repo.fork && inputs.bm-private-data-key != '' }}
       shell: bash -l {0}
       run: |
