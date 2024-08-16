@@ -1978,7 +1978,12 @@ class Equilibrium(CoilSetMHDState):
         :
             The plot axis
         """
-        return EquilibriumPlotter(self, ax, plasma=plasma, show_ox=show_ox)
+        return EquilibriumPlotter(
+            self,
+            ax,
+            plasma=plasma,
+            show_ox=show_ox,
+        )
 
     def plot_field(self, ax: Axes | None = None, *, show_ox: bool = True):
         """
