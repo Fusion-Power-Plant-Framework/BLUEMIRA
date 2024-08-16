@@ -62,7 +62,7 @@ runs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         activate-environment: bluemira
-        environment-file: conda/environment.yml
+        environment-file: conda/environment${{ inputs.os != 'ubuntu-latest' && '-minimal' || '' }}.yml
         miniforge-version: "latest"
         use-only-tar-bz2: false
         conda-remove-defaults: true
