@@ -4,11 +4,13 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
+from copy import deepcopy
 
 import numpy as np
 import numpy.typing as npt
 
 from bluemira.equilibria.coils import CoilSet
+from bluemira.equilibria.diagnostics import EqDiagnosticOptions
 from bluemira.equilibria.equilibrium import Equilibrium
 from bluemira.equilibria.optimisation.constraints import UpdateableConstraint
 from bluemira.equilibria.optimisation.objectives import CoilCurrentsObjective
@@ -16,6 +18,7 @@ from bluemira.equilibria.optimisation.problem.base import (
     CoilsetOptimisationProblem,
     CoilsetOptimiserResult,
 )
+from bluemira.equilibria.plotting import EquilibriumComparisonPlotter
 from bluemira.optimisation import Algorithm, AlgorithmType, optimise
 
 
@@ -41,6 +44,10 @@ class MinimalCurrentCOP(CoilsetOptimisationProblem):
         Otherwise, the parameters can be founded by digging through the source code.
     constraints:
         List of optimisation constraints to apply to the optimisation problem
+    plot:
+        Whether or not to plot
+    diag_ops:
+        Diagnostic plotting options for Equilibrium
     """
 
     def __init__(
@@ -52,6 +59,9 @@ class MinimalCurrentCOP(CoilsetOptimisationProblem):
         opt_conditions: dict[str, float | int] | None = None,
         opt_parameters: dict[str, float] | None = None,
         constraints: list[UpdateableConstraint] | None = None,
+        *,
+        plot: bool | None = False,
+        diag_ops: EqDiagnosticOptions | None = None,
     ):
         self.coilset = coilset
         self.eq = eq
@@ -60,6 +70,16 @@ class MinimalCurrentCOP(CoilsetOptimisationProblem):
         self.opt_algorithm = opt_algorithm
         self.opt_parameters = opt_parameters
         self._constraints = [] if constraints is None else constraints
+
+        self.plotting_enabled = plot
+
+        if self.plotting_enabled:
+            self.comp_plot = EquilibriumComparisonPlotter(
+                equilibrium=self.eq,
+                diag_ops=EqDiagnosticOptions(reference_eq=deepcopy(self.eq))
+                if diag_ops is None
+                else diag_ops,
+            )
 
     def optimise(
         self, x0: npt.NDArray | None = None, *, fixed_coils: bool = True
@@ -99,11 +119,13 @@ class MinimalCurrentCOP(CoilsetOptimisationProblem):
             eq_constraints=eq_constraints,
             ineq_constraints=ineq_constraints,
         )
-
         opt_currents = opt_result.x
         self.coilset.set_optimisation_state(
             opt_currents=opt_currents,
             current_scale=self.scale,
         )
+
+        if self.plotting_enabled:
+            self.comp_plot.update_plot()
 
         return CoilsetOptimiserResult.from_opt_result(self.coilset, opt_result)
