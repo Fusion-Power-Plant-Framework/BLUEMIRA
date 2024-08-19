@@ -10,6 +10,7 @@ Diagnostic options for use in the equilibria module.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,3 +34,35 @@ class EqDiagnosticOptions:
     def __post_init__(self):
         """Post init folder definition"""
         self.folder = Path.cwd() if self.folder is None else Path(self.folder)
+
+
+class FixedOrFree(Enum):
+    """
+    For use in select_eq - to create appropriate
+    Equilibrium or FixedPlasmaEquilibrium object.
+    Fixed or free boundary equilibrium.
+    """
+
+    FIXED = auto()
+    FREE = auto()
+
+
+class LCFSMask(Enum):
+    """
+    For LCFS masking in plots.
+    Block the area within or outside of the refernce LCFS.
+    """
+
+    IN = auto()
+    OUT = auto()
+
+
+class CSData(Enum):
+    """
+    For the coilset comparision tables.
+    Value to be comapred: current, x-position, or z-position.
+    """
+
+    CURRENT = auto()
+    XLOC = auto()
+    ZLOC = auto()
