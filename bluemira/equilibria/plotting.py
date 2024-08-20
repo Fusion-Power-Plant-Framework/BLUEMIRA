@@ -703,6 +703,9 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
         self.eq = equilibrium
         self.reference_eq = diag_ops.reference_eq
 
+        import pdb
+        pdb.set_trace()
+
         super().__init__(ax, subplots=self.diag_ops.split_psi_plots)
 
         self.coilset_psi = self.eq.coilset.psi(self.eq.x, self.eq.z)
@@ -935,11 +938,7 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
         diag_ops: EqDiagnosticOptions,
         ax=None,
     ):
-        self.diag_ops = diag_ops
-        self.eq = equilibrium
-        self.reference_eq = diag_ops.reference_eq
-
-        super().__init__(ax, subplots=self.diag_ops.split_psi_plots)
+        super().__init__(equilibrium, diag_ops, ax)
 
         if np.shape(self.eq.grid.x) != np.shape(self.reference_eq.grid.x):
             bluemira_warn("Reference psi must have same grid size as input equilibria.")
@@ -1088,12 +1087,11 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         diag_ops: EqDiagnosticOptions,
         ax=None,
     ):
-        self.diag_ops = diag_ops
-        self.eq = equilibrium
-        self.reference_eq = diag_ops.reference_eq
-
-        super().__init__(ax, subplots=self.diag_ops.split_psi_plots)
+        super().__init__(equilibrium, diag_ops, ax)
         
+        import pdb
+        pdb.set_trace()
+
         # Interpolation:
         if ((self.reference_eq.grid.x_size != self.eq.grid.x_size)
             or (self.reference_eq.grid.z_size != self.eq.grid.z_size)
@@ -1165,7 +1163,7 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
             self.grid.x,
             self.grid.z,
             mask_matx,
-            self.reference_lcfs.xz.T,
+            ref_lcfs.xz.T,
             include_edges=False
             )
 
