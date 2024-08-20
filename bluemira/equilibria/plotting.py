@@ -703,9 +703,6 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
         self.eq = equilibrium
         self.reference_eq = diag_ops.reference_eq
 
-        import pdb
-        pdb.set_trace()
-
         super().__init__(ax, subplots=self.diag_ops.split_psi_plots)
 
         self.coilset_psi = self.eq.coilset.psi(self.eq.x, self.eq.z)
@@ -1088,9 +1085,6 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         ax=None,
     ):
         super().__init__(equilibrium, diag_ops, ax)
-        
-        import pdb
-        pdb.set_trace()
 
         # Interpolation:
         if ((self.reference_eq.grid.x_size != self.eq.grid.x_size)
@@ -1121,12 +1115,12 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         """
         If the grids are different, make a new one to interpolate over.
         """
-        x_min = np.max(self.reference_eq.x_min, self.eq.x_min)
-        x_max = np.min(self.reference_eq.x_max, self.eq.x_max)
-        z_min = np.max(self.reference_eq.z_min, self.eq.z_min)
-        z_max = np.min(self.reference_eq.z_max, self.eq.z_max)
-        nx = np.min(self.reference_eq.nx, self.eq.nx)
-        nz = np.min(self.reference_eq.nz, self.eq.nz)
+        x_min = np.max([self.reference_eq.grid.x_min, self.eq.grid.x_min])
+        x_max = np.min([self.reference_eq.grid.x_max, self.eq.grid.x_max])
+        z_min = np.max([self.reference_eq.grid.z_min, self.eq.grid.z_min])
+        z_max = np.min([self.reference_eq.grid.z_max, self.eq.grid.z_max])
+        nx = np.min([self.reference_eq.grid.nx, self.eq.grid.nx])
+        nz = np.min([self.reference_eq.grid.nz, self.eq.grid.nz])
         return Grid(x_min, x_max, z_min, z_max, nx, nz)
     
     def interpolate_psi(self, psi, psi_grid):
