@@ -550,10 +550,10 @@ class MultiEqAnalysis:
         return dataframe
     
     def plot_prof(
+            self,
             ax,
             profiles,
-            title,
-            equilibrium_names,
+            ax_title,
             ):
         """
         Plot equilibria profiles from list.
@@ -564,17 +564,17 @@ class MultiEqAnalysis:
             Matplotlib axes object.
         profiles:
             List of profile objects.
-        title:
+        ax_title:
             Text to be printed above the axis.
         equilibrium_names:
             Names of the equilibia to be used as plot labels.
         """
     
         x = np.linspace(0, 1, 50)
-        for p, name in zip(profiles, equilibrium_names, strict=False):
+        for p, name in zip(profiles, self.equilibrium_names, strict=False):
             ax.plot(x, p(x), marker=".", label=name)
             ax.legend(loc="best")
-            ax.set_title(title)
+            ax.set_title(ax_title)
 
     def plot_compare_profiles(
             self,
@@ -609,7 +609,7 @@ class MultiEqAnalysis:
         ax_list = [ax[0, 0], ax[0, 1], ax[1, 0], ax[1, 1], ax[0, 2]]
 
         for axs, (key, profs) in zip(ax_list, self.profiles.items(), strict=False):
-            self.plot_prof(axs, profs, title=key, equilibrium_names=self.equilibrium_names)
+            self.plot_prof(axs, profs, ax_title=key)
         ax[1, 2].axis("off")
 
         if header is not None:
