@@ -162,7 +162,7 @@ class EqAnalysis:
             BluemiraError("Please provide either an Equilibrium object or eqdsk file path as an input.")  
 
         if diag_ops.reference_eq:
-            self.reference_profiles = self.reference_eq.profiles
+            self.reference_profiles = self.diag_ops.reference_eq.profiles
 
     def plot(self):
         """Plot equilibria"""
@@ -170,8 +170,7 @@ class EqAnalysis:
     
     def plot_profiles(self):
         """Plot profiles"""
-        #FIXME
-        pass
+        return self._profiles.plot()
     
     def plot_equilibria_with_profiles(
             self,
@@ -223,7 +222,7 @@ class EqAnalysis:
             BluemiraError("Please provide a reference Equilibrium object or Reference eqdsk file path in EqDiagnosticOptions.")
             return 
         return EquilibriumComparisonPostOptPlotter(
-            equilibrium=self.eq,
+            equilibrium=self._eq,
             diag_ops=self.diag_ops,
             ax=ax
             ).plot_compare_psi(mask_type=mask_type)
@@ -263,11 +262,7 @@ class EqAnalysis:
         shape_ax = (2, 3)
         if ax is not None:
             if np.shape(ax) != shape_ax:
-                raise BluemiraError(
-                    f"Subplot shape is (2,3), you have provided settings for {
-                        np.shape(ax)
-                        }."
-                )
+                raise BluemiraError(f"Subplot shape is (2,3), you have provided settings for {np.shape(ax)}.")
         else:
             _, ax = plt.subplots(2, 3)
 
@@ -286,23 +281,24 @@ class EqAnalysis:
             self._profiles.shape,
         ]
         ax_titles = ["pprime", "ffprime", "fRBpol","pressure","shape"]
-        axs = [ax[0, 0], ax[0, 1], ax[1, 0], ax[1, 1], ax[0, 2]]
+        axes = [ax[0, 0], ax[0, 1], ax[1, 0], ax[1, 1], ax[0, 2]]
 
         x = np.linspace(0, 1, 50)
 
-        for ref_prof, prof, sign, a, a_title in (
+        for ref_prof, prof, sign, axs, a_title in zip(
             ref_profs, 
             profs,
             reference_profile_sign,
+            axes,
             ax_titles, 
-            axs,
+            strict=False
         ):
-            a.plot(x, sign * ref_prof,marker=".", label=self.equilibrium_names[0])
-            a.plot(x, prof.pprime, marker=".", label=self.equilibrium_names[1])
+            axs.plot(x, sign * ref_prof(x), marker=".", label=equilibrium_names[0])
+            axs.plot(x, prof(x), marker=".", label=equilibrium_names[1])
             if diff:
-                a.plot(x, sign * ref_prof - prof, marker=".", label=self.equilibrium_names[0] + " - " + self.equilibrium_names[1])
-            a.set_title(a_title)
-            a.legend(loc="best")
+                axs.plot(x, sign * ref_prof(x) - prof(x), marker=".", label=equilibrium_names[0] + " - " + equilibrium_names[1])
+            axs.set_title(a_title)
+            axs.legend(loc="best")
         
         ax[1, 2].axis("off")
         plt.suptitle("Profile Comparison")
@@ -445,13 +441,6 @@ class MultiEqAnalysis:
                 "shape": prof.shape,
             }
 
-        if is_num(from_cocos):
-            from_cocos = np.ones(len(self.equilibrium_paths)) * self.from_cocos
-        if is_num(to_cocos):
-            to_cocos = np.ones(len(self.equilibrium_paths)) * self.to_cocos
-        if is_num(qpsi_sign):
-            qpsi_sign = np.ones(len(self.equilibrium_paths)) * self.qpsi_sign
-
         prof_dict = {
             "pprime": [],
             "ffprime": [],
@@ -528,7 +517,7 @@ class MultiEqAnalysis:
                 coilset_dict = {}
                 for coil in eq.coilset._coils:
                     if value == CSData.CURRENT:
-                        coilset_dict[coil.name] = coil.current
+                        coilset_dict[coil.name] = coil.current/1e6
                     elif value == CSData.XLOC:
                         coilset_dict[coil.name] = coil.x
                     elif value == CSData.ZLOC:
@@ -552,6 +541,12 @@ class MultiEqAnalysis:
         pd.set_option("display.float_format", "{:.2f}".format)
         dataframe = pd.DataFrame(dict_list).T
         dataframe.columns = self.equilibrium_names
+        if value in {CSData.CURRENT}:
+            dataframe.style.set_caption("Current (MA)")
+        elif value in {CSData.XLOC}:
+            dataframe.style.set_caption("X-position (m)")
+        elif value in {CSData.ZLOC}:
+            dataframe.style.set_caption("Z-position (m)")
         return dataframe
     
     def plot_prof(
@@ -584,7 +579,7 @@ class MultiEqAnalysis:
     def plot_compare_profiles(
             self,
             ax=None,
-            title=None,
+            header=None,
             ):
         """
         Plot the profiles of all the listed equilibria.
@@ -593,7 +588,7 @@ class MultiEqAnalysis:
         ----------
         ax:
             List of Matplotlib Axes objects set by user
-        title:
+        header:
             Tesxt to be added at the top of the figure
         show:
             Whether or not to display the plot
@@ -607,21 +602,17 @@ class MultiEqAnalysis:
         shape_ax = (2, 3)
         if ax is not None:
             if np.shape(ax) != shape_ax:
-                raise BluemiraError(
-                    f"Subplot shape is (2,3), you have provided settings for {
-                        np.shape(ax)
-                        }."
-                )
+                raise BluemiraError(f"Subplot shape is (2,3), you have provided settings for {np.shape(ax)}.")
         else:
             _, ax = plt.subplots(2, 3)
 
         ax_list = [ax[0, 0], ax[0, 1], ax[1, 0], ax[1, 1], ax[0, 2]]
 
-        for a, (key, profs) in zip(ax_list, self.profiles.items(), strict=False):
-            self.plot_prof(a, profs, title=key, equilibrium_names=self.equilibrium_names)
+        for axs, (key, profs) in zip(ax_list, self.profiles.items(), strict=False):
+            self.plot_prof(axs, profs, title=key, equilibrium_names=self.equilibrium_names)
         ax[1, 2].axis("off")
 
-        if title is not None:
-            plt.suptitle(title)
+        if header is not None:
+            plt.suptitle(header)
         plt.show()
         return ax[0, 0], ax[0, 1], ax[1, 0], ax[1, 1], ax[0, 2], ax[1, 2]
