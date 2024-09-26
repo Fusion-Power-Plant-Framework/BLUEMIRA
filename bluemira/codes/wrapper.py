@@ -134,3 +134,34 @@ def neutronics_code_solver(
     """
     neutron = get_code_interface(module)
     return neutron.Solver(params, build_config, neutronics_model, source, tally_function)
+
+
+def powerbalance_solver(
+    params: ParameterFrame,
+    build_config: BuildConfig,
+    run_dir: str,
+    read_dir: Optional[str] = None,
+    module: Optional[str] = "UKAEA_POWERBALANCE",
+) -> FileProgramInterface:
+    """
+    Powerbalance solver
+
+    Parameters
+    ----------
+    params: ParameterFrame
+        ParameterFrame for plasmod
+    build_config: Dict
+        build configuration dictionary
+    run_dir: str
+        powerbalance run directory
+    read_dir: str
+        Directory to read in previous run
+
+    Returns
+    -------
+    Solver object: FileProgramInterface
+
+    """
+    powerbalance = get_code_interface(module)
+
+    return powerbalance.Solver(params, build_config, run_dir, read_dir)
