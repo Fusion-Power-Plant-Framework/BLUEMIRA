@@ -24,7 +24,8 @@ from bluemira.base.constants import CoilType, raw_uc
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.display.plotter import Zorder, plot_coordinates
 from bluemira.equilibria.constants import DPI_GIF, J_TOR_MIN, M_PER_MN, PLT_PAUSE
-from bluemira.equilibria.find import Xpoint, get_contours, grid_2d_contour, _in_plasma
+from bluemira.equilibria.diagnostics import LCFSMask, PsiPlotType
+from bluemira.equilibria.find import Xpoint, _in_plasma, get_contours, grid_2d_contour
 from bluemira.equilibria.grid import Grid
 from bluemira.equilibria.physics import calc_psi
 from bluemira.utilities.plot_tools import save_figure, smooth_contour_fill, str_to_latex
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
     from matplotlib.axes import Axes
 
-    from bluemira.equilibria.diagnostics import EqDiagnosticOptions, LCFSMask
+    from bluemira.equilibria.diagnostics import EqDiagnosticOptions
     from bluemira.equilibria.equilibrium import (
         Equilibrium,
         FixedPlasmaEquilibrium,
@@ -705,12 +706,18 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
 
         super().__init__(ax, subplots=self.diag_ops.split_psi_plots)
 
-        self.coilset_psi = self.eq.coilset.psi(self.eq.x, self.eq.z)
-        self.plasma_psi = self.eq.plasma.psi()
         self.total_psi = self.eq.psi()
-        self.ref_coilset_psi = self.reference_eq.coilset.psi(self.reference_eq.x, self.reference_eq.z)
-        self.ref_plasma_psi = self.reference_eq.plasma.psi()
+        self.plasma_psi = self.eq.plasma.psi()
+        self.coilset_psi = self.eq.coilset.psi(self.eq.x, self.eq.z)
         self.ref_total_psi = self.reference_eq.psi()
+        self.ref_plasma_psi = self.reference_eq.plasma.psi()
+        if (self.ref_total_psi - self.ref_plasma_psi == 0).all():
+            # Fill with zeros if there is no coilset
+            self.ref_coilset_psi = 0.0 * self.reference_eq.grid.x
+        else:
+            self.ref_coilset_psi = self.reference_eq.coilset.psi(
+                self.reference_eq.x, self.reference_eq.z
+            )
 
     def plot_reference_LCFS(self, ref_lcfs_label=None):
         """
@@ -776,7 +783,7 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
                 label="Current LCFS",
             )
 
-    def plot_psi_coilset(self, **kwargs):
+    def plot_psi_coilset(self, grid: Grid = None, **kwargs):
         """
         Plot flux surfaces - coilset contribution
         """
@@ -787,25 +794,46 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
             levels = np.linspace(
                 np.amin(self.coilset_psi), np.amax(self.coilset_psi), nlevels
             )
-        if self.diag_ops.psi_diff:
+
+        if grid is None:
+            x, z = self.eq.x, self.eq.z
+        else:
+            x, z = grid.x, grid.z
+
+        if self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            vmin = 0
+            vmax = 1
+        else:
+            vmin = np.amin(self.total_psi)
+            vmax = np.amax(self.total_psi)
+
+        title_type = "Difference "
+        if PsiPlotType.PSI_REL_DIFF:
+            title_type = "Relative difference "
+        if PsiPlotType.PSI_ABS_DIFF:
+            title_type = "Absolute difference "
+
+        if self.diag_ops.psi_diff in PsiPlotType.DIFF:
             if self.coilset_psi is None:
                 bluemira_warn(
                     "Coilset_psi all 0s. Will only plot current and reference LCFS"
                 )
             else:
                 im = self.ax[0].contourf(
-                    self.eq.x,
-                    self.eq.z,
+                    x,
+                    z,
                     self.coilset_psi,
                     levels=levels,
                     cmap=cmap,
                     zorder=8,
-                    vmin=0,
-                    vmax=1,
+                    vmin=vmin,
+                    vmax=vmax,
                 )
-                plt.colorbar(mappable=im, cax=self.cax1, ticks=np.linspace(0, 1, 10))
+                plt.colorbar(
+                    mappable=im, cax=self.cax1, ticks=np.linspace(vmin, vmax, 10)
+                )
                 plt.suptitle(
-                    "Relative difference in psi between reference equilibrium"
+                    title_type + "in psi between reference equilibrium"
                     " and current equilibrium, \n split by contribution from"
                     " coilset and plasma"
                 )
@@ -813,8 +841,8 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
 
         else:
             self.ax[0].contour(
-                self.eq.x,
-                self.eq.z,
+                x,
+                z,
                 self.coilset_psi,
                 levels=levels,
                 cmap=cmap,
@@ -828,40 +856,55 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
         self.plot_LCFS()
         self.plot_reference_LCFS()
 
-    def plot_psi_plasma(self, **kwargs):
+    def plot_psi_plasma(self, grid: Grid = None, **kwargs):
         """
         Plot flux surfaces - plasma contribution
         """
         nlevels = kwargs.pop("nlevels", PLOT_DEFAULTS["psi"]["nlevels"])
         cmap = kwargs.pop("cmap", PLOT_DEFAULTS["psi"]["cmap"])
+
         if self.plasma_psi is not None:
             levels = np.linspace(
                 np.amin(self.plasma_psi), np.amax(self.plasma_psi), nlevels
             )
 
-        if self.diag_ops.psi_diff:
+        if grid is None:
+            x, z = self.eq.x, self.eq.z
+        else:
+            x, z = grid.x, grid.z
+
+        if self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            vmin = 0
+            vmax = 1
+        else:
+            vmin = np.amin(self.total_psi)
+            vmax = np.amax(self.total_psi)
+
+        if self.diag_ops.psi_diff in PsiPlotType.DIFF:
             if self.plasma_psi is None:
                 bluemira_warn(
                     "Plasma_psi all 0s. Will only plot current and reference LCFS"
                 )
             else:
                 im = self.ax[1].contourf(
-                    self.eq.x,
-                    self.eq.z,
+                    x,
+                    z,
                     self.plasma_psi,
                     levels=levels,
                     cmap=cmap,
                     zorder=8,
-                    vmin=0,
-                    vmax=1,
+                    vmin=vmin,
+                    vmax=vmax,
                 )
-                plt.colorbar(mappable=im, cax=self.cax2, ticks=np.linspace(0, 1, 10))
+                plt.colorbar(
+                    mappable=im, cax=self.cax2, ticks=np.linspace(vmin, vmax, 10)
+                )
                 plt.tight_layout()
 
         else:
             self.ax[1].contour(
-                self.eq.x,
-                self.eq.z,
+                x,
+                z,
                 self.plasma_psi,
                 levels=levels,
                 cmap=cmap,
@@ -871,7 +914,7 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
         self.plot_LCFS(lcfs_label="Current LCFS")
         self.plot_reference_LCFS(ref_lcfs_label="Reference LCFS")
 
-    def plot_psi(self, **kwargs):
+    def plot_psi(self, grid: Grid = None, **kwargs):
         """
         Plot flux surfaces
         """
@@ -883,33 +926,51 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
                 np.amin(self.total_psi), np.amax(self.total_psi), nlevels
             )
 
-        if self.diag_ops.psi_diff:
+        if grid is None:
+            x, z = self.eq.x, self.eq.z
+        else:
+            x, z = grid.x, grid.z
+
+        if self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            vmin = 0
+            vmax = 1
+        else:
+            vmin = np.amin(self.total_psi)
+            vmax = np.amax(self.total_psi)
+
+        title_type = "Difference "
+        if PsiPlotType.PSI_REL_DIFF:
+            title_type = "Relative difference "
+        if PsiPlotType.PSI_ABS_DIFF:
+            title_type = "Absolute difference "
+
+        if self.diag_ops.psi_diff in PsiPlotType.DIFF:
             if self.total_psi is None:
                 bluemira_warn(
                     "Total_psi all 0s. Will only plot current and reference LCFS"
                 )
             else:
                 im = self.ax.contourf(
-                    self.eq.x,
-                    self.eq.z,
+                    x,
+                    z,
                     self.total_psi,
                     levels=levels,
                     cmap=cmap,
                     zorder=8,
-                    vmin=0,
-                    vmax=1,
+                    vmin=vmin,
+                    vmax=vmax,
                 )
-                plt.colorbar(mappable=im, cax=self.cax, ticks=np.linspace(0, 1, 10))
+                plt.colorbar(
+                    mappable=im, cax=self.cax, ticks=np.linspace(vmin, vmax, 10)
+                )
                 plt.suptitle(
-                    "Relative difference in total psi between reference equilibrium and"
+                    title_type + "in total psi between reference equilibrium and"
                     " current equilibrium"
                 )
                 plt.tight_layout()
 
         else:
-            self.ax.contour(
-                self.eq.x, self.eq.z, self.total_psi, levels=levels, cmap=cmap, zorder=8
-            )
+            self.ax.contour(x, z, self.total_psi, levels=levels, cmap=cmap, zorder=8)
             plt.title("Total psi for current equilibrium")
         # Plot current and reference lcfs
         self.plot_LCFS()
@@ -964,48 +1025,51 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
                 " and the input equilibrium."
             )
 
-        if self.diag_ops.psi_diff:
+        if self.diag_ops.psi_diff in PsiPlotType.DIFF:
             self._calculate_psi()
 
         self.i = 0
 
     def _calculate_psi(self):
-        # Relative difference
-        diff_coilset_psi = np.abs(
-            self.ref_coilset_psi - self.eq.coilset.psi(self.eq.x, self.eq.z)
+        diff_coilset_psi = self.ref_coilset_psi - self.eq.coilset.psi(
+            self.eq.x, self.eq.z
         )
-
         # if all zeros
-        self.coilset_psi = (
-            None
-            if not np.all(diff_coilset_psi)
-            else (diff_coilset_psi / np.max(diff_coilset_psi))
-        )
+        if not np.all(diff_coilset_psi):
+            self.coilset_psi = None
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_ABS_DIFF:
+            self.coilset_psi = np.abs(diff_coilset_psi)
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            self.coilset_psi = np.abs(diff_coilset_psi) / np.max(
+                np.abs(diff_coilset_psi)
+            )
+        else:
+            self.coilset_psi = diff_coilset_psi
 
-        # Relative difference
-        diff_plasma_psi = np.abs(
-            self.ref_plasma_psi - self.eq.plasma.psi()
-        )
-
+        diff_plasma_psi = self.ref_plasma_psi - self.eq.plasma.psi()
         # if all zeros
-        self.plasma_psi = (
-            None
-            if not np.all(diff_plasma_psi)
-            else diff_plasma_psi / np.max(diff_plasma_psi)
-        )
+        if not np.all(diff_plasma_psi):
+            self.plasma_psi = None
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_ABS_DIFF:
+            self.plasma_psi = np.abs(diff_plasma_psi)
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            self.plasma_psi = np.abs(diff_plasma_psi) / np.max(np.abs(diff_plasma_psi))
+        else:
+            self.plasma_psi = diff_plasma_psi
 
-        # Relative difference
-        diff_total_psi = np.abs(self.ref_total_psi - self.eq.psi())
-
+        diff_total_psi = self.ref_total_psi - self.eq.psi()
         # if all zeros
-        self.total_psi = (
-            None
-            if not np.all(diff_total_psi)
-            else diff_total_psi / np.max(diff_total_psi)
-        )
+        if not np.all(diff_total_psi):
+            self.total_psi = None
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_ABS_DIFF:
+            self.total_psi = np.abs(diff_total_psi)
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            self.total_psi = np.abs(diff_total_psi) / np.max(np.abs(diff_total_psi))
+        else:
+            self.total_psi = diff_total_psi
 
     def _clean_plots(self):
-        if self.i == 0 and self.diag_ops.psi_diff:
+        if self.i == 0 and (self.diag_ops.psi_diff in PsiPlotType.DIFF):
             if self.diag_ops.split_psi_plots:
                 self.cax1 = make_axes_locatable(self.ax[0]).append_axes(
                     "right", size="5%", pad="2%"
@@ -1018,7 +1082,7 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
                     "right", size="5%", pad="2%"
                 )
         else:
-            if self.diag_ops.psi_diff:
+            if self.diag_ops.psi_diff in PsiPlotType.DIFF:
                 if self.diag_ops.split_psi_plots:
                     self.cax1.clear()
                     self.cax2.clear()
@@ -1077,7 +1141,6 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
 
 
 class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
-
     def __init__(
         self,
         equilibrium,
@@ -1087,17 +1150,18 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         super().__init__(equilibrium, diag_ops, ax)
 
         # Interpolation:
-        if ((self.reference_eq.grid.x_size != self.eq.grid.x_size)
+        if (
+            (self.reference_eq.grid.x_size != self.eq.grid.x_size)
             or (self.reference_eq.grid.z_size != self.eq.grid.z_size)
             or (self.reference_eq.grid.dx != self.eq.grid.dx)
             or (self.reference_eq.grid.dz != self.eq.grid.dz)
-            ):
+        ):
             self.grid = self.make_comparison_grid()
             self.interpolate_psi_for_comparison()
         else:
             self.grid = self.reference_eq.grid
         self.mask = self.make_lcfs_mask()
-        if self.diag_ops.psi_diff:
+        if self.diag_ops.psi_diff in PsiPlotType.DIFF:
             self.calculate_psi_diff()
             if self.diag_ops.split_psi_plots:
                 self.cax1 = make_axes_locatable(self.ax[0]).append_axes(
@@ -1122,7 +1186,7 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         nx = np.min([self.reference_eq.grid.nx, self.eq.grid.nx])
         nz = np.min([self.reference_eq.grid.nz, self.eq.grid.nz])
         return Grid(x_min, x_max, z_min, z_max, nx, nz)
-    
+
     def interpolate_psi(self, psi, psi_grid):
         """Interpolate psi over new comparision grid"""
         psi_func = RectBivariateSpline(psi_grid.x[:, 0], psi_grid.z[0, :], psi)
@@ -1130,9 +1194,15 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
 
     def interpolate_psi_for_comparison(self):
         """Interpolate all psi components over new grid."""
-        self.ref_coilset_psi = self.interpolate_psi(self.ref_coilset_psi, self.reference_eq.grid)
-        self.ref_plasma_psi = self.interpolate_psi(self.ref_plasma_psi, self.reference_eq.grid)
-        self.ref_total_psi = self.interpolate_psi(self.ref_total_psi, self.reference_eq.grid)
+        self.ref_coilset_psi = self.interpolate_psi(
+            self.ref_coilset_psi, self.reference_eq.grid
+        )
+        self.ref_plasma_psi = self.interpolate_psi(
+            self.ref_plasma_psi, self.reference_eq.grid
+        )
+        self.ref_total_psi = self.interpolate_psi(
+            self.ref_total_psi, self.reference_eq.grid
+        )
         self.coilset_psi = self.interpolate_psi(self.coilset_psi, self.eq.grid)
         self.plasma_psi = self.interpolate_psi(self.plasma_psi, self.eq.grid)
         self.total_psi = self.interpolate_psi(self.total_psi, self.eq.grid)
@@ -1152,14 +1222,10 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
             ref_lcfs = self.reference_eq.get_LCFS()
         except Exception:  # noqa: BLE001
             bluemira_warn("Unable to find reference LCFS")
-            return
+            return None
         return _in_plasma(
-            self.grid.x,
-            self.grid.z,
-            mask_matx,
-            ref_lcfs.xz.T,
-            include_edges=False
-            )
+            self.grid.x, self.grid.z, mask_matx, ref_lcfs.xz.T, include_edges=False
+        )
 
     def apply_mask(self, mask_type):
         """Apply mask to psi from equilibrium and reference equilibrium."""
@@ -1176,30 +1242,40 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         """
         Find the difference betwwen the reference and choisen equilibrium psi values.
         """
-        # Relative difference
-        self.coilset_psi = np.abs(self.ref_coilset_psi - self.coilset_psi)
+        diff_coilset_psi = self.ref_coilset_psi - self.coilset_psi
         # if all zeros
-        self.coilset_psi = (
-            None
-            if not np.all(self.coilset_psi)
-            else (self.coilset_psi / np.max(self.coilset_psi))
-        )
-        # Relative difference
-        self.plasma_psi = np.abs(self.ref_plasma_psi - self.plasma_psi)
+        if not np.all(diff_coilset_psi):
+            self.coilset_psi = None
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_ABS_DIFF:
+            self.coilset_psi = np.abs(diff_coilset_psi)
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            self.coilset_psi = np.abs(diff_coilset_psi) / np.max(
+                np.abs(diff_coilset_psi)
+            )
+        else:
+            self.coilset_psi = diff_coilset_psi
+
+        diff_plasma_psi = self.ref_plasma_psi - self.plasma_psi
         # if all zeros
-        self.plasma_psi = (
-            None
-            if not np.all(self.plasma_psi)
-            else self.plasma_psi / np.max(self.plasma_psi)
-        )
-        # Relative difference
-        self.total_psi = np.abs(self.ref_total_psi - self.total_psi)
+        if not np.all(diff_plasma_psi):
+            self.plasma_psi = None
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_ABS_DIFF:
+            self.plasma_psi = np.abs(diff_plasma_psi)
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            self.plasma_psi = np.abs(diff_plasma_psi) / np.max(np.abs(diff_plasma_psi))
+        else:
+            self.plasma_psi = diff_plasma_psi
+
+        diff_total_psi = self.ref_total_psi - self.total_psi
         # if all zeros
-        self.total_psi = (
-            None
-            if not np.all(self.total_psi)
-            else self.total_psi / np.max(self.total_psi)
-        )
+        if not np.all(diff_total_psi):
+            self.total_psi = None
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_ABS_DIFF:
+            self.total_psi = np.abs(diff_total_psi)
+        elif self.diag_ops.psi_diff in PsiPlotType.PSI_REL_DIFF:
+            self.total_psi = np.abs(diff_total_psi) / np.max(np.abs(diff_total_psi))
+        else:
+            self.total_psi = diff_total_psi
 
     def plot_compare_psi(self, mask_type=None):
         """FIXME"""
@@ -1208,8 +1284,8 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
             self.apply_mask(mask_type)
 
         if self.diag_ops.split_psi_plots:
-            self.plot_psi_coilset()
-            self.plot_psi_plasma()
+            self.plot_psi_coilset(self.grid)
+            self.plot_psi_plasma(self.grid)
             legend = self.ax[0].legend()
             legend.set_zorder(10)
             legend = self.ax[1].legend()
@@ -1223,13 +1299,13 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
             self.ax[1].set_title("Plasma")
             self.ax[1].set_aspect("equal")
         else:
-            self.plot_psi()
+            self.plot_psi(self.grid)
             legend = self.ax.legend()
             legend.set_zorder(10)
             self.ax.set_xlabel("$x$ [m]")
             self.ax.set_ylabel("$z$ [m]")
             self.ax.set_aspect("equal")
-      
+
 
 class BreakdownPlotter(Plotter):
     """
