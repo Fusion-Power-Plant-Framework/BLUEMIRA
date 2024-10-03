@@ -170,7 +170,7 @@ class EqAnalysis:
         """Plot profiles"""
         return self._profiles.plot()
 
-    def plot_equilibria_with_profiles(self, title=None, ax=None, show=True):
+    def plot_equilibria_with_profiles(self, title=None, ax=None, show=True):  # noqa: FBT002
         """
         Plot equilibria alongside profiles.
 
@@ -187,6 +187,11 @@ class EqAnalysis:
         -------
         ax1, ax2:
             The Matplotlib Axes objects for each subplot.
+
+        Raises
+        ------
+        BluemiraError:
+            if the wrong number of axes is provided
 
         """
         n_ax = 2
@@ -226,7 +231,11 @@ class EqAnalysis:
         ).plot_compare_psi(mask_type=mask_type)
 
     def plot_compare_profiles(
-        self, equilibrium_names=None, reference_profile_sign=None, ax=None, diff=True
+        self,
+        equilibrium_names=None,
+        reference_profile_sign=None,
+        ax=None,
+        diff=True,  # noqa: FBT002
     ):
         """
         Plot equilibria reference and input profiles. The diff option can be used to plot
@@ -245,6 +254,13 @@ class EqAnalysis:
         diff:
             If two equilibria are being compared then we have the option of also
             plotting the difference between them.
+
+        Raises
+        ------
+        BluemiraError:
+            if no reference equilibrium or equilibrium file path is provided
+        ValueError:
+            if the profile sign array provided is an incorrect length
         """
         if self.diag_ops.reference_eq is None:
             BluemiraError(
@@ -609,6 +625,11 @@ class MultiEqAnalysis:
         -------
         ax1, ax2, ax3, ax4, ax5, ax6:
             The Matplotlib Axes objects for each subplot.
+
+        Raises
+        ------
+        BluemiraError:
+            if the axes provided are the incorrect shape
 
         """
         shape_ax = (2, 3)

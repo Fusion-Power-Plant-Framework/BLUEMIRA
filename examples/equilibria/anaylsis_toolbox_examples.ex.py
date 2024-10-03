@@ -14,10 +14,9 @@
 
 # %%
 from pathlib import Path
-import pandas as pd
-from bluemira.base.file import get_bluemira_path
+
+from bluemira.equilibria.analysis import EqAnalysis, MultiEqAnalysis, select_eq
 from bluemira.equilibria.diagnostics import EqDiagnosticOptions
-from bluemira.equilibria.analysis import select_eq, EqAnalysis, MultiEqAnalysis
 
 # %pdb
 
@@ -29,7 +28,9 @@ eq = select_eq(eq_path, from_cocos=7)
 
 # %%
 diag_ops = EqDiagnosticOptions(
-    psi_diff=True, split_psi_plots=False, reference_eq=ref_eq,
+    psi_diff=True,
+    split_psi_plots=False,
+    reference_eq=ref_eq,
 )
 
 analysis = EqAnalysis(diag_ops, eq)
@@ -47,15 +48,17 @@ analysis.plot_compare_profiles()
 p1 = ref_path
 p2 = eq_path
 
-equilibrium_names = ['MASTy Eq', 'DEMOish Eq']
+equilibrium_names = ["MASTy Eq", "DEMOish Eq"]
 
-multi_analysis = MultiEqAnalysis([p1, p2], equilibrium_names=equilibrium_names, from_cocos=[3, 7])
+multi_analysis = MultiEqAnalysis(
+    [p1, p2], equilibrium_names=equilibrium_names, from_cocos=[3, 7]
+)
 
 # %%
-pd = multi_analysis.coilset_info_table()
+pdf = multi_analysis.coilset_info_table()
 
 # %%
-pd.style.set_caption("Current (MA)")
+pdf.style.set_caption("Current (MA)")
 
 # %%
 multi_analysis.plot_compare_profiles()
