@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from bluemira.equilibria.equilibrium import MHDState
     from bluemira.equilibria.optimisation.problem.base import CoilsetOptimisationProblem
 
+    from .bluemira.equilibria.flux_surfaces import CoreResults
+
 from bluemira.base.error import BluemiraError
 from bluemira.equilibria.diagnostics import CSData, FixedOrFree
 from bluemira.equilibria.equilibrium import Equilibrium, FixedPlasmaEquilibrium
@@ -131,7 +133,7 @@ class EqAnalysis:
         qpsi_sign=-1,
     ):
         self.diag_ops = diag_ops
-        self.fixed_or_free = (FixedOrFree.FREE,)
+        self.fixed_or_free = FixedOrFree.FREE
         self.dummy_coils = (None,)
         self.from_cocos = (3,)
         self.to_cocos = (3,)
@@ -169,6 +171,56 @@ class EqAnalysis:
     def plot_profiles(self):
         """Plot profiles"""
         return self._profiles.plot()
+
+    def plot_core_analysis(self) -> CoreResults:
+        """
+        Plot characteristics of the plasma core and return results.
+        Only for free boundary equilibria.
+
+        Returns
+        -------
+        :
+            Dataclass for core results.
+
+        Raises
+        ------
+        BluemiraError:
+            If the equilibrium is fixed boundary.
+
+        """
+        if self.fixed_or_free is FixedOrFree.FIXED:
+            raise BluemiraError(
+                "This function can only be used for Free Boundary Equilbria."
+            )
+        return self._eq.analyse_core()
+
+    def physics_info_table(self, equilibrium_name="Eq_input"):
+        """
+        Create a Pandas dataframe with the physics information
+        from the Equilbria of interest.
+        Not for use with FixedPlasmaEquilibrium.
+
+        Returns
+        -------
+        dataframe:
+            Pandas dataframe with summary of physics information.
+
+        Raises
+        ------
+        BluemiraError:
+            If the equilibrium is fixed boundary.
+
+        """
+        if self.fixed_or_free is FixedOrFree.FIXED:
+            raise BluemiraError(
+                "This function can only be used for Free Boundary Equilbria."
+            )
+
+        summary_dict = [self._eq.analyse_plasma()]
+        pd.set_option("display.float_format", "{:.2f}".format)
+        dataframe = pd.DataFrame(summary_dict).T
+        dataframe.columns = [equilibrium_name]
+        return dataframe
 
     def plot_equilibria_with_profiles(self, title=None, ax=None, show=True):  # noqa: FBT002
         """
