@@ -30,7 +30,7 @@ from bluemira.geometry.tools import (
 from bluemira.geometry.wire import BluemiraWire
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable
 
     from bluemira.equilibria import Equilibrium
 
@@ -393,12 +393,18 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         target_end_point:
             The position (in x-z) where the target
             joins to the dome.
+
+        Raises
+        ------
+        ValueError
+            target and blanket baffle radii must be equal
+
         """
         bx, bz = blanket_join_point[0], blanket_join_point[1]
         tx, tz = target_baffle_join_point[0], target_baffle_join_point[1]
         mt = target_gradient
 
-        def solve(l1: Tuple[float, ...], l2: Tuple[float, ...]):
+        def solve(l1: tuple[float, ...], l2: tuple[float, ...]):
             A = np.array([[l1[0], l1[1]], [l2[0], l2[1]]])
             b = np.array([l1[2], l2[2]])
             return np.linalg.solve(A, b)
@@ -445,7 +451,7 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         radius_b = float(np.linalg.norm(blanket_join_point - arc_center_point))
 
         if not np.isclose(radius_b, radius_t):
-            raise ValueError("radi must be equal")
+            raise ValueError("radii must be equal")
 
         # make_circle_arc_3P would have been used but it put the arc center
         # somewhere weird so could not be used
@@ -497,7 +503,7 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         """
         return DivertorSilhouetteDesigner._get_wire_end(wire, axis, operator.gt)
 
-    def _get_wire_ends_by_psi(self, wire: BluemiraWire) -> Tuple[np.ndarray, np.ndarray]:
+    def _get_wire_ends_by_psi(self, wire: BluemiraWire) -> tuple[np.ndarray, np.ndarray]:
         """
         Get the coordinates of the ends of a wire where the end
         with higher psi is returned first

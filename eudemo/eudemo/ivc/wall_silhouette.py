@@ -273,7 +273,7 @@ class WallSilhouetteDesigner(Designer[GeometryParameterisation]):
             make_polygon({"x": [0, 20, 20, 0, 0], "z": [0, 0, -20, -20, 0]}, closed=True)
         )
         upper = boolean_cut(lcfs, half_plane)[0]
-        upper = upper.boundary[0].discretize(ndiscr=200, byedges=True)
+        upper = upper.boundary[0].discretise(ndiscr=200, byedges=True)
         x_min = min(upper.x)
         z_max = max(upper.z)
         factor = (z_max + dz_max) / z_max

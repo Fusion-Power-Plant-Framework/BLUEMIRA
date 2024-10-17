@@ -29,6 +29,7 @@ from bluemira.equilibria.optimisation.constraints import (
     PsiConstraint,
 )
 from bluemira.equilibria.optimisation.problem import PulsedNestedPositionCOP
+from bluemira.equilibria.profiles import CustomProfile
 from bluemira.equilibria.run import (
     BreakdownCOPSettings,
     EQSettings,
@@ -170,7 +171,6 @@ class PFCoilsDesigner(Designer[CoilSet]):
             self.build_config.get("grid_settings", {}),
         )
         profiles = deepcopy(self.ref_eq.profiles)
-        from bluemira.equilibria.profiles import CustomProfile
 
         pn = np.linspace(0, 1, 50)
         profiles = CustomProfile(
@@ -318,7 +318,7 @@ class PFCoilsDesigner(Designer[CoilSet]):
             "phi_l_neg": {"value": 45.0},
             "phi_l_pos": {"value": 30.0},
         })
-        lcfs = lcfs_parameterisation.create_shape().discretize(byedges=True, ndiscr=50)
+        lcfs = lcfs_parameterisation.create_shape().discretise(byedges=True, ndiscr=50)
         # from bluemira.geometry.coordinates import interpolate_points, Coordinates
 
         lcfs = self.ref_eq.eq.get_LCFS()

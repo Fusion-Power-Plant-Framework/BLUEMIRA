@@ -151,7 +151,7 @@ class BlanketDesigner(Designer[tuple[BluemiraFace, BluemiraFace, Coordinates]]):
             The panel points of the blanket
         """
         segments = self.segment_blanket()
-        return segments.inboard, segments.outboard
+        return segments.inboard, segments.outboard, None
         # Inboard
         ib_panels = self.panel_boundary(segments.inboard_boundary)
         ib_panels_face = BluemiraFace(ib_panels)

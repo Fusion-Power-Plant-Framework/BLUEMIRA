@@ -15,12 +15,12 @@ from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+from tabulate import tabulate
 
+from bluemira.base.constants import raw_uc
 from bluemira.base.look_and_feel import bluemira_warn
 
 if TYPE_CHECKING:
-    import pandas as pd
-
     from bluemira.codes.openmc.output import OpenMCResult
     from bluemira.equilibria.run import Snapshot
     from eudemo.eudemo.neutronics.run import EUDEMONeutronicsCSGReactor
@@ -73,34 +73,43 @@ class EquilibriumManager:
             state.eq.coilset.plot(ax[i], label=True)
         return f
 
-    def summary(self) -> pd.DataFrame:
+    def summary(self):
         """
-        Produce a summary dataframe of the coils and currents in different states.
+        Produce a summary of the coils and currents in different states.
         """
         coilset = self.get_state(self.SOF).coilset
-        df = pd.DataFrame(
-            columns=[
-                "Coil name",
-                "x",
-                "z",
-                "dx",
-                "dz",
-                "Breakdown currents [MA]",
-                "SOF currents [MA]",
-                "EOF currents [MA]",
-            ]
+        columns = [
+            "Coil name",
+            "x",
+            "z",
+            "x_width",
+            "z_width",
+            "Breakdown currents [MA]",
+            "SOF currents [MA]",
+            "EOF currents [MA]",
+        ]
+
+        records = list(
+            zip(
+                coilset.name,
+                coilset.x,
+                coilset.z,
+                2.0 * coilset.dx,
+                2.0 * coilset.dz,
+                raw_uc(self.get_state(self.BREAKDOWN).coilset.current, "A", "MA"),
+                raw_uc(self.get_state(self.SOF).coilset.current, "A", "MA"),
+                raw_uc(self.get_state(self.EOF).coilset.current, "A", "MA"),
+                strict=False,
+            )
         )
-        df["Coil name"] = coilset.name
-        df["x"] = coilset.x
-        df["z"] = coilset.z
-        df["dx"] = 2.0 * coilset.dx
-        df["dz"] = 2.0 * coilset.dz
-        df["Breakdown currents [MA]"] = (
-            self.get_state(self.BREAKDOWN).coilset.current / 1e6
+
+        return tabulate(
+            records,
+            headers=columns,
+            tablefmt="fancy_grid",
+            showindex=False,
+            numalign="right",
         )
-        df["SOF currents [MA]"] = self.get_state(self.SOF).coilset.current / 1e6
-        df["EOF currents [MA]"] = self.get_state(self.EOF).coilset.current / 1e6
-        return df
 
 
 class NeutronicsManager:

@@ -203,16 +203,13 @@ class BaseManager(abc.ABC):
         comp: ComponentT,
         dims_to_show: tuple[str, ...],
         component_filter: Callable[[ComponentT], bool] | None,
+        *,
         show: bool = True,
     ):
         for i, dim in enumerate(dims_to_show):
-            if show:
-                sub_show = i == len(dims_to_show) - 1
-            else:
-                sub_show = False
             ComponentPlotter(view=dim).plot_2d(
                 self._filter_tree(comp, dims_to_show, component_filter),
-                show=sub_show,
+                show=i == len(dims_to_show) - 1 if show else False,
             )
 
 
