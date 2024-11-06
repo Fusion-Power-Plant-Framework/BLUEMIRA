@@ -14,7 +14,7 @@ IN_mappings = {
     "n_TF": ("n_tf", "dimensionless"),
     "TF_ripple_limit": ("ripmax", "%"),
     "C_Ejima": ("gamma", "dimensionless"),
-    "e_nbi": ("enbeam", "keV"),
+    "e_nbi": ("beam_energy", "keV"),
     "P_hcd_ss": ("pinjalw", "MW"),
     "eta_nb": ("etanbi", "dimensionless"),
     "e_mult": ("emult", "dimensionless"),

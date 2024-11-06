@@ -482,12 +482,12 @@ class ProcessInputs:
     bscfmax: float | None = None
     cboot: float | None = None
     harnum: float | None = None
-    enbeam: float | None = None
+    beam_energy: float | None = None
     etaech: float | None = None
     etanbi: float | None = None
     feffcd: float | None = None
     frbeam: float | None = None
-    ftritbm: float | None = None
+    f_tritium_beam: float | None = None
     gamma_ecrh: float | None = None
     xi_ebw: float | None = None
     iefrf: int | None = None
@@ -631,8 +631,8 @@ class ProcessInputs:
     dene: float | None = None
     dnbeta: float | None = None
     epbetmax: float | None = None
-    falpha: float | None = None
-    fdeut: float | None = None
+    f_alpha_plasma: float | None = None
+    f_deuterium: float | None = None
     ftar: float | None = None
     ffwal: float | None = None
     fgwped: float | None = None
@@ -640,7 +640,8 @@ class ProcessInputs:
     fkzohm: float | None = None
     fpdivlim: float | None = None
     fne0: float | None = None
-    ftrit: float | None = None
+    f_tritium: float | None = None
+    f_helium3: float | None = None
     fvsbrnni: float | None = None
     gamma: float | None = None
     hfact: float | None = None

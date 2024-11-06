@@ -564,7 +564,7 @@ ITERATION_VAR_MAPPING = {
     "ohcth": 16,
     "tdwell": 17,
     "q": 18,
-    "enbeam": 19,
+    "beam_energy": 19,
     "tcpav": 20,
     "ftburn": 21,
     # 22 NOT USED
