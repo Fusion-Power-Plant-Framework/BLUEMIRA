@@ -807,7 +807,7 @@
     "var_mod": "Plasma",
     "scan01": 0.010009
   },
-  "betanb": {
+  "beta_beam": {
     "var_mod": "Plasma",
     "scan01": 0.0
   },
@@ -1083,15 +1083,15 @@
     "var_mod": "Plasma",
     "scan01": 0.5
   },
-  "powfmw": {
+  "fusion_power": {
     "var_mod": "Plasma",
     "scan01": 3072.9
   },
-  "pdt": {
+  "dt_power": {
     "var_mod": "Plasma",
     "scan01": 3068.0
   },
-  "pdd": {
+  "dd_power": {
     "var_mod": "Plasma",
     "scan01": 4.9193
   },
@@ -1099,15 +1099,15 @@
     "var_mod": "Plasma",
     "scan01": 0.0
   },
-  "palpmw": {
+  "alpha_power_total": {
     "var_mod": "Plasma",
     "scan01": 613.6
   },
-  "palpnb": {
+  "alpha_power_beams": {
     "var_mod": "Plasma",
     "scan01": 0.0
   },
-  "pneutmw": {
+  "non_alpha_charged_power": {
     "var_mod": "Plasma",
     "scan01": 2456.2
   },
@@ -1119,7 +1119,7 @@
     "var_mod": "Plasma",
     "scan01": 811.09
   },
-  "pbrempv*vol": {
+  "pbrempv*plasma_volume": {
     "var_mod": "Plasma",
     "scan01": 193.25
   },
@@ -1227,11 +1227,11 @@
     "var_mod": "Plasma",
     "scan01": 0.95
   },
-  "falpe": {
+  "f_alpha_electron": {
     "var_mod": "Plasma",
     "scan01": 0.64064
   },
-  "falpi": {
+  "f_alpha_ion": {
     "var_mod": "Plasma",
     "scan01": 0.35936
   },
@@ -3667,7 +3667,7 @@
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 811.09
   },
-  "falpha*palpmw": {
+  "f_alpha_plasma*alpha_power_total": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 582.92
   },
@@ -3683,7 +3683,7 @@
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 225.0
   },
-  "powfmw.": {
+  "fusion_power.": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 3072.9
   },
@@ -3743,11 +3743,11 @@
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 2634.7
   },
-  "pnetelmw/(powfmw+emultmw": {
+  "pnetelmw/(fusion_power+emultmw": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 13.67
   },
-  "pnetelmw/powfmw": {
+  "pnetelmw/fusion_power": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 16.271
   },

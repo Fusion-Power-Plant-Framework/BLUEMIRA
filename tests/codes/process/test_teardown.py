@@ -66,7 +66,7 @@ class TestTeardown:
         """
 
         class MFile:
-            data: ClassVar = {"enbeam": {"var_mod": "some info", "scan01": 1234}}
+            data: ClassVar = {"beam_energy": {"var_mod": "some info", "scan01": 1234}}
 
         class MFW(_MFileWrapper):
             # Overwrite some methods because data doesnt exist in 'mfile'
@@ -90,7 +90,7 @@ class TestTeardown:
         with (
             mock.patch(f"{self.MODULE_REF}._MFileWrapper", new=MFW),
             file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF),
-            mock.patch("bluemira.codes.process.api.OBS_VARS", new={"enbeam": None}),
+            mock.patch("bluemira.codes.process.api.OBS_VARS", new={"beam_energy": None}),
         ):
             teardown.read()
 

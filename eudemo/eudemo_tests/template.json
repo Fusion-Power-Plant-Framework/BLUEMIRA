@@ -213,7 +213,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "pbrempv*vol",
+        "name": "pbrempv*plasma_volume",
         "send": false,
         "recv": true,
         "unit": "MW"
@@ -247,7 +247,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "powfmw",
+        "name": "fusion_power",
         "send": false,
         "recv": true,
         "unit": "MW"
@@ -266,7 +266,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "pdd",
+        "name": "dd_power",
         "send": false,
         "recv": true,
         "unit": "MW"
@@ -285,7 +285,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "pdt",
+        "name": "dt_power",
         "send": false,
         "recv": true,
         "unit": "MW"
@@ -571,7 +571,7 @@
     "source": "Calculated",
     "mapping": {
       "PROCESS": {
-        "name": "vol",
+        "name": "plasma_volume",
         "send": false,
         "recv": false,
         "unit": "m^3"
