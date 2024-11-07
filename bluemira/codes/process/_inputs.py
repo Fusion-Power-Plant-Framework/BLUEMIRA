@@ -467,7 +467,7 @@ class ProcessInputs:
     thshield_ob: float | None = None
     thshield_vb: float | None = None
     vgap: float | None = None
-    vgap2: float | None = None
+    vgap_vv_thermalshield: float | None = None
     vgaptop: float | None = None
     vvblgap: float | None = None
     plleni: float | None = None
@@ -479,7 +479,7 @@ class ProcessInputs:
 
     # Current drive
     beamwd: float | None = None
-    bscfmax: float | None = None
+    bootstrap_current_fraction_max: float | None = None
     cboot: float | None = None
     harnum: float | None = None
     beam_energy: float | None = None
@@ -646,9 +646,9 @@ class ProcessInputs:
     gamma: float | None = None
     hfact: float | None = None
     taumax: float | None = None
-    ibss: int | None = None
+    i_bootstrap_current: int | None = None
     iculbl: int | None = None  # listed as an output...
-    icurr: int | None = None
+    i_plasma_current: int | None = None
     idensl: int | None = None
     idia: int | None = None
     ifalphap: int | None = None

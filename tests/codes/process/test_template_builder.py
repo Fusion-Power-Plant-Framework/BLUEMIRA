@@ -28,7 +28,6 @@ from bluemira.codes.process.model_mapping import (
     CostModel,
     CurrentDriveEfficiencyModel,
     DensityLimitModel,
-    EPEDScalingModel,
     OperationModel,
     OutputCostsSwitch,
     PFSuperconductorModel,
@@ -328,7 +327,6 @@ class TestInDatOneForOne:
             PlasmaProfileModel.CONSISTENT,
             PlasmaPedestalModel.PEDESTAL_GW,
             PlasmaNullConfigurationModel.SINGLE_NULL,
-            EPEDScalingModel.SAARELMA,
             BetaLimitModel.THERMAL,
             DensityLimitModel.GREENWALD,
             AlphaPressureModel.WARD,
@@ -406,7 +404,7 @@ class TestInDatOneForOne:
             "gapomin": 0.2,
             # Vertical build inputs
             "d_vv_top": 0.3,
-            "vgap2": 0.05,
+            "vgap_vv_thermalshield": 0.05,
             "shldtth": 0.3,
             "divfix": 0.621,
             "d_vv_bot": 0.3,
@@ -414,7 +412,7 @@ class TestInDatOneForOne:
             "pinjalw": 51.0,
             "gamma_ecrh": 0.3,
             "etaech": 0.4,
-            "bscfmax": 0.99,
+            "bootstrap_current_fraction_max": 0.99,
             # BOP inputs
             "etath": 0.375,
             "etahtp": 0.87,

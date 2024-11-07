@@ -105,8 +105,8 @@ shldith  = 0.30 * inboard shield thickness (m) (`iteration variable 93`)
 shldoth  = 0.80 * outboard shield thickness (m) (`iteration variable 94`)
 shldtth  = 0.30 * upper/lower shield thickness (m); calculated if `blktmodel > 0` (= shldlth if double-null)
 tfcth    = 1.0500e+00 * inboard TF coil thickness; (centrepost for ST) (m)
-vgap2    = 0.12 * vertical gap between vacuum vessel and thermal shields (m)
-vgap     = 1.60 * vertical gap between x-point and divertor (m) (if = 0; it is calculated)
+vgap_vv_thermalshield  = 0.12 * vertical gap between vacuum vessel and thermal shields (m)
+vgap_xpoint_divertor    = 1.60 * vertical gap between x-point and divertor (m) (if = 0; it is calculated)
 
 *-----------------Buildings Module-----------------*
 
@@ -184,8 +184,8 @@ ucme     = 3.0d8 * cost of maintenance equipment ($)
 
 *-------------Current Drive Variables--------------*
 
-bscfmax  = 0.99 * maximum fraction of plasma current from bootstrap; if `bscfmax < 0`;
-enbeam   = 1000.0 * neutral beam energy (keV) (`iteration variable 19`)
+bootstrap_current_fraction_max = 0.99 * maximum fraction of plasma current from bootstrap; if `bscfmax < 0`;
+beam_energy  = 1000.0 * neutral beam energy (keV) (`iteration variable 19`)
 etanbi   = 0.4 * neutral beam wall plug to injector efficiency
 feffcd   = 1.0 * current drive efficiency fudge factor (`iteration variable 47`)
 frbeam   = 1.0 * R_tangential / R_major for neutral beam injection
@@ -402,9 +402,9 @@ fkzohm   = 1.0245 * Zohm elongation scaling adjustment factor (`ishape=2; 3`)
 fvsbrnni = 4.4628e-01 * fraction of the plasma current produced by non-inductive means (`iteration variable 44`)
 gamma    = 0.3 * Ejima coefficient for resistive startup V-s formula
 hfact    = 1.1000e+00 * H factor on energy confinement times; radiation corrected (`iteration variable 10`); If
-ibss     = 4 * switch for bootstrap current scaling
+i_bootstrap_current     = 4 * switch for bootstrap current scaling
 iculbl   = 1 * switch for beta limit scaling (`constraint equation 24`)
-icurr    = 4 * switch for plasma current scaling to use
+i_plasma_current   = 4 * switch for plasma current scaling to use
 idensl   = 7 * switch for density limit to enforce (`constraint equation 5`)
 ifalphap = 1 * switch for fast alpha pressure calculation
 iinvqd   = 1 * switch for inverse quadrature in L-mode scaling laws 5 and 9;
@@ -527,7 +527,7 @@ n_tf     = 18 * Number of TF coils (default = 50 for stellarators); Number of TF
 tftmp    = 4.75 * peak helium coolant temperature in TF coils and PF coils (K)
 thicndut = 2.0d-3 * conduit insulation thickness (m)
 thkcas   = 4.9102e-01 * inboard TF coil case outer (non-plasma side) thickness (m) (`iteration variable 57`)
-thwcndut = 4.0000e-03 * TF coil conduit case thickness (m) (`iteration variable 58`)
+thwcndut = 8.0000e-03 * TF coil conduit case thickness (m) (`iteration variable 58`)
 tinstf   = 0.013 * Thickness of the ground insulation layer surrounding (m)
 tmargmin = 1.7 * minimum allowable temperature margin ; TFC AND CS (K)
 vdalw    = 1.2650e+01 * max voltage across TF coil during quench (kV)

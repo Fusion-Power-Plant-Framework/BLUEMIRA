@@ -171,26 +171,6 @@ class PlasmaProfileModel(PROCESSModel):
     CONSISTENT = 1, ("q", "q0")
 
 
-class EPEDScalingModel(PROCESSModel):
-    """
-    Switch for the pedestal scaling model
-
-    TODO: This is largely undocumented and bound to some extent with PLASMOD
-    """
-
-    @classproperty
-    def switch_name(self) -> str:
-        """
-        PROCESS switch name
-        """
-        return "ieped"
-
-    UKNOWN_0 = 0, ("teped",)
-    SAARELMA = 1
-    UNKNOWN_1 = 2
-    UNKNOWN_2 = 3
-
-
 class BetaLimitModel(PROCESSModel):
     """
     Switch for the plasma beta limit model
@@ -275,7 +255,7 @@ class PlasmaCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "icurr"
+        return "i_plasma_current"
 
     PENG = 1
     PENG_DN = 2
@@ -361,7 +341,7 @@ class BootstrapCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "ibss"
+        return "i_bootstrap_current"
 
     ITER = 1, ("cboot",)
     GENERAL = 2

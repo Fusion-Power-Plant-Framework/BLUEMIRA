@@ -137,7 +137,7 @@ walalw   = 8.0 * Allowable wall-load (mw/m2)
 cost_model = 0 * use $ 1990 PROCESS model
 
 *-------------Current Drive Variables--------------*
-bscfmax  = 0.99 * Maximum fraction of plasma current from bootstrap;
+bootstrap_current_fraction_max = 0.99 * Maximum fraction of plasma current from bootstrap;
 enbeam   = 1000.0 * Neutral beam energy (kev) (iteration variable 19)
 etanbi   = 0.4 * Neutral beam wall plug to injector efficiency
 frbeam   = 1.0 * R_tangential / r_major for neutral beam injection

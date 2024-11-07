@@ -246,7 +246,7 @@ template_builder.add_input_values({
     "pinjalw": 51.0,
     "gamma_ecrh": 0.3,
     "etaech": 0.4,
-    "bscfmax": 0.99,
+    "bootstrap_current_fraction_max": 0.99,
     # BOP inputs
     "etath": 0.375,
     "etahtp": 0.87,

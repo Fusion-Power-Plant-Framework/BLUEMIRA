@@ -191,7 +191,7 @@ ucme     = 3.0d8 * cost of maintenance equipment ($)
 
 *-------------Current Drive Variables--------------*
 
-bscfmax  = 0.99, * maximum fraction of plasma current from bootstrap; if `bscfmax < 0`;
+bootstrap_current_fraction_max = 0.99, * maximum fraction of plasma current from bootstrap; if < 0;
 enbeam   = 1000 * neutral beam energy (keV) (`iteration variable 19`)
 etanbi   = 0.4 * neutral beam wall plug to injector efficiency
 feffcd   = 1.0, * current drive efficiency fudge factor (`iteration variable 47`)
