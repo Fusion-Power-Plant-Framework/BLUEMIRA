@@ -466,7 +466,7 @@ class ProcessInputs:
     thshield_ib: float | None = None
     thshield_ob: float | None = None
     thshield_vb: float | None = None
-    vgap: float | None = None
+    vgap_xpoint_divertor: float | None = None
     vgap_vv_thermalshield: float | None = None
     vgaptop: float | None = None
     vvblgap: float | None = None

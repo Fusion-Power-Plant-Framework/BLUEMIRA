@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 import copy
 from pathlib import Path
-from typing import ClassVar
 from unittest import mock
 
 import numpy as np
@@ -65,19 +64,6 @@ class TestTeardown:
         Tested for a value with units.
         """
 
-        class MFile:
-            data: ClassVar = {"beam_energy": {"var_mod": "some info", "scan01": 1234}}
-
-        class MFW(_MFileWrapper):
-            # Overwrite some methods because data doesnt exist in 'mfile'
-
-            def __init__(self, path, name):  # noqa: ARG002
-                self.mfile = MFile()
-                self._name = name
-
-            def _derive_radial_build_params(self, data):  # noqa: ARG002
-                return {}
-
         teardown = Teardown(self.default_pf, None, utils.READ_DIR)
 
         # Less Warnings
@@ -88,7 +74,7 @@ class TestTeardown:
 
         # Test
         with (
-            mock.patch(f"{self.MODULE_REF}._MFileWrapper", new=MFW),
+            mock.patch(f"{self.MODULE_REF}._MFileWrapper", new=utils.mfw()),
             file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF),
             mock.patch("bluemira.codes.process.api.OBS_VARS", new={"beam_energy": None}),
         ):

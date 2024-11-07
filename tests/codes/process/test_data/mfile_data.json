@@ -811,6 +811,10 @@
     "var_mod": "Plasma",
     "scan01": 0.0
   },
+  "beam_energy": {
+    "var_mod": "Plasma",
+    "scan01": 0.0
+  },
   "gammaft": {
     "var_mod": "Plasma",
     "scan01": 0.17556
