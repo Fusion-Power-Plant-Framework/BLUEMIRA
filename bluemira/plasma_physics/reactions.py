@@ -349,9 +349,8 @@ def _reactivity_bosch_hale(
         :title: H.-S. Bosch and G.M. Hale 1992 Nucl. Fusion 32 611
     """
     if reaction == Reactions.D_D:
-        return 0.5 * (
-            _reactivity_bosch_hale(temp_kev, Reactions.D_D1)
-            + _reactivity_bosch_hale(temp_kev, Reactions.D_D2)
+        return _reactivity_bosch_hale(temp_kev, Reactions.D_D1) + _reactivity_bosch_hale(
+            temp_kev, Reactions.D_D2
         )
     mapping = {
         Reactions.D_T: BoschHale_DT_4Hen(),
