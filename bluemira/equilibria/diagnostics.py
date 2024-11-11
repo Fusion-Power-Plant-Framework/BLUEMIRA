@@ -20,14 +20,57 @@ if TYPE_CHECKING:
     from bluemira.equilibria.equilibrium import Equilibrium
 
 
+class EqSubplots(Enum):
+    """
+    Type of plot axes.
+    Determines number of subplots, axes label, etc.
+    """
+
+    XZ = auto()
+    """Plot x vs z"""
+    XZ_COMPONENT_PSI = auto()
+    """PLot x vs z for differnt psi components."""
+    VS_PSI_NORM = auto()
+    """Plot parmeters (numbers of which can vary) against the normailised psi."""
+    VS_X = auto()
+    """Plot parmeters (numbers of which can vary) against x."""
+
+
 class PsiPlotType(Flag):
-    """FIXME"""
+    """
+    For use with psi comparison plotter.
+    """
 
     PSI = auto()
+    """Plot equilibrium psi."""
     PSI_DIFF = auto()
+    """
+    Plot the difference between a reference equilibrium psi
+    and the equilibrium psi.
+    """
     PSI_ABS_DIFF = auto()
+    """
+    Plot the absolute difference between a reference equilibrium psi
+    and the equilibrium psi.
+    """
     PSI_REL_DIFF = auto()
+    """
+    Plot the realstive difference between a reference equilibrium psi
+    and the equilibrium psi.
+    """
     DIFF = PSI_DIFF | PSI_ABS_DIFF | PSI_REL_DIFF
+
+
+class DivLegsToPlot(Flag):
+    """Which divertor legs to create plots for."""
+
+    UP = auto()
+    """Upper pair of legs."""
+    LW = auto()
+    """Lower pair of legs."""
+    ALL = auto()
+    """All availble legs."""
+    PAIR = UP | LW
 
 
 class LCFSMask(Enum):
@@ -37,7 +80,9 @@ class LCFSMask(Enum):
     """
 
     IN = auto()
+    """Mask out values inside reference LCFS."""
     OUT = auto()
+    """Mask out values outside reference LCFS."""
 
 
 class CSData(Enum):
@@ -62,13 +107,24 @@ class FixedOrFree(Enum):
     FREE = auto()
 
 
+class FluxSurfaceType(Enum):
+    """
+    For flux surface comparision plotting.
+    Compare LCFSs, separaticesor flux surfeaces with a given normailised psi.
+    """
+
+    LCFS = auto()
+    SEPARATRIX = auto()
+    PSI_NORM = auto()
+
+
 @dataclass
 class EqDiagnosticOptions:
     """Diagnostic plotting options for Equilibrium."""
 
     reference_eq: Equilibrium | None = None
     psi_diff: PsiPlotType = PsiPlotType.PSI
-    split_psi_plots: bool = False
+    split_psi_plots: EqSubplots = EqSubplots.XZ
     lcfs_mask: LCFSMask | None = None
     plot_name: str = "default_0"
     folder: str | PathLike | None = None
