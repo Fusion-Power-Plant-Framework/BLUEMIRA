@@ -1306,7 +1306,7 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
             self.total_psi = diff_total_psi
 
     def plot_compare_psi(self):
-        """FIXME"""
+        """Plot flux differnces"""
         # Apply mask
         if self.diag_ops.lcfs_mask is not None:
             self.apply_mask(self.diag_ops.lcfs_mask)
