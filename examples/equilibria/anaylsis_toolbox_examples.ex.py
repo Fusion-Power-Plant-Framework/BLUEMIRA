@@ -1,3 +1,4 @@
+# %%
 # SPDX-FileCopyrightText: 2021-present M. Coleman, J. Cook, F. Franza
 # SPDX-FileCopyrightText: 2021-present I.A. Maione, S. McIntosh
 # SPDX-FileCopyrightText: 2021-present J. Morris, D. Short
@@ -101,6 +102,10 @@ eq_analysis_2 = EqAnalysis(diag_ops_2, double_demoish_eq)
 # %%
 # Plot equilibrium
 eq_analysis_1.plot()
+
+# %%
+# Plot field components
+eq_analysis_1.plot_field()
 
 # %%
 # Plot equilibrium normalised profiles

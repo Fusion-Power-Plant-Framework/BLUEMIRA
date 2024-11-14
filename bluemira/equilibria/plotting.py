@@ -25,7 +25,12 @@ from bluemira.base.error import BluemiraError
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.display.plotter import Zorder, plot_coordinates
 from bluemira.equilibria.constants import DPI_GIF, J_TOR_MIN, M_PER_MN, PLT_PAUSE
-from bluemira.equilibria.diagnostics import EqSubplots, LCFSMask, PsiPlotType
+from bluemira.equilibria.diagnostics import (
+    EqBPlotParam,
+    EqSubplots,
+    LCFSMask,
+    PsiPlotType,
+)
 from bluemira.equilibria.find import Xpoint, _in_plasma, get_contours, grid_2d_contour
 from bluemira.equilibria.grid import Grid
 from bluemira.equilibria.physics import calc_psi
@@ -483,18 +488,18 @@ class EquilibriumPlotterMixin:
     ax: Axes
     psi: float | npt.NDArray[np.float64]
 
-    def plot_Bp(self, **kwargs):
+    def plot_B_component(self, poloidal=True, **kwargs):  # noqa: FBT002
         """
-        Plots the poloidal field onto the Axes.
+        Plots the poloidal or toroidal field onto the Axes.
         """
         nlevels = kwargs.pop("nlevels", PLOT_DEFAULTS["field"]["nlevels"])
         cmap = kwargs.pop("cmap", PLOT_DEFAULTS["field"]["cmap"])
 
-        Bp = self.eq.Bp()
-        levels = np.linspace(1e-36, np.amax(Bp), nlevels)
-        c = self.ax.contourf(self.eq.x, self.eq.z, Bp, levels=levels, cmap=cmap)
+        B_comp = self.eq.Bp() if poloidal else self.eq.Bt(self.eq.x)
+        levels = np.linspace(1e-36, np.amax(B_comp), nlevels)
+        c = self.ax.contourf(self.eq.x, self.eq.z, B_comp, levels=levels, cmap=cmap)
         cbar = plt.colorbar(c)
-        cbar.set_label("$B_{p}$ [T]")
+        cbar.set_label("$B_{p}$ [T]") if poloidal else cbar.set_label("$B_{t}$ [T]")
 
     def plot_psi(self, **kwargs):
         """
@@ -545,17 +550,23 @@ class FixedPlasmaEquilibriumPlotter(EquilibriumPlotterMixin, Plotter):
     eq: FixedPlasmaEquilibrium
 
     def __init__(
-        self, equilibrium: FixedPlasmaEquilibrium, ax=None, *, field: bool = False
+        self,
+        equilibrium: FixedPlasmaEquilibrium,
+        ax=None,
+        *,
+        field: EqBPlotParam = EqBPlotParam.PSI,
     ):
         super().__init__(ax)
         self.eq = equilibrium
         self.psi = self.eq.psi(self.eq.x, self.eq.z)
 
-        if not field:
+        if field not in EqBPlotParam.FIELD:
             self.plot_plasma_current()
             self.plot_psi()
-        else:
-            self.plot_Bp()
+        elif field is EqBPlotParam.BP:
+            self.plot_B_component()
+        elif field is EqBPlotParam.BT:
+            self.plot_B_component(poloidal=False)
         self.plot_LCFS()
 
     def plot_LCFS(self):
@@ -591,7 +602,7 @@ class EquilibriumPlotter(EquilibriumPlotterMixin, Plotter):
         *,
         plasma=False,
         show_ox=True,
-        field=False,
+        field: EqBPlotParam = EqBPlotParam.PSI,
     ):
         super().__init__(ax)
         self.eq = equilibrium
@@ -617,11 +628,13 @@ class EquilibriumPlotter(EquilibriumPlotterMixin, Plotter):
             )
             self.op_psi = np.amin(self.psi)
 
-        if not field:
+        if field not in EqBPlotParam.FIELD:
             self.plot_plasma_current()
             self.plot_psi()
-        else:
-            self.plot_Bp()
+        elif field is EqBPlotParam.BP:
+            self.plot_B_component()
+        elif field is EqBPlotParam.BT:
+            self.plot_B_component(poloidal=False)
 
         if self.o_points and self.x_points:
             # Only plot if we can normalise psi

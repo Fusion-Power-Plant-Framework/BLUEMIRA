@@ -107,6 +107,20 @@ class FixedOrFree(Enum):
     FREE = auto()
 
 
+class EqBPlotParam(Flag):
+    """
+    The paramater to plot for an equilibria xz plot.
+    """
+
+    PSI = auto()
+    """Poloidal Magnetic Flux"""
+    BP = auto()
+    """Poloidal Field"""
+    BT = auto()
+    """Toroidal Field"""
+    FIELD = BP | BT
+
+
 class FluxSurfaceType(Enum):
     """
     For flux surface comparision plotting.
