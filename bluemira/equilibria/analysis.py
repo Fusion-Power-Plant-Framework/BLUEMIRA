@@ -27,6 +27,7 @@ from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.equilibria.diagnostics import (
     CSData,
     DivLegsToPlot,
+    EqBPlotParam,
     FixedOrFree,
     FluxSurfaceType,
 )
@@ -37,7 +38,11 @@ from bluemira.equilibria.find_legs import (
     get_legs_length_and_angle,
 )
 from bluemira.equilibria.flux_surfaces import analyse_plasma_core
-from bluemira.equilibria.plotting import CorePlotter, EquilibriumComparisonPostOptPlotter
+from bluemira.equilibria.plotting import (
+    CorePlotter,
+    EquilibriumComparisonPostOptPlotter,
+    EquilibriumPlotter,
+)
 from bluemira.equilibria.profiles import CustomProfile
 from bluemira.geometry.coordinates import Coordinates
 from bluemira.utilities.tools import is_num
@@ -324,6 +329,33 @@ class EqAnalysis:
         """Plot equilibria"""
         self._eq.plot()
         plt.show()
+
+    def plot_field(self, ax=None):
+        """Plot poloidal and toroidal field"""
+        n_ax = 2
+        if ax is not None:
+            if len(ax) != n_ax:
+                raise BluemiraError(  # noqa: DOC501
+                    f"There are 2 subplots, you have provided settings for {len(ax)}."
+                )
+            ax1, ax2 = ax[0], ax[1]
+        else:
+            _, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.set_xlabel("$x$ [m]")
+        ax1.set_ylabel("$z$ [m]")
+        ax1.set_title("Poloidal")
+        ax1.set_aspect("equal")
+        ax2.set_xlabel("$x$ [m]")
+        ax2.set_ylabel("$z$ [m]")
+        ax2.set_title("Toroidal")
+        ax2.set_aspect("equal")
+
+        EquilibriumPlotter(
+            self._eq, ax=ax1, plasma=False, show_ox=True, field=EqBPlotParam.BP
+        )
+        EquilibriumPlotter(
+            self._eq, ax=ax2, plasma=False, show_ox=True, field=EqBPlotParam.BT
+        )
 
     def plot_profiles(self):
         """Plot profiles"""
