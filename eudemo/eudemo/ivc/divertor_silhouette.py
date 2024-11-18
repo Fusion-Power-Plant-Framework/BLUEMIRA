@@ -394,6 +394,11 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
             The position (in x-z) where the target
             joins to the dome.
 
+        Returns
+        -------
+        :
+            Arc of circular baffle
+
         Raises
         ------
         ValueError
@@ -507,6 +512,14 @@ class DivertorSilhouetteDesigner(Designer[tuple[BluemiraWire, ...]]):
         """
         Get the coordinates of the ends of a wire where the end
         with higher psi is returned first
+
+        Returns
+        -------
+        :
+            higher psi point
+        :
+            lower psi point
+
         """
         start_point = wire.start_point()
         end_point = wire.end_point()

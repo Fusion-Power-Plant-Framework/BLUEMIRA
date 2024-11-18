@@ -65,6 +65,11 @@ class EquilibriumManager:
     def plot(self):
         """
         Plot the states of the equilibria
+
+        Returns
+        -------
+        :
+            The plot figure
         """
         f, ax = plt.subplots(1, 3)
         for i, case in enumerate([self.BREAKDOWN, self.SOF, self.EOF]):
@@ -73,9 +78,14 @@ class EquilibriumManager:
             state.eq.coilset.plot(ax[i], label=True)
         return f
 
-    def summary(self):
+    def summary(self) -> str:
         """
         Produce a summary of the coils and currents in different states.
+
+        Returns
+        -------
+        :
+            A tabulated summary string
         """
         coilset = self.get_state(self.SOF).coilset
         columns = [
