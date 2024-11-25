@@ -24,6 +24,7 @@ runs:
         repository: "Fusion-Power-Plant-Framework/bluemira-private-data"
         ssh-key: ${{ inputs.bm-private-data-key }}
         path: "./bluemira-private-data"
+        ref: je-cook/process_develop
 
     - name: Move bluemira-private-data
       working-directory: "/home/runner/work/"
