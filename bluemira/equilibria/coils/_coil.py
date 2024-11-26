@@ -127,6 +127,7 @@ class Coil(CoilFieldsMixin):
         "_flag_sizefix",
         "_j_max",
         "_number",
+        "_resistance",
         "_x",
         "_x_boundary",
         "_z",
@@ -148,6 +149,7 @@ class Coil(CoilFieldsMixin):
         b_max: float = np.nan,
         discretisation: float = np.nan,
         n_turns: int = 1,
+        resistance: float = 0,
         *,
         psi_analytic: bool = False,
         Bx_analytic: bool = True,
@@ -172,6 +174,7 @@ class Coil(CoilFieldsMixin):
         self.ctype = ctype
         self.name = name
         self.n_turns = n_turns
+        self.resistance = resistance
 
         self._number = CoilNumber.generate(self.ctype)
         if self.name is None:
@@ -196,6 +199,7 @@ class Coil(CoilFieldsMixin):
             f"{type(self).__name__}({self.name} ctype={self.ctype.name} x={self.x:.2g}"
             f" z={self.z:.2g} dx={self.dx:.2g} dz={self.dz:.2g}"
             f" current={self.current:.2g} j_max={self.j_max:.2g} b_max={self.b_max:.2g}"
+            f" resistance={self.resistance:.2g}"
             f" discretisation={self.discretisation:.2g})"
         )
 
@@ -415,6 +419,16 @@ class Coil(CoilFieldsMixin):
         """Set coil max field"""
         self._b_max = floatify(value)
 
+    @property
+    def resistance(self):
+        """Get coil resistance"""
+        return self._resistance
+
+    @resistance.setter
+    def resistance(self, value: float):
+        """Set coil resistance"""
+        self._resistance = value
+
     @discretisation.setter
     def discretisation(self, value: float):
         """Set coil discretisation"""
@@ -425,6 +439,7 @@ class Coil(CoilFieldsMixin):
         self,
         j_max: float = NBTI_J_MAX,
         b_max: float = NBTI_B_MAX,
+        resistance: float = 0,
     ) -> None:
         """
         Assigns EM material properties to coil
@@ -443,6 +458,7 @@ class Coil(CoilFieldsMixin):
         """
         self.j_max = j_max
         self.b_max = b_max
+        self.resistance = resistance
 
     def get_max_current(self):
         """
