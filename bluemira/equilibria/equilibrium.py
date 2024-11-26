@@ -1398,7 +1398,6 @@ class Equilibrium(CoilSetMHDState):  # noqa: PLR0904
         # Speed optimisations
         o_points, x_points = self.get_OX_points(psi=psi, force_update=True)
         mask = in_plasma(self.x, self.z, psi, o_points=o_points, x_points=x_points)
-        print()  # flusher  # noqa: T201
 
         def minimise_dli(x):
             """

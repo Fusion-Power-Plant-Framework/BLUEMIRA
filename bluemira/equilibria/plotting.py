@@ -91,6 +91,7 @@ PLOT_DEFAULTS = {
             "CS": "#003688",
             "Plasma": "r",
             "NONE": "grey",
+            "DUM": "green",
         },
         "edgecolor": "k",
         "linewidth": 1,
@@ -313,7 +314,7 @@ class CoilGroupPlotter(Plotter):
             x, z = self._cg.get_control_coils().position
             xc = (max(x) + min(x)) / 2
             zc = (max(z) + min(z)) / 2
-        except AttributeError:
+        except (AttributeError, TypeError):
             # Not a coilset
             return None
         else:
