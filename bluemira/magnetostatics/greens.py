@@ -237,7 +237,9 @@ def circular_coil_inductance_elliptic(
     return MU_0 * (2 * radius - rc) * ((1 - k**2 / 2) * ellipk_nb(k) - ellipe_nb(k))
 
 
-def circular_coil_inductance_kirchhoff(radius: float, rc: float) -> float:
+def circular_coil_inductance_kirchhoff(
+    radius: float | np.ndarray, rc: float | np.ndarray
+) -> float | np.ndarray:
     """
     Calculate the inductance of a circular coil by Kirchhoff's approximation.
 
@@ -260,6 +262,34 @@ def circular_coil_inductance_kirchhoff(radius: float, rc: float) -> float:
     where :math:`\\mu_{0}` is the vacuum permeability
     """
     return MU_0 * radius * (np.log(8 * radius / rc) - 2 + 0.25)
+
+
+def square_coil_inductance_kirchhoff(
+    radius: float | np.ndarray, width: float | np.ndarray, height: float | np.ndarray
+) -> float | np.ndarray:
+    """
+    Calculate the inductance of a square coil by Kirchhoff's approximation.
+
+    radius:
+        The radius of the square coil
+    width:
+        The width of the coil cross-section
+    height
+        The height of the coil cross-section
+
+    Returns
+    -------
+    The self-inductance of the square coil [H]
+
+    Notes
+    -----
+    .. math::
+
+        Inductance = \\mu_0 radius (ln(8\\frac{radius}{width + height}) - 0.5)
+
+    where :math:`\\mu_{0}` is the vacuum permeability
+    """
+    return MU_0 * radius * (np.log(8 * radius / (width + height)) - 0.5)
 
 
 @nb.jit(nopython=True)

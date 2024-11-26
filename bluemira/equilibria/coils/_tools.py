@@ -14,13 +14,19 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from bluemira.magnetostatics.greens import circular_coil_inductance_elliptic, greens_psi
+from bluemira.magnetostatics.greens import (
+    circular_coil_inductance_elliptic,
+    greens_psi,
+    square_coil_inductance_kirchhoff,
+)
 
 if TYPE_CHECKING:
     from bluemira.equilibria.coils import CoilSet
 
 
-def make_mutual_inductance_matrix(coilset: CoilSet) -> np.ndarray:
+def make_mutual_inductance_matrix(
+    coilset: CoilSet, *, square_coil: bool = False, with_quadratures: bool = False
+) -> np.ndarray:
     """
     Calculate the mutual inductance matrix of a coilset.
 
@@ -53,28 +59,37 @@ def make_mutual_inductance_matrix(coilset: CoilSet) -> np.ndarray:
         with :math:`L_i` as the self-inductance using elliptic integrals.
 
     """
-    n_coils = coilset.n_coils()
+    if with_quadratures:
+        n_coils = coilset._quad_dx.ravel().size
+        xcoord = coilset._quad_x
+        zcoord = coilset._quad_z
+        dx = coilset._quad_dx
+        dz = coilset._quad_dz
+    else:
+        n_coils = coilset.n_coils()
+        xcoord = coilset.x
+        zcoord = coilset.z
+        dx = coilset.dx
+        dz = coilset.dz
+
     M = np.zeros((n_coils, n_coils))  # noqa: N806
-    xcoord = coilset.x
-    zcoord = coilset.z
-    dx = coilset.dx
-    dz = coilset.dz
     n_turns = coilset.n_turns
 
     itri, jtri = np.triu_indices(n_coils, k=1)
-
     M[itri, jtri] = (
         n_turns[itri]
         * n_turns[jtri]
-        * greens_psi(xcoord[itri], zcoord[itri], xcoord[jtri], zcoord[jtri])
+        * greens_psi(xcoord[itri], zcoord[itri], xcoord[jtri], zcoord[jtri]).ravel()
     )
     M[jtri, itri] = M[itri, jtri]
 
-    radius = np.hypot(dx, dz)
-    for i in range(n_coils):
-        M[i, i] = n_turns[i] ** 2 * circular_coil_inductance_elliptic(
-            xcoord[i], radius[i]
-        )
+    ind = np.diag_indices_from(M)
+
+    if square_coil:
+        M[ind] = square_coil_inductance_kirchhoff(xcoord, dx, dz)
+    else:
+        radius = np.hypot(dx, dz)
+        M[ind] = n_turns**2 * circular_coil_inductance_elliptic(xcoord, radius)
 
     return M
 
