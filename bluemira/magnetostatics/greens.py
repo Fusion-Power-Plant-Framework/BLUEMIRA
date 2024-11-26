@@ -18,6 +18,7 @@ __all__ = [
     "greens_Bx",
     "greens_Bz",
     "greens_all",
+    "greens_dbz_dx",
     "greens_dpsi_dx",
     "greens_dpsi_dz",
     "greens_psi",
@@ -108,7 +109,96 @@ ellipk_nb.__doc__ += ellipk.__doc__
 
 
 @nb.jit(nopython=True)
-def circular_coil_inductance_elliptic(radius: float, rc: float) -> float:
+def _elliptic_derivatives(e, k, k2):
+    r"""Get :math:`\frac{dK}{dk}` and :math:`\frac{dE}{dk}` [dimensionless]
+
+    .. math::
+
+        \frac{dK}{dk} &= \frac{E}{k}\frac{1}{1-k^2} - \frac{K}{k}
+
+        \frac{dE}{dk} &= \frac{E}{k} - \frac{K}{k}
+    """
+    sqk2 = np.sqrt(k2)
+    e_sqk = e / sqk2
+    k_sqk = k / sqk2
+    dKdk = e_sqk / (1 - k2) - k_sqk  # noqa: N806
+    dEdk = e_sqk - k_sqk  # noqa: N806
+    return dKdk, dEdk
+
+
+@nb.jit(nopython=True)
+def _dkdr(g3, xc, x):
+    r"""Get dkdr
+
+    .. math::
+
+        \text{dkdr} &= \frac{-2 x xc \frac{x+xc}{g_3^2} +
+                       \frac{x}{g_3}}{\sqrt{\frac{x xc}{g_3}}}
+
+            &= -2\sqrt{x xc} \sqrt{g_3}(\frac{x+xc}{g_3^2}) +
+                \sqrt{\frac{g_3}{x xc}}\frac{x}{g_3}
+
+            &= -2\sqrt{\frac{x xc}{g_3^3}} (x+xc) + \sqrt{\frac{xc}{g_3x}}
+
+            &= -2 \frac{(x+xc)\sqrt{x xc}}{g_3^{\frac{3}{2}}}  + \sqrt{\frac{xc}{g_3x}}
+
+    unit: [m^(-1)]
+    """
+    # old_expression = (-2 * x * xc * (x + xc) / (g3**2) + x / g3) / sqrt(x * xc / g3)
+    term_1 = -2 * (x + xc) * np.sqrt(x * xc) / g3**1.5
+    term_2 = np.sqrt(xc / (g3 * x))
+    return term_1 + term_2
+
+
+@nb.jit(nopython=True)
+def _g(xc, zc, x, z):
+    r"""Get the tuple of (:math:`g_1, g_2, g_3, g_4`)
+
+    unit: [m^2]
+
+    .. math::
+
+        g_1 &= xc^2 - x^2 - z^2
+        g_2 &= (xc - x)^2 + z^2
+        g_3 &= (xc + x)^2 + z^2
+        g_4 &= xc^2 + x^2 + z^2
+    """
+    x2 = x**2
+    xc2 = xc**2
+    z2 = (zc - z) ** 2
+    g1 = xc2 - x2 - z2
+    g2 = (xc - x) ** 2 + z2
+    g3 = (xc + x) ** 2 + z2
+    g4 = xc2 + x2 + z2
+    return g1, g2, g3, g4
+
+
+@nb.jit(nopython=True)
+def _g_r(xc, x):
+    r"""Get the tuple of (:math:`g_{1r}, g_{2r}, g_{3r}`)
+
+    unit: [m]
+
+    .. math::
+
+        g_{1r} &= \frac{dg_1}{dxc} = -2xc
+        g_{2r} &= \frac{dg_2}{dxc} = 2xc - 2x
+        g_{3r} &= \frac{dg_3}{dxc} = 2xc + 2x
+
+    :math:`g_{4r}` is not used anywhere so is not computed.
+    """
+    xc2 = 2 * xc
+    x2 = 2 * x
+    g1r = -xc2
+    g2r = xc2 - x2
+    g3r = xc2 + x2
+    return g1r, g2r, g3r
+
+
+@nb.jit(nopython=True)
+def circular_coil_inductance_elliptic(
+    radius: float | np.ndarray, rc: float | np.ndarray
+) -> float | np.ndarray:
     """
     Calculate the inductance of a circular coil by elliptic integrals.
 
@@ -278,6 +368,71 @@ def greens_dpsi_dx(
     a, k2 = calc_a_k2(xc, zc, x, z)
     i1, i2 = calc_i1_i2(a, k2)
     return MU_0_2PI * x * ((xc**2 - (z - zc) ** 2 - x**2) * i2 + i1)
+
+
+@nb.jit(nopython=True)
+def greens_dbz_dx(
+    xc: float | np.ndarray,
+    zc: float | np.ndarray,
+    x: float | np.ndarray,
+    z: float | np.ndarray,
+) -> float | np.ndarray:
+    r"""
+    Calculate :math:`\frac{dB_z}{dx}` (= :math:`\frac{dB_x}{dz}` for vacuum)
+
+    Get the radial gradient of the vertical magnetic field due to a circular filament.
+
+    unit: [N/A/m^2]
+
+    .. math::
+
+        \frac{dB_z}{dx} = \frac{dB_x}{dz} = \frac{\mu_0 I}{2 \pi}\left(
+            - \frac{(K+E\frac{g_1}{g_2}) g_{3r}}{2 g_3^{\frac{3}{2}}}
+            + \frac{- E \frac{g_{1r}}{g_2} - E \frac{g_1 g_{2r}}{g_2^2}
+                    + \frac{dE}{dk} \frac{g_1}{g_2} \text{dkdr}
+                    + \frac{dK}{dk} \text{dkdr}
+                    }{\sqrt{g_3}}
+        \right)
+
+    where :math:`K = K(k^2), E = E(k^2)`.
+
+    Returns
+    -------
+    :
+        the gradient to the mangetic field
+    """
+    _, k2 = calc_a_k2(xc, zc, x, z)
+    e, k = calc_e_k(k2)
+    kdk, edk = _elliptic_derivatives(e, k, k2)
+    g1, g2, g3, _ = _g(xc, zc, x, z)
+    g1r, g2r, g3r = _g_r(x, xc)
+    dkdr = _dkdr(g3, xc, x)
+
+    # Avoid divide by 0
+    g2 = np.where(g2 == 0, GREENS_ZERO, g2)
+    g3 = np.where(g3 == 0, GREENS_ZERO, g3)
+    logic_or = np.logical_or(g2 == 0, g3 == 0)
+    inv_g2 = g2**-1
+    inv_g2_2 = g2**-2
+
+    p1 = np.where(
+        logic_or,
+        0,
+        -MU_0_4PI * (k + e * g1 * inv_g2) * g3r * g3**-1.5,
+    )
+    p2 = np.where(
+        logic_or,
+        0,
+        MU_0_2PI
+        * (
+            e * g1r * inv_g2
+            - e * g1 * g2r * inv_g2_2
+            + (g1 * edk * dkdr) * inv_g2
+            + kdk * dkdr
+        )
+        * g3**-0.5,
+    )
+    return p1 + p2
 
 
 @nb.jit(nopython=True)
@@ -563,8 +718,9 @@ def greens_all(
     i1 *= 4
     i2 *= 4
     a_part = (z - zc) ** 2 + x**2 + xc**2
-    b_part = -2 * x * xc
-    g_bx = MU_0_4PI * xc * (z - zc) * (i1 - i2 * a_part) / b_part
-    g_bz = MU_0_4PI * xc * ((xc + x * a_part / b_part) * i2 - i1 * x / b_part)
+    inv_b_part = 1 / (-2 * x * xc)
+    x_b_part = x * inv_b_part
+    g_bx = MU_0_4PI * xc * (z - zc) * (i1 - i2 * a_part) * inv_b_part
+    g_bz = MU_0_4PI * xc * ((xc + a_part * x_b_part) * i2 - i1 * x_b_part)
     g_psi = MU_0_4PI * a * ((2 - k2) * k - 2 * e)
     return g_psi, g_bx, g_bz
