@@ -115,7 +115,7 @@ template_builder.add_variable("fncycle", 1.0)
 template_builder.adjust_variable("fne0", 0.6, upper_bound=0.95)
 template_builder.adjust_variable("fdene", 1.2, upper_bound=1.2)
 template_builder.adjust_variable("flhthresh", 1.2, lower_bound=1.1, upper_bound=1.2)
-template_builder.adjust_variable("ftburn", 1.0, upper_bound=1.0)
+template_builder.adjust_variable("ft_burn", 1.0, upper_bound=1.0)
 
 # Modifying the initial variable vector to improve convergence
 template_builder.adjust_variable("fpnetel", 1.0)
@@ -205,7 +205,7 @@ template_builder.add_input_values({
     "coreradiationfraction": 0.6,
     # Important stuff
     "pnetelin": 500.0,
-    "tbrnmn": 7.2e3,
+    "t_burn_min": 7.2e3,
     "sig_tf_case_max": 5.8e8,
     "sig_tf_wp_max": 5.8e8,
     "alstroh": 6.6e8,
@@ -229,7 +229,7 @@ template_builder.add_input_values({
     "ddwex": 0.15,
     "gapomin": 0.2,
     # Vertical build inputs
-    "vgap2": 0.05,
+    "vgap_vv_thermalshield": 0.05,
     "divfix": 0.621,
     # HCD inputs
     "pinjalw": 51.0,
@@ -241,8 +241,8 @@ template_builder.add_input_values({
     "etahtp": 0.87,
     "etaiso": 0.9,
     "vfshld": 0.6,
-    "tdwell": 0.0,
-    "tramp": 500.0,
+    "t_between_pulse": 0.0,
+    "t_precharge": 500.0,
     # CS / PF coil inputs
     "fcuohsu": 0.7,
     "ohhghf": 0.9,

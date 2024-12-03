@@ -48,12 +48,12 @@ class ProcessInputs:
     # Top down of PROCESS variables list
 
     # Times
-    tburn: float | None = None
-    tdwell: float | None = None
+    t_burn: float | None = None
+    t_between_pulse: float | None = None
     t_fusion_ramp: float | None = None
-    tohs: float | None = None
-    tqnch: float | None = None
-    tramp: float | None = None
+    t_current_ramp_up: float | None = None
+    t_ramp_down: float | None = None
+    t_precharge: float | None = None
 
     # FWBS
     ibkt_life: int | None = None
@@ -391,11 +391,11 @@ class ProcessInputs:
     fstr_wp: float | None = None
     fmaxvvstress: float | None = None
     ftbr: float | None = None
-    ftburn: float | None = None
+    ft_burn: float | None = None
     ftcycl: float | None = None
     ftmargoh: float | None = None
     ftmargtf: float | None = None
-    ftohs: float | None = None
+    ft_current_ramp_up: float | None = None
     ftpeak: float | None = None
     fvdump: float | None = None
     fvs: float | None = None
@@ -415,7 +415,7 @@ class ProcessInputs:
     pseprmax: float | None = None
     ptfnucmax: float | None = None
     tbrmin: float | None = None
-    tbrnmn: float | None = None
+    t_burn_min: float | None = None
     vvhealw: float | None = None
     walalw: float | None = None
     taulimit: float | None = None

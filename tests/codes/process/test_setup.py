@@ -88,7 +88,7 @@ class TestSetup:
 )
 class TestSetupIntegration:
     @mock.patch(f"{MODULE_REF}.InDat")
-    def test_obsolete_parameter_names_are_updated(self, writer_cls_mock):
+    def test_obsolete_parameter_names_are_updated(self, writer_cls_mock, caplog):
         pf = ProcessSolverParams.from_json(PARAM_FILE)
         pf.mappings["tk_tf_front_ib"] = ParameterMapping(
             "dr_tf_case_out", send=True, recv=False, unit="m"
@@ -97,7 +97,9 @@ class TestSetupIntegration:
         writer_cls_mock.return_value.data = {"x": 0}
 
         setup.run()
+        # 'dr_tf_case_out' is old name for 'casthi'
+        assert "Obsolete dr_tf_case_out" in caplog.records[0].message
+        assert "name is casthi" in caplog.records[0].message
 
         writer = writer_cls_mock.return_value
-        # 'dr_tf_case_out' is old name for 'casthi'
         assert mock.call("casthi", 0.04) in writer.add_parameter.call_args_list

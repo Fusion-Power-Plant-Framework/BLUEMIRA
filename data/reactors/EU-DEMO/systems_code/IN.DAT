@@ -110,9 +110,11 @@ shldoth  = 0.3 * outboard shield thickness (m) (`iteration variable 94`)
 shldtth  = 0.3 * upper/lower shield thickness (m); calculated if `blktmodel > 0` (= shldlth if double-null)
 tfcth    = 1.0500e+00 * inboard TF coil thickness; (centrepost for ST) (m)
 tftsgap  = 0.05 * Minimum metal-to-metal gap between TF coil and thermal shield (m)
-thshield = 0.05 * TF-VV thermal shield thickness (m)
-vgap2    = 0.12, * vertical gap between vacuum vessel and thermal shields (m)
-vgap     = 1.60, * vertical gap between x-point and divertor (m) (if = 0; it is calculated)
+thshield_ib = 0.05 * TF-VV thermal shield thickness (m)
+thshield_ob = 0.05 * TF-VV thermal shield thickness (m)
+thshield_vb = 0.05 * TF-VV thermal shield thickness (m)
+vgap_vv_thermalshield    = 0.12, * vertical gap between vacuum vessel and thermal shields (m)
+vgap_xpoint_divertor    = 1.60, * vertical gap between x-point and divertor (m) (if = 0; it is calculated)
 vvblgap  = 0.02 * gap between vacuum vessel and blanket (m)
 
 *-----------------Buildings Module-----------------*
@@ -147,7 +149,7 @@ fpinj    = 1.0, * f-value for injection power (`constraint equation 30`; `iterat
 fpnetel  = 1.0, * f-value for net electric power (`constraint equation 16`; `iteration variable 25`)
 fstrcase = 1.0000e+00 * f-value for maximum TF coil case TRESCA stress
 fstrcond = 8.6890e-01 * f-value for maxiumum TF coil conduit TRESCA stress
-ftburn   = 1.00e+00 * f-value for minimum burn time (`constraint equation 13`; `iteration variable 21`)
+ft_burn   = 1.00e+00 * f-value for minimum burn time (`constraint equation 13`; `iteration variable 21`)
 fvdump   = 6.1211e-01 * f-value for dump voltage (`constraint equation 34`; `iteration variable 51`)
 fwalld   = 1.3024e-01 * f-value for maximum wall load (`constraint equation 8`; `iteration variable 14`)
 pnetelin = 500 * required net electric power (MW) (`constraint equation 16`)
@@ -411,7 +413,7 @@ gamma    = 0.3 * Ejima coefficient for resistive startup V-s formula
 hfact    = 1.1000e+00 * H factor on energy confinement times; radiation corrected (`iteration variable 10`); If
 ibss     = 4, * switch for bootstrap current scaling
 iculbl   = 1, * switch for beta limit scaling (`constraint equation 24`)
-icurr    = 4, * switch for plasma current scaling to use
+i_plasma_current    = 4, * switch for plasma current scaling to use
 idensl   = 7, * switch for density limit to enforce (`constraint equation 5`)
 ifalphap = 1, * switch for fast alpha pressure calculation
 ifispact = 0, * switch for neutronics calculations;
@@ -422,7 +424,7 @@ nesep    = 0.2e20 * electron density at separatrix [m-3] (`ipedestal=1;2; calcul
 rhopedn  = 0.94 * r/a of density pedestal (`ipedestal>=1`)
 rhopedt  = 0.94 * r/a of temperature pedestal (`ipedestal>=1`)
 tbeta    = 2.0 * temperature profile index beta  (`ipedestal=1;2`)
-teped    = 5.5 * electron temperature of pedestal (keV) (`ipedestal>=1; ieped=0; calculated for ieped=1`)
+teped    = 5.5 * electron temperature of pedestal (keV) (`ipedestal>=1`)
 tesep    = 0.1 * electron temperature at separatrix (keV) (`ipedestal>=1`) calculated if reinke
 iprofile = 1 * switch for current profile consistency;
 isc      = 34, * switch for energy confinement time scaling law (see description in `tauscl`)
@@ -543,7 +545,7 @@ vftf     = 0.33, * coolant fraction of TFC 'cable' (`i_tf_sup=1`); or of TFC leg
 
 *-----------------Times Variables------------------*
 
-tburn    = 1.0d4, * burn time (s) (calculated if `lpulse=1`)
+t_burn    = 1.0d4, * burn time (s) (calculated if `lpulse=1`)
 
 *---------------Torga Curgap Module----------------*
 

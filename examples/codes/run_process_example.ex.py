@@ -209,7 +209,7 @@ template_builder.add_input_values({
     "coreradiationfraction": 0.6,
     # Important stuff
     "pnetelin": 500.0,
-    "tbrnmn": 7.2e3,
+    "t_burn_min": 7.2e3,
     "sig_tf_case_max": 5.8e8,
     "sig_tf_wp_max": 5.8e8,
     "alstroh": 6.6e8,
@@ -238,7 +238,7 @@ template_builder.add_input_values({
     "gapomin": 0.2,
     # Vertical build inputs
     "d_vv_top": 0.3,
-    "vgap2": 0.05,
+    "vgap_vv_thermalshield": 0.05,
     "shldtth": 0.3,
     "divfix": 0.621,
     "d_vv_bot": 0.3,
@@ -252,8 +252,8 @@ template_builder.add_input_values({
     "etahtp": 0.87,
     "etaiso": 0.9,
     "vfshld": 0.6,
-    "tdwell": 0.0,
-    "tramp": 500.0,
+    "t_between_pulse": 0.0,
+    "t_precharge": 500.0,
     # CS / PF coil inputs
     "t_crack_vertical": 0.4e-3,
     "fcuohsu": 0.7,

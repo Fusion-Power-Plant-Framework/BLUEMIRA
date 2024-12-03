@@ -368,7 +368,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "pcoreradmw",
+        "name": "pinnerzoneradmw",
         "send": false,
         "recv": true,
         "unit": "MW"
@@ -382,7 +382,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "pedgeradmw",
+        "name": "pouterzoneradmw",
         "send": false,
         "recv": true,
         "unit": "MW"
@@ -941,7 +941,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "bootipf",
+        "name": "bootstrap_current_fraction",
         "send": false,
         "recv": true,
         "unit": "dimensionless"
@@ -1858,7 +1858,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "tburn",
+        "name": "t_burn",
         "send": false,
         "recv": false,
         "unit": "s"
@@ -2403,7 +2403,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "thshield",
+        "name": "thshield_ib",
         "send": true,
         "recv": true,
         "unit": "m"

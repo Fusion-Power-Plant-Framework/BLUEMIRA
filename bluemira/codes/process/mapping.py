@@ -92,7 +92,7 @@ OUT_mappings = {
 
 IO_mappings = {
     "A": ("aspect", "dimensionless"),
-    "tau_flattop": (("tbrnmn", "tburn"), "s"),
+    "tau_flattop": (("t_burn_min", "t_burn"), "s"),
     "P_el_net": (("pnetelin", "pnetelmw"), "MW"),
     "tk_bb_ib": ("blnkith", "m"),
     "tk_bb_ob": ("blnkoth", "m"),

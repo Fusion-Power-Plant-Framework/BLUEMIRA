@@ -1334,7 +1334,7 @@ fpinj    = 1.0, * f-value for injection power (`constraint equation 30`; `iterat
 fpnetel  = 1.0, * f-value for net electric power (`constraint equation 16`; `iteration variable 25`)
 fstrcase = 1.0000e+00 * f-value for maximum TF coil case TRESCA stress
 fstrcond = 8.6890e-01 * f-value for maxiumum TF coil conduit TRESCA stress
-ftburn   = 1.00e+00 * f-value for minimum burn time (`constraint equation 13`; `iteration variable 21`)
+ft_burn   = 1.00e+00 * f-value for minimum burn time (`constraint equation 13`; `iteration variable 21`)
 fvdump   = 6.1211e-01 * f-value for dump voltage (`constraint equation 34`; `iteration variable 51`)
 fwalld   = 1.3024e-01 * f-value for maximum wall load (`constraint equation 8`; `iteration variable 14`)
 pnetelin = 500 * required net electric power (MW) (`constraint equation 16`)
@@ -1732,7 +1732,7 @@ vftf     = 0.33, * coolant fraction of TFC 'cable' (`i_tf_sup=1`); or of TFC leg
 
 *-----------------Times Variables------------------*
 
-tburn    = 1.0d4, * burn time (s) (calculated if `lpulse=1`)
+t_burn    = 1.0d4, * burn time (s) (calculated if `lpulse=1`)
 
 *---------------Torga Curgap Module----------------*
 

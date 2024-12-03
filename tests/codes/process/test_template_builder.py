@@ -299,7 +299,7 @@ class TestInDatOneForOne:
         template_builder.adjust_variable(
             "flhthresh", 1.2, lower_bound=1.1, upper_bound=1.2
         )
-        template_builder.adjust_variable("ftburn", 1.0, upper_bound=1.0)
+        template_builder.adjust_variable("ft_burn", 1.0, upper_bound=1.0)
 
         # Modifying the initial variable vector to improve convergence
         template_builder.adjust_variable("fpnetel", 1.0)
@@ -375,7 +375,7 @@ class TestInDatOneForOne:
             "coreradiationfraction": 0.6,
             # Important stuff
             "pnetelin": 500.0,
-            "tbrnmn": 7.2e3,
+            "t_burn_min": 7.2e3,
             "sig_tf_case_max": 5.8e8,
             "sig_tf_wp_max": 5.8e8,
             "alstroh": 6.6e8,
@@ -418,8 +418,8 @@ class TestInDatOneForOne:
             "etahtp": 0.87,
             "etaiso": 0.9,
             "vfshld": 0.6,
-            "tdwell": 0.0,
-            "tramp": 500.0,
+            "t_between_pulse": 0.0,
+            "t_precharge": 500.0,
             # CS / PF coil inputs
             "t_crack_vertical": 0.4e-3,
             "fcuohsu": 0.7,
@@ -523,5 +523,5 @@ class TestInDatOneForOne:
                 )
 
     def test_no_extra_inputs(self):
-        for k in self.template:
-            assert k in self.true_data
+        vals = [k for k in self.template if k not in self.true_data]
+        assert len(vals) == 0

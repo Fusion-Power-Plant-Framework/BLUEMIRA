@@ -351,7 +351,7 @@ class Constraint(ConstraintSelection, Model):
     PF_ENERGY_RATE_UPPER_LIMIT = (
         66,
         (65, 113),
-        ("tohs",),
+        ("t_current_ramp_up",),
         "Limit on rate of change of energy in poloidal field",
     )
     WALL_RADIATION_UPPER_LIMIT = (
@@ -562,11 +562,11 @@ ITERATION_VAR_MAPPING = {
     "fwalld": 14,
     "fvs": 15,
     "ohcth": 16,
-    "tdwell": 17,
+    "t_between_pulse": 17,
     "q": 18,
     "beam_energy": 19,
     "tcpav": 20,
-    "ftburn": 21,
+    "ft_burn": 21,
     # 22 NOT USED
     "fcoolcp": 23,
     # 24 NOT USED
@@ -610,8 +610,8 @@ ITERATION_VAR_MAPPING = {
     "fdtmp": 62,
     "ftpeak": 63,
     "fauxmn": 64,
-    "tohs": 65,
-    "ftohs": 66,
+    "t_current_ramp_up": 65,
+    "ft_current_ramp_up": 66,
     "ftcycl": 67,
     "fptemp": 68,
     "rcool": 69,

@@ -76,7 +76,7 @@ boundu(60) = 9.0d4
 ixc = 61 * gapds
 boundl(61) = 0.12
 ixc = 63  * ftpeak (f-value for equation 39)
-ixc = 65 * tohs
+ixc = 65 * t_current_ramp_up
 boundu(65) = 1000
 ixc = 103 * flhthresh
 ixc = 109 * ralpne
@@ -103,8 +103,8 @@ shldith  = 0.30 * Inboard shield thickness (m)
 shldoth  = 0.80 * Outboard shield thickness (m)
 shldtth  = 0.30 * Upper/lower shield thickness (m);
 tfcth    = 1.0500e+00 * Inboard tf coil thickness; (centrepost for st) (m)
-vgap2    = 0.061 * Vertical gap between vacuum vessel and tf coil (m)
-vgap   = 1.60 * Vertical gap between x-point and divertor (m)
+vgap_vv_thermalshield    = 0.061 * Vertical gap between vacuum vessel and tf coil (m)
+vgap_xpoint_divertor   = 1.60 * Vertical gap between x-point and divertor (m)
 tftsgap = 0.02
 thshield = 0.05
 vvblgap = 0.02
@@ -125,12 +125,12 @@ fpinj    = 1.0 * F-value for injection power
 fpnetel  = 1.0 * F-value for net electric power
 fstrcase = 1.0000e+00 * F-value for tf coil case stress
 fstrcond = 8.6890e-01 * F-value for tf coil conduit stress
-ftburn   = 1.00e+00 * F-value for minimum burn time
+ft_burn   = 1.00e+00 * F-value for minimum burn time
 fvdump   = 1.0      * F-value for dump voltage
 fwalld   = 1.3024e-01 * F-value for maximum wall load
 pnetelin = 500.0 * Required net electric power (mw)
 pseprmax = 17.0 * Maximum ratio of power crossing the separatrix to
-tbrnmn   = 7.2e3 * Minimum burn time (s)
+t_burn_min   = 7.2e3 * Minimum burn time (s)
 
 walalw   = 8.0 * Allowable wall-load (mw/m2)
 *------------------Cost Variables------------------*
@@ -206,7 +206,7 @@ rpf2     = -1.825 * Offset (m) of radial position of ipfloc=2 pf coils
 
 maxpoloidalpower = 250
 fpoloidalpower = 1.00
-tohs = 80 *
+t_current_ramp_up = 80 *
 
 zref(1) = 3.6
 zref(2) = 1.2
@@ -231,7 +231,7 @@ gamma    = 0.3 * Ejima coefficient for resistive startup v-s formula
 hfact    = 1.1000e+00 * H factor on energy confinement times (iteration variable 10)
 ibss     = 4 * Switch for bootstrap current scaling;
 iculbl   = 1 * Switch for beta limit scaling (constraint equation 24);
-icurr    = 4 * Switch for plasma current scaling to use;
+i_plasma_current    = 4 * Switch for plasma current scaling to use;
 idia     = 2 *switch for diamagnetic current scaling (2: SCENE scaling)
 idensl   = 7 * Switch for density limit to enforce (constraint equation 5);
 ifalphap = 1 * Switch for fast alpha pressure calculation;
@@ -285,6 +285,6 @@ tmargmin = 1.7 * Minimum allowable temperature margin (cs and tf coils) (k)
 vdalw    = 30.0        * Max voltage across tf coil during quench (kv)
 vftf     = 0.33 * Coolant fraction of tfc 'cable' (itfsup=1); or of tfc leg (itfsup=0)
 *-----------------Times Variables------------------*
-tburn    = 1000.0 * Burn time (s) (calculated if lpulse=1)
+t_burn    = 1000.0 * Burn time (s) (calculated if lpulse=1)
 *-----------------Vacuum Variables-----------------*
 output_costs = 0
