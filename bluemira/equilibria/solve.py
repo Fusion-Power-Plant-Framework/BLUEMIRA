@@ -16,13 +16,13 @@ from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
 import numpy as np
 
-from bluemira.base.file import try_get_bluemira_path
 from bluemira.base.look_and_feel import (
     bluemira_print,
     bluemira_print_flush,
     bluemira_warn,
 )
 from bluemira.equilibria.constants import DPI_GIF, PLT_PAUSE, PSI_REL_TOL
+from bluemira.equilibria.diagnostics import PicardDiagnostic, PicardDiagnosticOptions
 from bluemira.optimisation.error import OptimisationError
 from bluemira.utilities.plot_tools import make_gif, save_figure
 
@@ -120,6 +120,8 @@ class ConvergenceCriterion(ABC):
         if ax is None:
             _f, ax = plt.subplots()
         ax.semilogy(self.progress)
+        ax.semilogy([0, len(self.progress)], [self.limit, self.limit])
+        ax.grid(visible=True, which="both")
         ax.set_xlabel("Iterations [n]")
         ax.set_ylabel(self.math_string)
 
@@ -460,15 +462,12 @@ class PicardIterator:
         self,
         eq: Equilibrium,
         optimisation_problem: CoilsetOptimisationProblem,
+        diagnostic_plotting: PicardDiagnosticOptions | None = None,
         convergence: ConvergenceCriterion | None = None,
         *,
         fixed_coils: bool = False,
         relaxation: float = 0,
         maxiter: int = 30,
-        plot: bool = True,
-        gif: bool = False,
-        figure_folder: str | None = None,
-        plot_name: str = "default_0",
     ):
         self.eq = eq
         self.coilset = self.eq.coilset
@@ -486,18 +485,14 @@ class PicardIterator:
 
         self.relaxation = relaxation
         self.maxiter = maxiter
-        self.plot_flag = plot or (gif and not plot)
-        self.gif_flag = gif
-        if figure_folder is None:
-            figure_folder = try_get_bluemira_path(
-                "", subfolder="generated_data", allow_missing=not self.gif_flag
-            )
-        self.figure_folder = figure_folder
+        if diagnostic_plotting is None:
+            diagnostic_plotting = PicardDiagnosticOptions()
+        self.diagnostic_plotting = diagnostic_plotting
         self.store = []
         self.i = 0
-        if self.plot_flag:
-            self.pname = plot_name
+        if diagnostic_plotting.plot is not PicardDiagnostic.NO_PLOT:
             self.f, self.ax = plt.subplots()
+            self.pname = diagnostic_plotting.plot_name
 
     def _optimise_coilset(self):
         self.result = None
@@ -579,11 +574,11 @@ class PicardIterator:
         self._psi = self.eq.psi()
         self._j_tor = self.eq._jtor
         check = self.check_converged()
-        if self.plot_flag:
+        if self.diagnostic_plotting.plot is not PicardDiagnostic.NO_PLOT:
             self.update_fig()
         if check:
-            if self.gif_flag:
-                make_gif(self.figure_folder, self.pname)
+            if self.diagnostic_plotting.gif:
+                make_gif(self.diagnostic_plotting.figure_folder, self.pname)
             raise StopIteration
         self._optimise_coilset()
         self._psi = (
@@ -639,13 +634,16 @@ class PicardIterator:
         Updates the figure if plotting is used
         """
         self.ax.clear()
-        self.eq.plot(ax=self.ax)
+        if self.diagnostic_plotting.plot is PicardDiagnostic.EQ:
+            self.eq.plot(ax=self.ax)
+        elif self.diagnostic_plotting.plot is PicardDiagnostic.CONVERGENCE:
+            self.convergence.plot(ax=self.ax)
         plt.pause(PLT_PAUSE)
         save_figure(
             self.f,
             self.pname + str(self.i),
-            save=self.gif_flag,
-            folder=self.figure_folder,
+            save=self.diagnostic_plotting.gif,
+            folder=self.diagnostic_plotting.figure_folder,
             dpi=DPI_GIF,
         )
 

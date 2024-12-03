@@ -55,6 +55,7 @@ from bluemira.base.constants import raw_uc
 from bluemira.display import plot_defaults
 from bluemira.display.plotter import plot_coordinates
 from bluemira.equilibria.coils import Coil, CoilSet
+from bluemira.equilibria.diagnostics import PicardDiagnostic, PicardDiagnosticOptions
 from bluemira.equilibria.equilibrium import Equilibrium
 from bluemira.equilibria.grid import Grid
 from bluemira.equilibria.optimisation.constraints import (
@@ -241,9 +242,13 @@ x_point = FieldNullConstraint(
 current_opt_problem = UnconstrainedTikhonovCurrentGradientCOP(
     coilset, eq, MagneticConstraintSet([isoflux, x_point]), gamma=1e-7
 )
-
+diagnostic_plotting = PicardDiagnosticOptions(plot=PicardDiagnostic.EQ)
 program = PicardIterator(
-    eq, current_opt_problem, fixed_coils=True, relaxation=0.2, plot=True
+    eq,
+    current_opt_problem,
+    fixed_coils=True,
+    relaxation=0.2,
+    diagnostic_plotting=diagnostic_plotting,
 )
 program()
 
@@ -288,14 +293,12 @@ current_opt_problem = TikhonovCurrentCOP(
     max_currents=coilset.get_max_current(0.0),
     constraints=[x_point, field_constraints, force_constraints],
 )
-
 program = PicardIterator(
     eq,
     current_opt_problem,
     fixed_coils=True,
     convergence=DudsonConvergence(1e-4),
     relaxation=0.1,
-    plot=False,
 )
 program()
 
@@ -330,7 +333,6 @@ program = PicardIterator(
     fixed_coils=True,
     convergence=DudsonConvergence(1e-4),
     relaxation=0.1,
-    plot=False,
 )
 program()
 
@@ -519,7 +521,7 @@ program = PicardIterator(
     fixed_coils=True,
     convergence=DudsonConvergence(1e-4),
     relaxation=0.1,
-    plot=True,
+    diagnostic_plotting=diagnostic_plotting,
 )
 program()
 
@@ -529,7 +531,7 @@ program = PicardIterator(
     fixed_coils=True,
     convergence=DudsonConvergence(1e-4),
     relaxation=0.05,
-    plot=True,
+    diagnostic_plotting=diagnostic_plotting,
 )
 program()
 

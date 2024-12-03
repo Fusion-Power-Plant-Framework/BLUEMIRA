@@ -23,6 +23,7 @@ from bluemira.base.parameter_frame import Parameter, ParameterFrame
 from bluemira.codes.plasmod.equilibrium_2d_coupling import solve_transport_fixed_boundary
 from bluemira.codes.wrapper import transport_code_solver
 from bluemira.equilibria import Equilibrium
+from bluemira.equilibria.diagnostics import PicardDiagnosticOptions
 from bluemira.equilibria.fem_fixed_boundary.fem_magnetostatic_2D import (
     FemGradShafranovFixedBoundary,
     FixedBoundaryEquilibrium,
@@ -116,8 +117,9 @@ class EquilibriumDesigner(Designer[Equilibrium]):
         - `read_file_path`: str
             the path to an eqdsk file to read the equilibrium from,
             required in `read` mode.
-        - `plot_optimisation`: bool
-            set to `True` to plot the iterations in the optimisation,
+        - `diagnotic_plotting`: PicardDiagnosticOptions
+            set to `diagnotic_plotting.plot` to one of the available plot types,
+            in order to plot for each of the iterations in the optimisation,
             only used in `run` mode
     """
 
@@ -131,7 +133,9 @@ class EquilibriumDesigner(Designer[Equilibrium]):
     ):
         super().__init__(params, build_config)
         self.file_path = self.build_config.get("file_path", None)
-        self.plot_optimisation = self.build_config.get("plot_optimisation", False)
+        self.diagnostic_plotting = self.build_config.get(
+            "diagnostic_plotting", PicardDiagnosticOptions()
+        )
         if self.run_mode == "read" and self.file_path is None:
             raise ValueError(
                 f"Cannot execute {type(self).__name__} in 'read' mode: "
@@ -154,7 +158,7 @@ class EquilibriumDesigner(Designer[Equilibrium]):
             convergence=DudsonConvergence(),
             relaxation=0.2,
             fixed_coils=True,
-            plot=self.plot_optimisation,
+            diagnostic_plotting=self.diagnostic_plotting,
         )
         self._result = iterator_program()
         self._update_params_from_eq(eq)
@@ -640,6 +644,9 @@ class ReferenceFreeBoundaryEquilibriumDesigner(Designer[Equilibrium]):
     ):
         super().__init__(params, build_config)
         self.file_path = self.build_config.get("file_path", None)
+        self.diagnostic_plotting = self.build_config.get(
+            "diagnostic_plotting", PicardDiagnosticOptions()
+        )
         self.lcfs_coords = lcfs_coords
         self.profiles = profiles
 
@@ -715,7 +722,7 @@ class ReferenceFreeBoundaryEquilibriumDesigner(Designer[Equilibrium]):
             eq,
             self.opt_problem,
             convergence=DudsonConvergence(iter_err_max),
-            plot=self.build_config.get("plot", False),
+            diagnotic_plotting=self.diagnostic_plotting,
             fixed_coils=True,
             **settings,
         )
