@@ -99,6 +99,7 @@ def setup_radial_build(run: dict[str, Any], width: float = 1.0):
         "blanket": "#edb120",
         "TF coil": "#7e2f8e",
         "Vacuum vessel": "k",
+        "Radiation shield": "#5dbb63",
         "Plasma": "#f77ec7",
         "first wall": "#edb120",
         "Machine bore": "w",
@@ -115,6 +116,7 @@ def setup_radial_build(run: dict[str, Any], width: float = 1.0):
         "blanket",
         "TF coil",
         "Vacuum vessel",
+        "Radiation shield",
         "Plasma",
         "scrape-off",
         "solenoid",
@@ -125,6 +127,7 @@ def setup_radial_build(run: dict[str, Any], width: float = 1.0):
         "TF coil": "TF coil",
         "Plasma": "Plasma",
         "Vacuum vessel": "Vacuum vessel",
+        "Radiation shield": "Radiation shield",
         "scrape-off": "Scrape-off layer",
         "solenoid": "Central solenoid",
         "Thermal shield": "Thermal shield",
@@ -134,7 +137,7 @@ def setup_radial_build(run: dict[str, Any], width: float = 1.0):
         yc = np.array(yc)
         coords = Coordinates({"x": xc, "y": yc})
         for key, c in col.items():
-            if key in comp[0]:
+            if key.upper() in comp[0].upper():
                 ax.plot(xc, yc, color=c, linewidth=0, label=key)
                 if comp[1] > 0:
                     plot_coordinates(
@@ -227,6 +230,122 @@ def process_RB_fromOUT(f):
     return {"Radial Build": rb, "n_TF": n_TF, "R_0": R_0}
 
 
+def process_RB_fromMFILE(f):
+    """
+    Parse PROCESS radial build from an MFILE.DAT file.
+
+    Raises
+    ------
+    OSError
+        If unable to read file or parse the expected structure.
+    """
+    # If the input is a string, treat as file name, and ensure it is closed.
+    if isinstance(f, str | Path):
+        with open(f) as fh:
+            return process_RB_fromMFILE(fh)  # Recursive call with file object
+    raw = f.readlines()
+    raw = raw[1:]
+    if not raw:
+        raise OSError("Cannot read from input file.")
+
+    if PROCESS not in raw[1] and PROCESS not in raw[2]:
+        bluemira_warn(
+            "Either this ain't a PROCESS MFILE.DAT file, or they changed the format."
+        )
+
+    def read_radial_build(num):
+        """
+        Reads a radial build parameter from the line number `num`.
+
+        In the MFILE, the Components are listed in 3 lines:
+
+        - Gap_radial_thickness_(m)___ (vvblgap)____<value>
+        - Radial_build_component_11 ___(radial_label(11))___vvblgap
+        - Radial_build_cumulative_radius_11___(radial_cum(11))____<value>
+
+        Be careful that `num` refers to the line number of the last line
+        (i.e., with (radial_cum(<component number>))).
+        """
+        # Extract relevant lines
+        l1, l3 = raw[num - 2], raw[num]
+
+        # Extract values
+        tk = strip_num(l1, typ="float")
+        label = l1.split("_radial_thickness_(")[0].replace("_", " ")
+
+        cum_tk = strip_num(l3, typ="float")
+
+        if "gap" in label:
+            # do not need to know gap between whom
+            # for plotting
+            label = "Gap"
+
+        return [label, tk, cum_tk]
+
+    rb = []
+    flag1, flag2, flag3 = False, False, False
+
+    for num, line in enumerate(raw):
+        # Extract Radial Build Parameters
+        if "# Vertical Build #" in line:
+            # Stop collecting Radial Build lines
+            flag1 = True
+        if "(radial_cum(" in line:
+            # Read Radial Build line
+            rb.append(read_radial_build(num))
+
+        if "(n_tf)" in line:
+            # Flag that n_TF is read
+            flag2 = True
+            n_TF = strip_num(line, typ="int")
+        if "(rmajor)" in line:
+            # Flag that rmajor is read
+            flag3 = True
+            R_0 = strip_num(line)
+
+        # If all necessary data is read, break out of the loop
+        if flag1 and flag2 and flag3:
+            break
+
+    # Return parsed radial build data and other extracted parameters
+    return {"Radial Build": rb, "n_TF": n_TF, "R_0": R_0}
+
+
+def process_RB_from_dir(sys_code_dir: str):
+    """
+    Read Radial Build from output file in sys_code_dir
+
+    If PROCESS_version_number >=3.1.0, Uses MFILE.DAT to plot
+
+    Raises
+    ------
+    CodesError
+        Cannot find OUT.DAT
+    """
+    mfilename = Path(sys_code_dir, "MFILE.DAT")
+
+    if mfilename.is_file():
+        with open(mfilename) as f:
+            # Read all lines from the file and strip the first line (header)
+            raw = f.readlines()[1:]
+            # Get the Version Number
+            process_version = float(
+                ".".join(raw[3].split('"')[-2].strip().split(".")[:2])
+            )
+            min_version = 3.1
+            if process_version >= min_version:
+                # Return radial build from MFILE
+                return process_RB_fromMFILE(mfilename)
+            bluemira_warn("MFILE.DAT file in old format. Trying to use OUT.DAT")
+
+    # Return radial build from OUT File
+    # (older versions)
+    ofilename = Path(sys_code_dir, "OUT.DAT")
+    if not ofilename.is_file():
+        raise CodesError(f"Could not find PROCESS OUT.DAT file '{ofilename}' either.")
+    return process_RB_fromOUT(ofilename)
+
+
 def plot_radial_build(
     sys_code_dir: str, width: float = 1.0, *, show: bool = True
 ) -> plt.Axes:
@@ -252,12 +371,7 @@ def plot_radial_build(
     CodesError
         Cannot find OUT.DAT
     """
-    filename = Path(sys_code_dir, "OUT.DAT")
-
-    if not filename.is_file():
-        raise CodesError(f"Could not find PROCESS OUT.DAT file '{filename}'.")
-
-    radial_build = process_RB_fromOUT(filename)
+    radial_build = process_RB_from_dir(sys_code_dir)
     ax = setup_radial_build(radial_build, width=width)
     if show:
         plt.show()
