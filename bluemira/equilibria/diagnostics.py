@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
     from bluemira.equilibria.equilibrium import Equilibrium
 
+from bluemira.base.file import try_get_bluemira_path
+
 
 class EqSubplots(Enum):
     """
@@ -147,3 +149,44 @@ class EqDiagnosticOptions:
     def __post_init__(self):
         """Post init folder definition"""
         self.folder = Path.cwd() if self.folder is None else Path(self.folder)
+
+
+class PicardDiagnostic(Enum):
+    """Type of plot to view during optimisation."""
+
+    EQ = auto()
+    """Plot the equilibrium"""
+    CONVERGENCE = auto()
+    """Plot the convergence"""
+    NO_PLOT = auto()
+
+
+@dataclass
+class PicardDiagnosticOptions:
+    """
+    Diagnostic plotting options for the Picard Iterator
+
+    plot:
+        What type of plot to produce. None for no plotting.
+    gif:
+        Whether or not to make a GIF
+    plot_name:
+        GIF plot file base-name
+    figure_folder:
+        The path where figures will be saved. If the input value is None (e.g. default)
+        then this will be reinterpreted as the path data/plots/equilibria under the
+        bluemira root folder, if that path is available.
+    """
+
+    plot: PicardDiagnostic = PicardDiagnostic.NO_PLOT
+    gif: bool = False
+    plot_name: str = "default_0"
+    figure_folder: str | PathLike | None = None
+
+    def __post_init__(self):
+        """Post init folder definition"""
+        if self.figure_folder is None:
+            figure_folder = try_get_bluemira_path(
+                "", subfolder="generated_data", allow_missing=not self.gif
+            )
+        self.figure_folder = figure_folder

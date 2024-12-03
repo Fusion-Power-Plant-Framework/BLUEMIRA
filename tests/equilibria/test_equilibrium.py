@@ -63,7 +63,7 @@ class TestFields:
             eq.coilset, eq, targets, gamma=1e-8
         )
 
-        program = PicardIterator(eq, opt_problem, relaxation=0.1, plot=False)
+        program = PicardIterator(eq, opt_problem, relaxation=0.1)
         program()
         cls.eq = eq
 
@@ -271,8 +271,6 @@ class TestSolveEquilibrium:
             convergence=DudsonConvergence(1e-1),
             fixed_coils=True,
             relaxation=0.2,
-            plot=False,
-            gif=False,
         )
         program()
         assert program.check_converged()
@@ -290,8 +288,6 @@ class TestSolveEquilibrium:
             convergence=DudsonConvergence(1e-1),
             fixed_coils=True,
             relaxation=0.2,
-            plot=False,
-            gif=False,
         )
         program()
         assert program.check_converged()
@@ -319,8 +315,6 @@ class TestSolveEquilibrium:
             convergence=DudsonConvergence(1e-1),
             fixed_coils=True,
             relaxation=0.2,
-            plot=False,
-            gif=False,
         )
         program()
         assert abs_rel_difference(calc_li3(eq), self.l_i) <= rel_tol

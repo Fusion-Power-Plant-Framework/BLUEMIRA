@@ -195,8 +195,6 @@ class TestSTEquilibrium:
         fbe_iterator = PicardIterator(
             eq,
             opt_problem,
-            plot=False,
-            gif=False,
             relaxation=0.3,
             maxiter=400,
             convergence=criterion,

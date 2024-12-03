@@ -361,7 +361,6 @@ class PulsedCoilsetDesign(ABC):
             convergence=self.eq_settings.convergence,
             relaxation=self.eq_settings.relaxation,
             fixed_coils=True,
-            plot=False,
         )
         program()
 
@@ -382,7 +381,6 @@ class PulsedCoilsetDesign(ABC):
             convergence=self.eq_settings.convergence,
             relaxation=self.eq_settings.relaxation,
             fixed_coils=True,
-            plot=False,
         )
         program()
 
@@ -505,7 +503,6 @@ class PulsedCoilsetDesign(ABC):
             fixed_coils=True,
             convergence=self._eq_settings.convergence,
             relaxation=self.eq_settings.relaxation,
-            plot=False,
         )
         program()
 
