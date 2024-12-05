@@ -106,7 +106,7 @@ tfcth    = 1.0500e+00 * Inboard tf coil thickness; (centrepost for st) (m)
 vgap_vv_thermalshield    = 0.061 * Vertical gap between vacuum vessel and tf coil (m)
 vgap_xpoint_divertor   = 1.60 * Vertical gap between x-point and divertor (m)
 tftsgap = 0.02
-thshield = 0.05
+thshield_ib = 0.05
 vvblgap = 0.02
 *---------------Buildings Variables----------------*
 *---------------Constraint Variables---------------*
@@ -266,7 +266,8 @@ lpulse   = 1 * Switch for reactor model;
 *SWEEP = 3.1, 3.2
 *--------------Stellarator Variables---------------*
 *-----------------Tfcoil Variables-----------------*
-alstrtf  = 5.50d8 * Allowable von mises stress in tf coil structural material (pa)
+sig_tf_case_max  = 5.50d8 * Allowable von mises stress in tf coil structural material (pa)
+sig_tf_wp_max  = 5.50d8 * Allowable von mises stress in tf coil structural material (pa)
 casthi   = 0.05 * Inboard tf coil case inner (plasma side) thickness (m)
 casths   = 0.10 * Inboard tf coil sidewall case thickness (m)
 cpttf    = 7.5e+04 * Tf coil current per turn (a);

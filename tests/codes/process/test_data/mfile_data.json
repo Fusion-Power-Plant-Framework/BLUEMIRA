@@ -1259,11 +1259,11 @@
     "var_mod": "Plasma",
     "scan01": 164.21
   },
-  "pdivt/rmajor": {
+  "pdivmax_over_rmajor": {
     "var_mod": "Plasma",
     "scan01": 18.694
   },
-  "pdivtbt/qar": {
+  "pdivtbt_over_qar": {
     "var_mod": "Plasma",
     "scan01": 9.2
   },
@@ -1659,7 +1659,15 @@
     "var_mod": "Radial Build",
     "scan01": 0.05
   },
-  "thshield": {
+  "thshield_ib": {
+    "var_mod": "Radial Build",
+    "scan01": 0.05
+  },
+  "thshield_ob": {
+    "var_mod": "Radial Build",
+    "scan01": 0.05
+  },
+  "thshield_vb": {
     "var_mod": "Radial Build",
     "scan01": 0.05
   },
@@ -1903,7 +1911,11 @@
     "var_mod": "Divertor build and plasma position",
     "scan01": 2.0024
   },
-  "alstrtf": {
+  "sig_tf_case_max": {
+    "var_mod": "TF coils",
+    "scan01": 580000000.0
+  },
+  "sig_tf_wp_max": {
     "var_mod": "TF coils",
     "scan01": 580000000.0
   },
