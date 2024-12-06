@@ -36,7 +36,10 @@ class TestDivertorSilhouetteDesigner:
         "div_type": {"value": "SN", "unit": ""},
         "div_L2D_ib": {"value": 1.1, "unit": "m"},
         "div_L2D_ob": {"value": 1.45, "unit": "m"},
-        "div_Ltarg": {"value": 0.5, "unit": "m"},
+        "div_Ltarg_ib": {"value": 0.5, "unit": "m"},
+        "div_Ltarg_ob": {"value": 0.5, "unit": "m"},
+        "div_targ_angle_ib": {"value": 42, "unit": "degrees"},
+        "div_targ_angle_ob": {"value": -25, "unit": "degrees"},
         "div_open": {"value": False, "unit": ""},
     }
 
@@ -69,17 +72,21 @@ class TestDivertorSilhouetteDesigner:
         divertor = designer.execute()
 
         for target in [divertor[1], divertor[3]]:
-            assert signed_distance(target, self.separatrix) == 0
+            assert signed_distance(target, self.separatrix) == pytest.approx(0)
 
-    def test_target_length_set_by_parameter(self):
-        val = 1.5
-        self.params["div_Ltarg"]["value"] = val
-        designer = DivertorSilhouetteDesigner(self.params, self.eq, self.wall)
+    @pytest.mark.parametrize(("div_ltarg", "div_targ_angle"), [(1.5, 52)])
+    def test_target_length_set_by_parameter(self, div_ltarg, div_targ_angle):
+        params = self.params.copy()
+        params["div_Ltarg_ib"]["value"] = div_ltarg / 2
+        params["div_Ltarg_ob"]["value"] = div_ltarg / 2
+        params["div_targ_angle_ib"]["value"] = div_targ_angle
+
+        designer = DivertorSilhouetteDesigner(params, self.eq, self.wall)
 
         divertor = designer.execute()
 
         for target in [divertor[1], divertor[3]]:
-            assert target.length == pytest.approx(val, rel=0, abs=EPS)
+            assert target.length == pytest.approx(div_ltarg / 2, rel=EPS)
 
     def test_dome_added_to_divertor(self):
         designer = DivertorSilhouetteDesigner(self.params, self.eq, self.wall)
@@ -128,4 +135,4 @@ class TestDivertorSilhouetteDesigner:
             [inner_target, inner_baffle],
             [outer_target, outer_baffle],
         ]:
-            assert signed_distance(target, baffle) == 0
+            assert signed_distance(target, baffle) == pytest.approx(0)

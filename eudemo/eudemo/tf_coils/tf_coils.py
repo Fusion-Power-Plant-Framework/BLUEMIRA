@@ -58,9 +58,10 @@ class TFCoil(ComponentManager):
     Wrapper around the TF Coil component tree.
     """
 
-    def __init__(self, component, field_solver):
+    def __init__(self, component, field_solver, centreline):
         super().__init__(component)
         self._field_solver = field_solver
+        self._centreline = centreline
 
     def field(
         self,
@@ -86,6 +87,11 @@ class TFCoil(ComponentManager):
             The magnetic field vector {Bx, By, Bz} in [T]
         """
         return self._field_solver.field(x, y, z)
+
+    @property
+    def centreline(self) -> BluemiraWire:
+        """Return the centreline"""
+        return self._centreline
 
     @property
     def xz_outer_boundary(self) -> BluemiraWire:
@@ -263,7 +269,7 @@ class TFCoilDesigner(Designer[GeometryParameterisation]):
         tk_offset = 0.5 * self.params.tf_wp_width.value
         # Variable thickness of the casing is problematic...
         # TODO: Improve this estimate (or use variable offset here too..)
-        tk_offset += 2 * np.sqrt(2) * self.params.tk_tf_front_ib.value
+        tk_offset += np.sqrt(2) * self.params.tk_tf_front_ib.value
         tk_offset += np.sqrt(2) * self.params.g_ts_tf.value
         return offset_wire(keep_out_zone, tk_offset, open_wire=False, join="arc")
 

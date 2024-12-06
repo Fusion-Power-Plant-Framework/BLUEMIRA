@@ -152,7 +152,10 @@ class EUDEMOReactorParams(ParameterFrame):
 
     # Divertor silhouette
     div_type: Parameter[str]
-    div_Ltarg: Parameter[float]  # noqa: N815
+    div_Ltarg_ib: Parameter[float]  # noqa: N815
+    div_Ltarg_ob: Parameter[float]  # noqa: N815
+    div_targ_angle_ib: Parameter[float]
+    div_targ_angle_ob: Parameter[float]
     div_open: Parameter[bool]
 
     # Remote maintenance

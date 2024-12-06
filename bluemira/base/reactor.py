@@ -203,11 +203,13 @@ class BaseManager(abc.ABC):
         comp: ComponentT,
         dims_to_show: tuple[str, ...],
         component_filter: Callable[[ComponentT], bool] | None,
+        *,
+        show: bool = True,
     ):
         for i, dim in enumerate(dims_to_show):
             ComponentPlotter(view=dim).plot_2d(
                 self._filter_tree(comp, dims_to_show, component_filter),
-                show=i == len(dims_to_show) - 1,
+                show=i == len(dims_to_show) - 1 if show else False,
             )
 
 
@@ -686,6 +688,7 @@ class Reactor(BaseManager):
         *dims: str,
         with_components: list[ComponentManager] | None = None,
         component_filter: Callable[[ComponentT], bool] | None = FilterMaterial(),
+        show: bool = True,
     ):
         """
         Plot the reactor.
@@ -701,9 +704,12 @@ class Reactor(BaseManager):
         component_filter:
             A callable to filter Components from the Component tree,
             returning True keeps the node False removes it
+        show:
+            Whether or not to immediately display the plot
         """
         self._plot_dims(
             self.component(with_components),
             self._validate_plot_dims(*dims),
             component_filter,
+            show=show,
         )
