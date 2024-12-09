@@ -74,12 +74,12 @@ dev = [
 ]
 examples = ["notebook", "jupytext"]
 pinned = [
-    "nlopt==2.7.1",
+    "nlopt==2.9.0",
     "numba==0.60.0",
-    "numba-scipy==0.4.0",
-    "numpy==1.26.4",
+    "numba-scipy @ git+https://github.com/je-cook/numba-scipy.git@layout_overhall",
+    "numpy==2.0.2",
     "matplotlib==3.9.3",
-    "scipy==1.10.1",
+    "scipy==1.14.1",
     "vtk==9.3.1",  # needed for uv resolution
 ]
 
