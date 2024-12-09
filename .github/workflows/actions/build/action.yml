@@ -71,7 +71,8 @@ runs:
     - name: Patch pivy
       shell: bash -l {0}
       run: |
-        /usr/bin/patch -l -p2 -N -d /home/runner/miniconda3/envs/bluemira/lib/python${{ inputs.python-version}}/site-packages/pivy/ < ./bluemira/codes/pivy.patch
+        PIVY_PATH=$(python -c 'from pathlib import Path; import pivy; print(Path(pivy.__file__).parent)')
+        /usr/bin/patch -l -p2 -N -d $PIVY_PATH < ./bluemira/codes/pivy.patch
 
     - name: Install bluemira
       shell: bash -l {0}

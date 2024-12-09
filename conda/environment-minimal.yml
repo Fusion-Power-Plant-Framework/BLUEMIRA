@@ -27,4 +27,4 @@ dependencies:
   - graphviz
   - pip
   - pip:
-      - -e '../[pinned]'
+      - -e '../[pinned,dev]'
