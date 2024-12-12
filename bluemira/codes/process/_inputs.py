@@ -491,6 +491,7 @@ class ProcessInputs:
     gamma_ecrh: float | None = None
     xi_ebw: float | None = None
     iefrf: int | None = None
+    wave_mode: int | None = None
     irfcf: int | None = None
     nbshield: float | None = None
     pheat: float | None = None  # Listed as an output

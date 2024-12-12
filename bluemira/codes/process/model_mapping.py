@@ -1110,6 +1110,22 @@ class CurrentDriveEfficiencyModel(PROCESSModel):
     ECRH_O = 13
 
 
+class ECRHWaveModel(PROCESSModel):
+    """
+    Switch for ECRH wave mode
+    """
+
+    @classproperty
+    def switch_name(self) -> str:
+        """
+        PROCESS switch name
+        """
+        return "wave_mode"
+
+    O_MODE = 0
+    X_MODE = 1
+
+
 class PlasmaIgnitionModel(PROCESSModel):
     """
     Switch to control whether or not the plasma is ignited
