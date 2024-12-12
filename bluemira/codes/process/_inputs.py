@@ -597,6 +597,7 @@ class ProcessInputs:
     isumatoh: int | None = None
     isumatpf: int | None = None
     i_pf_current: int | None = None
+    i_sup_pf_shape: int | None = None
     ncls: list[int] | None = None
     nfxfh: int | None = None
     ngrp: int | None = None

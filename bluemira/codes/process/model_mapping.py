@@ -875,6 +875,22 @@ class PFCurrentControlModel(PROCESSModel):
     SVD = 1
 
 
+class PFCoilPlacmentModel(PROCESSModel):
+    """Switch for the placement of Location 3 (outboard) PF coils
+    when the TF coils are superconducting (TFCoilConductorTechnology.SC)
+    """
+
+    @classproperty
+    def switch_name(self) -> str:
+        """
+        PROCESS switch name
+        """
+        return "i_sup_pf_shape"
+
+    DEFAULT = 0
+    OUTBOARD_EQUAL = 1, ("i_tf_sup",)
+
+
 class SolenoidSwitchModel(PROCESSModel):
     """
     Switch to control whether or not a central solenoid should be
