@@ -16,7 +16,12 @@ import numpy as np
 
 from bluemira.base.constants import MU_0
 from bluemira.equilibria.constants import X_TOLERANCE
-from bluemira.magnetostatics.greens import greens_Bx, greens_Bz, greens_psi
+from bluemira.magnetostatics.greens import (
+    greens_Bx,
+    greens_Bz,
+    greens_dbz_dx,
+    greens_psi,
+)
 from bluemira.magnetostatics.semianalytic_2d import (
     semianalytic_Bx,
     semianalytic_Bz,
@@ -58,6 +63,50 @@ class CoilGroupFieldsMixin:
         self._psi_analytic = psi_analytic
         self._Bx_analytic = Bx_analytic
         self._Bz_analytic = Bz_analytic
+
+    def dB_d(self, x: float | np.ndarray, z: float | np.ndarray):
+        """
+        dB_d of Coilset
+
+        Parameters
+        ----------
+        x:
+            The x values at which to calculate the dB_d response
+        z:
+            The z values at which to calculate the dB_d response
+        sum_coils:
+            sum over coils
+        control:
+            operations on control coils only
+
+        Returns
+        -------
+        :
+            Differential of magnetic field
+        """
+        return self.dB_d_response(x, z) * self.current
+
+    def dB_d_response(self, x: float | np.ndarray, z: float | np.ndarray):
+        """
+        Unit dB_d of Coilset
+
+        Parameters
+        ----------
+        x:
+            The x values at which to calculate the dB_d response
+        z:
+            The z values at which to calculate the dB_d response
+        sum_coils:
+            sum over coils
+        control:
+            operations on control coils only
+
+        Returns
+        -------
+        :
+            Differential of magnetic field response
+        """
+        return self._mix_control_method(x, z, greens_dbz_dx, None, disable_analytic=True)
 
     def psi(self, x: float | np.ndarray, z: float | np.ndarray):
         """
@@ -615,6 +664,34 @@ class CoilSetFieldsMixin(CoilGroupFieldsMixin):
         """
         return self._sum(super().Bz(x, z), sum_coils=sum_coils, control=control)
 
+    def dB_d(
+        self,
+        x: np.ndarray,
+        z: np.ndarray,
+        *,
+        sum_coils: bool = True,
+        control: bool = False,
+    ) -> np.ndarray:
+        """
+        dB_d of Coilset
+
+        Parameters
+        ----------
+        x:
+            The x values at which to calculate the dB_d response
+        z:
+            The z values at which to calculate the dB_d response
+        sum_coils:
+            sum over coils
+        control:
+            operations on control coils only
+
+        Returns
+        -------
+        Differential of magnetic field
+        """
+        return self._sum(super().dB_d(x, z), sum_coils=sum_coils, control=control)
+
     def psi_response(
         self,
         x: np.ndarray,
@@ -682,7 +759,7 @@ class CoilSetFieldsMixin(CoilGroupFieldsMixin):
         control: bool = False,
     ) -> np.ndarray:
         """
-        Bz of Coilset
+        Unit Bz of Coilset
 
         Parameters
         ----------
@@ -700,6 +777,37 @@ class CoilSetFieldsMixin(CoilGroupFieldsMixin):
         Bz response
         """
         return self._sum(super().Bz_response(x, z), sum_coils=sum_coils, control=control)
+
+    def dB_d_response(
+        self,
+        x: np.ndarray,
+        z: np.ndarray,
+        *,
+        sum_coils: bool = False,
+        control: bool = False,
+    ) -> np.ndarray:
+        """
+        Unit dB_d of Coilset
+
+        Parameters
+        ----------
+        x:
+            The x values at which to calculate the dB_d response
+        z:
+            The z values at which to calculate the dB_d response
+        sum_coils:
+            sum over coils
+        control:
+            operations on control coils only
+
+        Returns
+        -------
+        :
+            Differential of magnetic field response
+        """
+        return self._sum(
+            super().dB_d_response(x, z), sum_coils=sum_coils, control=control
+        )
 
     def control_F(self, coil_grp: CoilGroup, *, control: bool = False) -> np.ndarray:
         """

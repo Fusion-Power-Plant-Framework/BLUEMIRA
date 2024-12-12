@@ -18,7 +18,12 @@ from scipy.interpolate import RectBivariateSpline
 from bluemira.equilibria.constants import J_TOR_MIN
 from bluemira.equilibria.error import EquilibriaError
 from bluemira.equilibria.plotting import PlasmaCoilPlotter
-from bluemira.magnetostatics.greens import greens_Bx, greens_Bz, greens_psi
+from bluemira.magnetostatics.greens import (
+    greens_Bx,
+    greens_Bz,
+    greens_dbz_dx,
+    greens_psi,
+)
 from bluemira.utilities.tools import floatify
 
 if TYPE_CHECKING:
@@ -107,14 +112,22 @@ class PlasmaCoil:
             self._grid.x[:, 0], self._grid.z[0, :], plasma_psi
         )
         self._plasma_Bx = self._Bx_func(self._grid.x, self._grid.z)
+        self._plasma_dBx = self._dBx_func(self._grid.x, self._grid.z)
         self._plasma_Bz = self._Bz_func(self._grid.x, self._grid.z)
+        self._plasma_dBz = self._dBz_func(self._grid.x, self._grid.z)
         self._plasma_Bp = np.hypot(self._plasma_Bx, self._plasma_Bz)
 
     def _Bx_func(self, x, z):
         return -self._psi_func(x, z, dy=1, grid=False) / x
 
+    def _dBx_func(self, x, z):
+        return -self._psi_func(x, z, dy=2, grid=False) / x**2
+
     def _Bz_func(self, x, z):
         return self._psi_func(x, z, dx=1, grid=False) / x
+
+    def _dBz_func(self, x, z):
+        return -self._psi_func(x, z, dx=2, grid=False) / x**2
 
     def _check_in_grid(self, x, z):
         return self._grid.point_inside(x, z)
@@ -128,7 +141,12 @@ class PlasmaCoil:
         ------
         EquilibriaError
             No known toroidal current distribution
-        """  # noqa: DOC201
+
+        Returns
+        -------
+        :
+            Mapped greens function
+        """
         if self._j_tor is None:
             raise EquilibriaError(
                 "Cannot calculate value off grid; there is no known toroidal current"
@@ -210,6 +228,39 @@ class PlasmaCoil:
         return self._Bx_func(x, z)
 
     @treat_xz_array
+    def dBx(
+        self,
+        x: npt.ArrayLike | None = None,
+        z: npt.ArrayLike | None = None,
+    ) -> float | npt.NDArray[np.float64]:
+        """
+        Radial magnetic field at x, z
+
+        Parameters
+        ----------
+        x:
+            Radial coordinates at which to calculate
+        z:
+            Vertical coordinates at which to calculate.
+
+        Notes
+        -----
+        If both x and z are None, defaults to the full map on the grid.
+
+        Returns
+        -------
+        :
+            Radial magnetic field at the points [T]
+        """
+        if x is None and z is None:
+            return self._plasma_dBx
+
+        if not self._check_in_grid(x, z):
+            # greens_dbx_dz not implemented, for vacuum calculations this is equivalent
+            return self._convolve(greens_dbz_dx, x, z)
+        return self._dBx_func(x, z)
+
+    @treat_xz_array
     def Bz(
         self,
         x: npt.ArrayLike | None = None,
@@ -241,6 +292,38 @@ class PlasmaCoil:
             return self._convolve(greens_Bz, x, z)
         return self._Bz_func(x, z)
 
+    @treat_xz_array
+    def dBz(
+        self,
+        x: npt.ArrayLike | None = None,
+        z: npt.ArrayLike | None = None,
+    ) -> float | npt.NDArray[np.float64]:
+        """
+        Vertical magnetic field at x, z
+
+        Parameters
+        ----------
+        x:
+            Vertical coordinates at which to calculate
+        z:
+            Vertical coordinates at which to calculate.
+
+        Notes
+        -----
+        If both x and z are None, defaults to the full map on the grid.
+
+        Returns
+        -------
+        :
+            Vertical magnetic field at the points [T]
+        """
+        if x is None and z is None:
+            return self._plasma_dBz
+
+        if not self._check_in_grid(x, z):
+            return self._convolve(greens_dbz_dx, x, z)
+        return self._dBz_func(x, z)
+
     def Bp(
         self,
         x: npt.ArrayLike | None = None,
@@ -269,7 +352,7 @@ class PlasmaCoil:
             return self._plasma_Bp
         return np.hypot(self.Bx(x, z), self.Bz(x, z))
 
-    def plot(self, ax=None):
+    def plot(self, ax=None) -> PlasmaCoilPlotter:
         """
         Plot the PlasmaCoil.
 
@@ -281,11 +364,11 @@ class PlasmaCoil:
         Returns
         -------
         :
-            The axis
+            The plasma coil plotter object
         """
         return PlasmaCoilPlotter(self, ax=ax)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns
         -------
@@ -331,7 +414,8 @@ class NoPlasmaCoil:
 
         Returns
         -------
-        Poloidal magnetic flux at the points [V.s/rad]
+        :
+            Poloidal magnetic flux at the points [V.s/rad]
         """
         return self._return_zeros(x, z)
 
@@ -356,7 +440,8 @@ class NoPlasmaCoil:
 
         Returns
         -------
-        Radial magnetic field at the points [T]
+        :
+            Radial magnetic field at the points [T]
         """
         return self._return_zeros(x, z)
 
@@ -381,7 +466,8 @@ class NoPlasmaCoil:
 
         Returns
         -------
-        Vertical magnetic field at the points [T]
+        :
+            Vertical magnetic field at the points [T]
         """
         return self._return_zeros(x, z)
 
@@ -406,7 +492,60 @@ class NoPlasmaCoil:
 
         Returns
         -------
-        Poloidal magnetic field at the points [T]
+        :
+            Poloidal magnetic field at the points [T]
+        """
+        return self._return_zeros(x, z)
+
+    def dBx(
+        self,
+        x: npt.ArrayLike | None = None,
+        z: npt.ArrayLike | None = None,
+    ) -> float | npt.NDArray[np.float64]:
+        """
+        Radial magnetic field at x, z
+
+        Parameters
+        ----------
+        x:
+            Radial coordinates at which to calculate
+        z:
+            Vertical coordinates at which to calculate.
+
+        Notes
+        -----
+        If both x and z are None, defaults to the full map on the grid.
+
+        Returns
+        -------
+        :
+            Radial magnetic field at the points [T]
+        """
+        return self._return_zeros(x, z)
+
+    def dBz(
+        self,
+        x: npt.ArrayLike | None = None,
+        z: npt.ArrayLike | None = None,
+    ) -> float | npt.NDArray[np.float64]:
+        """
+        Vertical magnetic field at x, z
+
+        Parameters
+        ----------
+        x:
+            Vertical coordinates at which to calculate
+        z:
+            Vertical coordinates at which to calculate.
+
+        Notes
+        -----
+        If both x and z are None, defaults to the full map on the grid.
+
+        Returns
+        -------
+        :
+            Vertical magnetic field at the points [T]
         """
         return self._return_zeros(x, z)
 
