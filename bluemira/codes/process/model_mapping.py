@@ -359,7 +359,7 @@ class DiamagneticCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "idia"
+        return "i_diamagnetic_current"
 
     OFF = 0
     ST_FIT = 1
@@ -376,7 +376,7 @@ class PfirschSchluterCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "ips"
+        return "i_pfirsch_schluter_current"
 
     OFF = 0
     SCENE_FIT = 1
