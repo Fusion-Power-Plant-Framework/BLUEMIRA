@@ -226,6 +226,7 @@ class ProcessInputs:
     casthi: float | None = None
     casths: float | None = None
     tmargmin: float | None = None
+    tmargmin_cs: float | None = None
     oacdcp: float | None = None
     t_turn_tf: int | None = None
 
