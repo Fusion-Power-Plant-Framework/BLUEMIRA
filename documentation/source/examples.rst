@@ -25,6 +25,8 @@ Equilibria Examples
     examples/equilibria/Spherical_Approximation_how_it_works
     examples/equilibria/spherical_harmonic_approximation_basic_use
     examples/equilibria/coilset_opt_problem_tutorial
+    examples/equilibria/single_wire_field_toroidal_harmonics
+    examples/equilibria/toroidal_harmonics_component_function_verification
 
 Geometry Examples
 ^^^^^^^^^^^^^^^^^

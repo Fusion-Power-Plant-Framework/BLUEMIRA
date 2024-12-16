@@ -957,7 +957,7 @@ def cylindrical_to_toroidal(R_0: float, z_0: float, R: np.ndarray, Z: np.ndarray
     d_2 = np.sqrt((R - R_0) ** 2 + (Z - z_0) ** 2)
     tau = np.log(d_1 / d_2)
     sigma = np.sign(Z - z_0) * np.arccos(
-        (d_1**2 + d_2**2 - 4 * R_0**2) / (2 * d_1 * d_2)
+        np.clip((d_1**2 + d_2**2 - 4 * R_0**2) / (2 * d_1 * d_2), -1, 1)
     )
     return tau, sigma
 
