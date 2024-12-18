@@ -652,7 +652,7 @@ class ProcessInputs:
     i_bootstrap_current: int | None = None
     iculbl: int | None = None  # listed as an output...
     i_plasma_current: int | None = None
-    idensl: int | None = None
+    i_density_limit: int | None = None
     i_diamagnetic_current: int | None = None
     ifalphap: int | None = None
     iinvqd: int | None = None

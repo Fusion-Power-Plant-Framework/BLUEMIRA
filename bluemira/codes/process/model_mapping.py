@@ -234,7 +234,7 @@ class DensityLimitModel(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "idensl"
+        return "i_density_limit"
 
     ASDEX = 1
     BORRASS_ITER_I = 2
