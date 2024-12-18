@@ -657,7 +657,6 @@ class ProcessInputs:
     ifalphap: int | None = None
     iinvqd: int | None = None
     ipedestal: int | None = None
-    ieped: int | None = None  # listed as an output...
     i_pfirsch_schluter_current: int | None = None
     eped_sf: float | None = None
     neped: float | None = None
