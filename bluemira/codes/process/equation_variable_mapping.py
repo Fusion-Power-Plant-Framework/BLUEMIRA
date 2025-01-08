@@ -581,7 +581,7 @@ ITERATION_VAR_MAPPING = {
     "fportsz": 33,
     "fdivcol": 34,
     "fpeakb": 35,
-    "fbetatry": 36,
+    "fbeta_max": 36,
     "coheof": 37,
     "fjohc": 38,
     "fjohc0": 39,

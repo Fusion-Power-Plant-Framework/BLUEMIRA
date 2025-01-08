@@ -191,7 +191,7 @@ class BetaLimitModel(PROCESSModel):
 
 class BetaGScalingModel(PROCESSModel):
     """
-    Switch for the beta g coefficient dnbeta model
+    Switch for the beta g coefficient beta_norm_max model
 
     NOTE: Over-ridden if iprofile = 1
     """
@@ -203,7 +203,7 @@ class BetaGScalingModel(PROCESSModel):
         """
         return "gtscale"
 
-    INPUT = 0, ("dnbeta",)
+    INPUT = 0, ("beta_norm_max",)
     CONVENTIONAL = 1
     MENARD_ST = 2
 
@@ -218,7 +218,7 @@ class AlphaPressureModel(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "ifalphap"
+        return "i_beta_fast_alpha"
 
     HENDER = 0
     WARD = 1

@@ -310,7 +310,7 @@ class TestInDatOneForOne:
         template_builder.adjust_variable("fjohc", 0.57941, upper_bound=1.0)
         template_builder.adjust_variable("fjohc0", 0.53923, upper_bound=1.0)
         template_builder.adjust_variable("foh_stress", 1.0)
-        template_builder.adjust_variable("fbetatry", 0.48251)
+        template_builder.adjust_variable("fbeta_max", 0.48251)
         template_builder.adjust_variable("fwalld", 0.131)
         template_builder.adjust_variable("fmaxvvstress", 1.0)
         template_builder.adjust_variable("fpsepbqar", 1.0)
@@ -369,7 +369,7 @@ class TestInDatOneForOne:
             "fgwped": 0.85,
             "neped": 0.678e20,
             "nesep": 0.2e20,
-            "dnbeta": 3.0,
+            "beta_norm_max": 3.0,
             # Plasma impurity stuff
             "coreradius": 0.75,
             "coreradiationfraction": 0.6,

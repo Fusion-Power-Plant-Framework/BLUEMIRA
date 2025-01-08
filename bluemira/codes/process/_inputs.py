@@ -353,7 +353,7 @@ class ProcessInputs:
     fauxmn: float | None = None
     fbeta: float | None = None
     fbeta_poloidal: float | None = None
-    fbetatry: float | None = None
+    fbeta_max: float | None = None
     fbetatry_lower: float | None = None
     fcwr: float | None = None
     fdene: float | None = None
@@ -632,7 +632,7 @@ class ProcessInputs:
     cvol: float | None = None
     cwrmax: float | None = None
     dene: float | None = None
-    dnbeta: float | None = None
+    beta_norm_max: float | None = None
     epbetmax: float | None = None
     f_alpha_plasma: float | None = None
     f_deuterium: float | None = None
@@ -654,7 +654,7 @@ class ProcessInputs:
     i_plasma_current: int | None = None
     i_density_limit: int | None = None
     i_diamagnetic_current: int | None = None
-    ifalphap: int | None = None
+    i_beta_fast_alpha: int | None = None
     iinvqd: int | None = None
     ipedestal: int | None = None
     i_pfirsch_schluter_current: int | None = None

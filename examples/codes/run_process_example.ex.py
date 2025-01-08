@@ -203,7 +203,7 @@ template_builder.add_input_values({
     "fgwped": 0.85,
     "neped": 0.678e20,
     "nesep": 0.2e20,
-    "dnbeta": 3.0,
+    "beta_norm_max": 3.0,
     # Plasma impurity stuff
     "coreradius": 0.75,
     "coreradiationfraction": 0.6,
@@ -366,7 +366,7 @@ template_builder.adjust_variable("fstrcase", 1.0)
 template_builder.adjust_variable("ftmargtf", 1.0)
 template_builder.adjust_variable("ftmargoh", 1.0)
 template_builder.adjust_variable("ftaulimit", 1.0)
-template_builder.adjust_variable("fbetatry", 0.48251)
+template_builder.adjust_variable("fbeta_max", 0.48251)
 template_builder.adjust_variable("fpsepbqar", 1.0)
 template_builder.adjust_variable("fvdump", 1.0)
 template_builder.adjust_variable("fstrcond", 0.92007)

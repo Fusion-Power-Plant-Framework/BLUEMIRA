@@ -44,7 +44,7 @@ ixc = 18 * q
 boundl(18) = 3.0
 ixc = 29 * bore
 boundl(29) = 0.1
-ixc = 36 * fbetatry
+ixc = 36 * fbeta_max
 ixc = 37 * coheof
 ixc = 38 * fjohc
 boundu(38) = 0.25
@@ -111,7 +111,7 @@ vvblgap = 0.02
 *---------------Buildings Variables----------------*
 *---------------Constraint Variables---------------*
 bmxlim   = 14.0 * Maximum peak toroidal field (t)
-fbetatry = 4.8361e-01 * F-value for beta limit
+fbeta_max = 4.8361e-01 * F-value for beta limit
 fdene    = 1.2000e+00 * F-value for density limit
 ffuspow  = 1 * F-value for maximum fusion power
 fhldiv   = 2.0e0 * F-value for divertor heat load
@@ -224,7 +224,7 @@ aspect   = 3.1 * Aspect ratio (iteration variable 1)
 beta     = 3.0810e-02 * Total plasma beta (iteration variable 5)
 bt       = 5.6476e+00 * Toroidal field on axis (t) (iteration variable 2)
 dene     = 7.9759e+19 * Electron density (/m3) (iteration variable 6)
-dnbeta   = 3.0 * (troyon-like) coefficient for beta scaling;
+beta_norm_max   = 3.0 * (troyon-like) coefficient for beta scaling;
 fkzohm   = 1.0245 * Zohm elongation scaling adjustment factor (ishape=2; 3)
 fvsbrnni = 4.4628e-01 * Fraction of the plasma current produced by
 gamma    = 0.3 * Ejima coefficient for resistive startup v-s formula
@@ -234,7 +234,7 @@ i_beta_component   = 1 * Switch for beta limit scaling (constraint equation 24);
 i_plasma_current    = 4 * Switch for plasma current scaling to use;
 i_diamagnetic_current     = 2 *switch for diamagnetic current scaling (2: SCENE scaling)
 i_density_limit   = 7 * Switch for density limit to enforce (constraint equation 5);
-ifalphap = 1 * Switch for fast alpha pressure calculation;
+i_beta_fast_alpha = 1 * Switch for fast alpha pressure calculation;
 iinvqd   = 1 * Switch for inverse quadrature in l-mode scaling laws 5 and 9;
 ipedestal = 1 * Switch for pedestal profiles;
 neped    = 0.678e20 * Electron density of pedestal (/m3) (ipedestal=1)

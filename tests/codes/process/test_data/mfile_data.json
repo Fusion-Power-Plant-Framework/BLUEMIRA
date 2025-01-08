@@ -839,7 +839,7 @@
     "var_mod": "Plasma",
     "scan01": 1.38
   },
-  "dnbeta": {
+  "beta_norm_max": {
     "var_mod": "Plasma",
     "scan01": 4.5554
   },

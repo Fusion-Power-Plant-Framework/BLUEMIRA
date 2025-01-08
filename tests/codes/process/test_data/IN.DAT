@@ -42,7 +42,7 @@ ixc = 18 * q
 boundl(18) = 3.0
 ixc = 29 * bore
 boundl(29) = 0.5
-ixc = 36 * fbetatry
+ixc = 36 * fbeta_max
 ixc = 37 * coheof
 ixc = 38 * fjohc
 boundu(38) = 0.25
@@ -126,7 +126,7 @@ vgap_xpoint_divertor    = 1.60 * vertical gap between x-point and divertor (m) (
 *---------------Constraint Variables---------------*
 
 bmxlim   = 14.0 * maximum peak toroidal field (T) (`constraint equation 25`)
-fbetatry = 4.8361e-01 * f-value for beta limit (`constraint equation 24`; `iteration variable 36`)
+fbeta_max = 4.8361e-01 * f-value for beta limit (`constraint equation 24`; `iteration variable 36`)
 fdene    = 1.2000e+00 * f-value for density limit (`constraint equation 5`; `iteration variable 9`)
 ffuspow  = 1 * f-value for maximum fusion power (`constraint equation 9`; `iteration variable 26`)
 fhldiv   = 2.0e0 * f-value for divertor heat load (`constraint equation 18`; `iteration variable 27`)
@@ -397,7 +397,7 @@ aspect   = 3.5 * aspect ratio (`iteration variable 1`)
 beta     = 3.0810e-02 * total plasma beta (`iteration variable 5`) (calculated if `ipedestal=3` or stellarator)
 bt       = 5.6476e+00 * toroidal field on axis (T) (`iteration variable 2`)
 dene     = 7.9759e+19 * electron density (/m3) (`iteration variable 6`) (calculated if `ipedestal=3`)
-dnbeta   = 3.0 * Troyon-like coefficient for beta scaling calculated
+beta_norm_max   = 3.0 * Troyon-like coefficient for beta scaling calculated
 fkzohm   = 1.0245 * Zohm elongation scaling adjustment factor (`ishape=2; 3`)
 fvsbrnni = 4.4628e-01 * fraction of the plasma current produced by non-inductive means (`iteration variable 44`)
 gamma    = 0.3 * Ejima coefficient for resistive startup V-s formula
@@ -406,7 +406,7 @@ i_bootstrap_current     = 4 * switch for bootstrap current scaling
 i_beta_component   = 1 * switch for beta limit scaling (`constraint equation 24`)
 i_plasma_current   = 4 * switch for plasma current scaling to use
 i_density_limit   = 7 * switch for density limit to enforce (`constraint equation 5`)
-ifalphap = 1 * switch for fast alpha pressure calculation
+i_beta_fast_alpha = 1 * switch for fast alpha pressure calculation
 iinvqd   = 1 * switch for inverse quadrature in L-mode scaling laws 5 and 9;
 ipedestal = 1 * switch for pedestal profiles;
 neped    = 0.678e20 * electron density of pedestal [m-3] (`ipedestal=1;2; calculated if 3`)
