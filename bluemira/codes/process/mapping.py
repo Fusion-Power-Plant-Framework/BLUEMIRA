@@ -57,7 +57,7 @@ OUT_mappings = {
     "P_sync": ("psyncpv*vol", "MW"),
     "P_brehms": ("pbrempv*plasma_volume", "MW"),
     "f_bs": ("bootstrap_current_fraction", "dimensionless"),
-    "beta_p": ("betap", "dimensionless"),
+    "beta_p": ("beta_poloidal", "dimensionless"),
     "beta": ("beta", "dimensionless"),
     "tau_e": ("taueff", "s"),
     "v_burn": ("vburn", "V"),

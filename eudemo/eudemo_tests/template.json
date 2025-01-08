@@ -707,7 +707,7 @@
     "source": "Input",
     "mapping": {
       "PROCESS": {
-        "name": "betap",
+        "name": "beta_poloidal",
         "send": false,
         "recv": true,
         "unit": "dimensionless"

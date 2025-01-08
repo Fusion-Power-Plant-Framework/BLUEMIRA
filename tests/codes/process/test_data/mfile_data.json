@@ -795,7 +795,7 @@
     "var_mod": "Plasma",
     "scan01": 0.067018
   },
-  "betap": {
+  "beta_poloidal": {
     "var_mod": "Plasma",
     "scan01": 1.3307
   },
@@ -803,7 +803,7 @@
     "var_mod": "Plasma",
     "scan01": 0.070573
   },
-  "betaft": {
+  "beta_fast_alpha": {
     "var_mod": "Plasma",
     "scan01": 0.010009
   },
@@ -831,7 +831,7 @@
     "var_mod": "Plasma",
     "scan01": 0.060033
   },
-  "eps*betap": {
+  "eps*beta_poloidal": {
     "var_mod": "Plasma",
     "scan01": 0.55564
   },
@@ -851,7 +851,7 @@
     "var_mod": "Plasma",
     "scan01": 4.0526
   },
-  "betalim": {
+  "beta_max": {
     "var_mod": "Plasma",
     "scan01": 0.075333
   },
@@ -859,7 +859,7 @@
     "var_mod": "Plasma",
     "scan01": 2376000000.0
   },
-  "total_plasma_internal_energy": {
+  "e_plasma_beta": {
     "var_mod": "Plasma",
     "scan01": 2793100000.0
   },

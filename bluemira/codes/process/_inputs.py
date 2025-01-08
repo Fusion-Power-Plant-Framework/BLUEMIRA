@@ -346,13 +346,13 @@ class ProcessInputs:
 
     # Constraint variables
     auxmin: float | None = None
-    betpmx: float | None = None
+    beta_poloidal_max: float | None = None
     bigqmin: float | None = None
     bmxlim: float | None = None
     dr_tf_wp: float | None = None
     fauxmn: float | None = None
     fbeta: float | None = None
-    fbetap: float | None = None
+    fbeta_poloidal: float | None = None
     fbetatry: float | None = None
     fbetatry_lower: float | None = None
     fcwr: float | None = None
@@ -650,7 +650,7 @@ class ProcessInputs:
     hfact: float | None = None
     taumax: float | None = None
     i_bootstrap_current: int | None = None
-    iculbl: int | None = None  # listed as an output...
+    i_beta_component: int | None = None  # listed as an output...
     i_plasma_current: int | None = None
     i_density_limit: int | None = None
     i_diamagnetic_current: int | None = None

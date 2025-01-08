@@ -622,7 +622,7 @@ ITERATION_VAR_MAPPING = {
     "scraplo": 74,
     "tfootfi": 75,
     # 76, 77, 78 NOT USED
-    "fbetap": 79,
+    "fbeta_poloidal": 79,
     # 80 NOT USED
     "edrive": 81,
     "drveff": 82,

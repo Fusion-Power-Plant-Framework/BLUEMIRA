@@ -181,7 +181,7 @@ class BetaLimitModel(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "iculbl"
+        return "i_beta_component"
 
     TOTAL = 0  # Including fast ion contribution
     THERMAL = 1
