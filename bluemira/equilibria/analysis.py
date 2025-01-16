@@ -55,7 +55,7 @@ def select_eq(
     dummy_coils=None,
     from_cocos=3,
     to_cocos=3,
-    qpsi_sign=-1,
+    qpsi_positive=False,  # noqa: FBT002
 ) -> FixedPlasmaEquilibrium | Equilibrium:
     """
     Return an Equilibrium or FixedPlasmaEquilibrium object given a particular file name.
@@ -77,12 +77,13 @@ def select_eq(
         the determined COCOS indices.
     to_cocos:
         The COCOS index to convert the EQDSK file to.
-    qpsi_sign:
-        The sign of the qpsi, required for identification
+    qpsi_positive:
+        Whether or not qpsi is positive, required for identification
         when qpsi is not present in the file.
 
     Returns
     -------
+    :
         Equilibrium or FixedPlasmaEquilibrium
     """
     if fixed_or_free == FixedOrFree.FREE:
@@ -91,13 +92,13 @@ def select_eq(
             from_cocos=from_cocos,
             user_coils=dummy_coils,
             to_cocos=to_cocos,
-            qpsi_sign=qpsi_sign,
+            qpsi_positive=qpsi_positive,
         )
     return FixedPlasmaEquilibrium.from_eqdsk(
         file_path,
         from_cocos=from_cocos,
         to_cocos=to_cocos,
-        qpsi_sign=qpsi_sign,
+        qpsi_positive=qpsi_positive,
     )
 
 
@@ -133,7 +134,7 @@ def get_leg_flux_info(
 
     Raises
     ------
-    BluemiraError:
+    BluemiraError
         If leg pair is chosen that does not exist in chosen eq.
 
     """
@@ -148,7 +149,7 @@ def get_leg_flux_info(
         if legs_to_plot in DivLegsToPlot.PAIR:
             location = "lower" if legs_to_plot is DivLegsToPlot.LW else "upper"
             if f"{location}_inner" not in lgth:
-                raise BluemiraError(  # noqa: DOC501
+                raise BluemiraError(
                     f"One of your chosen equilibria does not have {location}_inner legs."
                 )
             if f"{location}_outer" not in lgth:
@@ -185,8 +186,13 @@ def get_target_flux(eq, target, target_coords, n_layers, vertical=False):  # noq
 
     Raises
     ------
-    BluemiraError:
+    BluemiraError
         If the target is set to vertical or horizontal incorectly.
+
+    Returns
+    -------
+    fs_list:
+        List of flux surface coordinates.
 
     """
     if eq._o_points is None:
@@ -197,7 +203,7 @@ def get_target_flux(eq, target, target_coords, n_layers, vertical=False):  # noq
         z = target_coords.z[np.argmin(target_coords.x)]
         target_size = np.abs(np.max(target_coords.x) - np.min(target_coords.x))
         if target_size == 0:
-            raise BluemiraError(  # noqa: DOC501
+            raise BluemiraError(
                 "No x-range found for target coords,"
                 " perhaps you are using a vertical target (set vertical=True)."
             )
@@ -271,13 +277,13 @@ class EqAnalysis:
         the determined COCOS indices.
     to_cocos:
         The COCOS index to convert the EQDSK file to.
-    qpsi_sign:
-        The sign of the qpsi, required for identification
+    qpsi_positive:
+        Whether or not qpsi is positive, required for identification
         when qpsi is not present in the file.
 
     Raises
     ------
-    BluemiraError:
+    BluemiraError
         If no equilibrium is chosen as input.
 
     """
@@ -291,14 +297,13 @@ class EqAnalysis:
         dummy_coils=None,
         from_cocos=3,
         to_cocos=3,
-        qpsi_sign=-1,
+        qpsi_positive=False,  # noqa: FBT002
     ):
         self.diag_ops = diag_ops
         self.fixed_or_free = FixedOrFree.FREE
         self.dummy_coils = (None,)
         self.from_cocos = (3,)
         self.to_cocos = (3,)
-        self.qpsi_sign = -1
 
         if eq:
             self._eq = eq
@@ -311,10 +316,13 @@ class EqAnalysis:
                 dummy_coils=dummy_coils,
                 from_cocos=from_cocos,
                 to_cocos=to_cocos,
-                qpsi_sign=qpsi_sign,
+                qpsi_positive=qpsi_positive,
             )
             self._profiles = CustomProfile.from_eqdsk_file(
-                file_path, from_cocos=from_cocos, to_cocos=to_cocos, qpsi_sign=qpsi_sign
+                file_path,
+                from_cocos=from_cocos,
+                to_cocos=to_cocos,
+                qpsi_positive=qpsi_positive,
             )
         else:
             BluemiraError(
@@ -331,11 +339,18 @@ class EqAnalysis:
         plt.show()
 
     def plot_field(self, ax=None):
-        """Plot poloidal and toroidal field"""
+        """
+        Plot poloidal and toroidal field.
+
+        Raises
+        ------
+        BluemiraError
+            if wrong number of axes is input
+        """
         n_ax = 2
         if ax is not None:
             if len(ax) != n_ax:
-                raise BluemiraError(  # noqa: DOC501
+                raise BluemiraError(
                     f"There are 2 subplots, you have provided settings for {len(ax)}."
                 )
             ax1, ax2 = ax[0], ax[1]
@@ -374,12 +389,12 @@ class EqAnalysis:
 
         Raises
         ------
-        BluemiraError:
+        BluemiraError
             If the equilibrium is fixed boundary.
 
         """
         if self.fixed_or_free is FixedOrFree.FIXED:
-            raise BluemiraError(  # noqa: DOC501
+            raise BluemiraError(
                 "This function can only be used for Free Boundary Equilbria."
             )
         return self._eq.analyse_core()
@@ -391,12 +406,12 @@ class EqAnalysis:
 
         Raises
         ------
-        BluemiraError:
+        BluemiraError
             If the equilibrium is fixed boundary.
 
         """
         if self.fixed_or_free is FixedOrFree.FIXED:
-            raise BluemiraError(  # noqa: DOC501
+            raise BluemiraError(
                 "This function can only be used for Free Boundary Equilbria."
             )
         self._eq.plot_core()
@@ -414,12 +429,12 @@ class EqAnalysis:
 
         Raises
         ------
-        BluemiraError:
+        BluemiraError
             If the equilibrium is fixed boundary.
 
         """
         if self.fixed_or_free is FixedOrFree.FIXED:
-            raise BluemiraError(  # noqa: DOC501
+            raise BluemiraError(
                 "This function can only be used for Free Boundary Equilbria."
             )
 
@@ -449,14 +464,14 @@ class EqAnalysis:
 
         Raises
         ------
-        BluemiraError:
+        BluemiraError
             if the wrong number of axes is provided
 
         """
         n_ax = 2
         if ax is not None:
             if len(ax) != n_ax:
-                raise BluemiraError(  # noqa: DOC501
+                raise BluemiraError(
                     f"There are 2 subplots, you have provided settings for {len(ax)}."
                 )
             ax1, ax2 = ax[0], ax[1]
@@ -567,8 +582,13 @@ class EqAnalysis:
 
         Raises
         ------
-        BluemiraError:
+        BluemiraError
             if no refernce equilibrium is provided
+
+        Returns
+        -------
+        :
+            plotting class
 
         """
         if self.diag_ops.reference_eq is None:
@@ -608,9 +628,9 @@ class EqAnalysis:
 
         Raises
         ------
-        BluemiraError:
+        BluemiraError
             if no reference equilibrium or equilibrium file path is provided
-        ValueError:
+        ValueError
             if the profile sign array provided is an incorrect length
         """
         if self.diag_ops.reference_eq is None:
@@ -628,12 +648,12 @@ class EqAnalysis:
         elif is_num(reference_profile_sign):
             reference_profile_sign *= np.ones(n_prof)
         elif len(reference_profile_sign) != n_prof:
-            raise ValueError("profile_sign length not equal to 5.")  # noqa: DOC501
+            raise ValueError("profile_sign length not equal to 5.")
 
         shape_ax = (2, 3)
         if ax is not None:
             if np.shape(ax) != shape_ax:
-                raise BluemiraError(  # noqa: DOC501
+                raise BluemiraError(
                     "Subplot shape is (2,3), "
                     f"you have provided settings for {np.shape(ax)}."
                 )
@@ -806,8 +826,8 @@ class MultiEqAnalysis:
         the determined COCOS indices.
     to_cocos:
         The COCOS index to convert the EQDSK file to.
-    qpsi_sign:
-        The sign of the qpsi, required for identification
+    qpsi_positive:
+        Whether or not qpsi is positive, required for identification
         when qpsi is not present in the file.
     """
 
@@ -819,7 +839,7 @@ class MultiEqAnalysis:
         dummy_coils=None,
         from_cocos=3,
         to_cocos=3,
-        qpsi_sign=-1,
+        qpsi_positive=False,  # noqa: FBT002
     ):
         self.equilibrium_paths = equilibrium_paths
 
@@ -856,12 +876,12 @@ class MultiEqAnalysis:
             from_cocos = np.ones(len(equilibrium_paths)) * from_cocos
         if is_num(to_cocos):
             to_cocos = np.ones(len(equilibrium_paths)) * to_cocos
-        if is_num(qpsi_sign):
-            qpsi_sign = np.ones(len(equilibrium_paths)) * qpsi_sign
+        if isinstance(qpsi_positive, bool):
+            qpsi_positive = len(equilibrium_paths) * [qpsi_positive]
 
         self.from_cocos = from_cocos
         self.to_cocos = to_cocos
-        self.qpsi_sign = qpsi_sign
+        self.qpsi_positive = qpsi_positive
 
         self.profiles = self.profile_dictionary()
 
@@ -872,7 +892,7 @@ class MultiEqAnalysis:
             self.dummy_coils,
             self.from_cocos,
             self.to_cocos,
-            self.qpsi_sign,
+            self.qpsi_positive,
             strict=False,
         ):
             self.equilibrium.append(
@@ -882,7 +902,7 @@ class MultiEqAnalysis:
                     dummy_coils=dummy,
                     from_cocos=fc,
                     to_cocos=tc,
-                    qpsi_sign=qs,
+                    qpsi_positive=qs,
                 )
             )
 
@@ -894,11 +914,13 @@ class MultiEqAnalysis:
 
         Cocos indecis and qpsi sign are set to Bluemira Defaults unless specified.
 
-        The user can spesify from_cocos, to_cocos and qpsi_sign using:
+        The user can spesify from_cocos, to_cocos and qpsi_positive using:
             - lists if the equilibria have different values
             - single values if equilibria all have the same convention
 
-        Return:
+        Returns
+        -------
+        :
             Profile Dictionary
             (profile type: list of profile objects for each equilibria)
         """
@@ -907,7 +929,7 @@ class MultiEqAnalysis:
                 self.equilibrium_paths,
                 from_cocos=self.from_cocos,
                 to_cocos=self.to_cocos,
-                qpsi_sign=self.qpsi_sign,
+                qpsi_positive=self.qpsi_positive,
             )
             return {
                 "pprime": prof.pprime,
@@ -928,11 +950,11 @@ class MultiEqAnalysis:
             self.equilibrium_paths,
             self.from_cocos,
             self.to_cocos,
-            self.qpsi_sign,
+            self.qpsi_positive,
             strict=False,
         ):
             prof = CustomProfile.from_eqdsk_file(
-                eq_path, from_cocos=fc, to_cocos=tc, qpsi_sign=q
+                eq_path, from_cocos=fc, to_cocos=tc, qpsi_positive=q
             )
             prof_dict["pprime"].append(prof.pprime)
             prof_dict["ffprime"].append(prof.ffprime)
@@ -1117,14 +1139,14 @@ class MultiEqAnalysis:
 
         Raises
         ------
-        BluemiraError:
+        BluemiraError
             if the axes provided are the incorrect shape
 
         """
         shape_ax = (2, 3)
         if ax is not None:
             if np.shape(ax) != shape_ax:
-                raise BluemiraError(  # noqa: DOC501
+                raise BluemiraError(
                     "Subplot shape is (2,3), you have provided "
                     f"settings for {np.shape(ax)}."
                 )
