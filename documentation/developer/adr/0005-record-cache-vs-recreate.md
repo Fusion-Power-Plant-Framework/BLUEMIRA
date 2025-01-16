@@ -1,10 +1,10 @@
-# 1. Caching vs. recreation of geometry from Matryoshkas
+# 5. Caching vs. recreation of geometry from Matryoshkas
 
 Date: 2022-06-15 - 2022-11-30
 
 ## Status
 
-Proposed
+Completed
 
 ## Context
 
