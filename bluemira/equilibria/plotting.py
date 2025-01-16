@@ -1219,6 +1219,11 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
     def make_comparison_grid(self):
         """
         If the grids are different, make a new one to interpolate over.
+
+        Returns
+        -------
+        :
+            new Grid
         """
         x_min = np.max([self.reference_eq.grid.x_min, self.eq.grid.x_min])
         x_max = np.min([self.reference_eq.grid.x_max, self.eq.grid.x_max])
@@ -1229,7 +1234,15 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         return Grid(x_min, x_max, z_min, z_max, nx, nz)
 
     def interpolate_psi(self, psi, psi_grid):
-        """Interpolate psi over new comparision grid"""
+        """
+        Interpolate psi over new comparision grid
+
+        Returns
+        -------
+        :
+            iterpolated psi values
+
+        """
         psi_func = RectBivariateSpline(psi_grid.x[:, 0], psi_grid.z[0, :], psi)
         return psi_func.ev(self.grid.x, self.grid.z)
 
@@ -1480,7 +1493,7 @@ class CorePlotter(Plotter):
         r, c = int((num_plots - 1) / 2) + 1, 2
         super().__init__(ax, subplots=EqSubplots.VS_PSI_NORM, nrows=r, ncols=c)
         self.plot_core(results, eq_name)
-        for a in ax[num_plots:]:
+        for a in self.ax[num_plots:]:
             a.axis("off")
 
     def plot_core(self, results, eq_name=None):
