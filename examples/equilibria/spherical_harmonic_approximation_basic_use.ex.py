@@ -201,7 +201,6 @@ program = PicardIterator(
     convergence=DudsonConvergence(1e-2),
     relaxation=0.1,
     maxiter=100,
-    plot=False,
 )
 program()
 

@@ -389,8 +389,10 @@ class EqSummary:
     q_95: float
     kappa_95: float
     delta_95: float
+    zeta_95: float
     kappa: float
     delta: float
+    zeta: float
     R_0: float
     A: float
     a: float
@@ -420,14 +422,18 @@ class EqSummary:
         if is_double_null:
             kappa_95 = f95.kappa
             delta_95 = f95.delta
+            zeta_95 = f95.zeta
             kappa = f100.kappa
             delta = f100.delta
+            zeta = f100.zeta
 
         else:
             kappa_95 = f95.kappa_upper
             delta_95 = f95.delta_upper
+            zeta_95 = f95.delta_upper
             kappa = f100.kappa_upper
             delta = f100.delta_upper
+            zeta = f100.delta_upper
 
         # d['dXsep'] = self.calc_dXsep()
         dx_shaf, dz_shaf = f100.shafranov_shift(eq)
@@ -447,8 +453,10 @@ class EqSummary:
             dz_shaf=dz_shaf,
             kappa_95=kappa_95,
             delta_95=delta_95,
+            zeta_95=zeta_95,
             kappa=kappa,
             delta=delta,
+            zeta=zeta,
         )
 
 

@@ -21,10 +21,16 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.interpolate import RectBivariateSpline
 
 from bluemira.base.constants import CoilType, raw_uc
+from bluemira.base.error import BluemiraError
 from bluemira.base.look_and_feel import bluemira_warn
 from bluemira.display.plotter import Zorder, plot_coordinates
 from bluemira.equilibria.constants import DPI_GIF, J_TOR_MIN, M_PER_MN, PLT_PAUSE
-from bluemira.equilibria.diagnostics import LCFSMask, PsiPlotType
+from bluemira.equilibria.diagnostics import (
+    EqBPlotParam,
+    EqSubplots,
+    LCFSMask,
+    PsiPlotType,
+)
 from bluemira.equilibria.find import Xpoint, _in_plasma, get_contours, grid_2d_contour
 from bluemira.equilibria.grid import Grid
 from bluemira.equilibria.physics import calc_psi
@@ -109,12 +115,12 @@ class Plotter:
     Utility plotter abstract object
     """
 
-    def __init__(self, ax=None, *, subplots=False, **kwargs):
+    def __init__(self, ax=None, *, subplots=EqSubplots.XZ, nrows=1, ncols=2, **kwargs):
         for kwarg in kwargs:
             if kwarg not in PLOT_DEFAULTS:
                 bluemira_warn(f"Unrecognised plot kwarg: {kwarg}")
 
-        if not subplots:
+        if subplots is EqSubplots.XZ:
             if ax is None:
                 self.f, self.ax = plt.subplots()
             else:
@@ -123,10 +129,10 @@ class Plotter:
             self.ax.set_ylabel("$z$ [m]")
             self.ax.set_aspect("equal")
 
-        else:
+        elif subplots is EqSubplots.XZ_COMPONENT_PSI:
             if ax is None:
                 self.f, self.ax = plt.subplots(
-                    nrows=1, ncols=2, sharex=True, sharey=True
+                    nrows=nrows, ncols=ncols, sharex=True, sharey=True
                 )
             else:
                 self.ax = ax
@@ -138,6 +144,27 @@ class Plotter:
             self.ax[1].set_ylabel("$z$ [m]")
             self.ax[1].set_title("Plasma")
             self.ax[1].set_aspect("equal")
+
+        elif subplots is EqSubplots.VS_PSI_NORM:
+            if ax is None:
+                gs = GridSpec(nrows, ncols)
+                self.ax = [plt.subplot(gs[i]) for i in range(nrows * ncols)]
+            else:
+                self.ax = ax
+            for c in range(1, ncols):
+                self.ax[(nrows * ncols) - c].set_xlabel("$\\psi_{n}$")
+
+        elif subplots is EqSubplots.VS_X:
+            if ax is None:
+                gs = GridSpec(nrows, ncols)
+                self.ax = [plt.subplot(gs[i]) for i in range(nrows * ncols)]
+            else:
+                self.ax = ax
+            for a in self.ax:
+                a.set_xlabel("$x$ [m]")
+
+        else:
+            BluemiraError(f"{subplots} is not a valid option for subplots.")
 
 
 class GridPlotter(Plotter):
@@ -461,18 +488,18 @@ class EquilibriumPlotterMixin:
     ax: Axes
     psi: float | npt.NDArray[np.float64]
 
-    def plot_Bp(self, **kwargs):
+    def plot_B_component(self, poloidal=True, **kwargs):  # noqa: FBT002
         """
-        Plots the poloidal field onto the Axes.
+        Plots the poloidal or toroidal field onto the Axes.
         """
         nlevels = kwargs.pop("nlevels", PLOT_DEFAULTS["field"]["nlevels"])
         cmap = kwargs.pop("cmap", PLOT_DEFAULTS["field"]["cmap"])
 
-        Bp = self.eq.Bp()
-        levels = np.linspace(1e-36, np.amax(Bp), nlevels)
-        c = self.ax.contourf(self.eq.x, self.eq.z, Bp, levels=levels, cmap=cmap)
+        B_comp = self.eq.Bp() if poloidal else self.eq.Bt(self.eq.x)
+        levels = np.linspace(1e-36, np.amax(B_comp), nlevels)
+        c = self.ax.contourf(self.eq.x, self.eq.z, B_comp, levels=levels, cmap=cmap)
         cbar = plt.colorbar(c)
-        cbar.set_label("$B_{p}$ [T]")
+        cbar.set_label("$B_{p}$ [T]") if poloidal else cbar.set_label("$B_{t}$ [T]")
 
     def plot_psi(self, **kwargs):
         """
@@ -523,17 +550,23 @@ class FixedPlasmaEquilibriumPlotter(EquilibriumPlotterMixin, Plotter):
     eq: FixedPlasmaEquilibrium
 
     def __init__(
-        self, equilibrium: FixedPlasmaEquilibrium, ax=None, *, field: bool = False
+        self,
+        equilibrium: FixedPlasmaEquilibrium,
+        ax=None,
+        *,
+        field: EqBPlotParam = EqBPlotParam.PSI,
     ):
         super().__init__(ax)
         self.eq = equilibrium
         self.psi = self.eq.psi(self.eq.x, self.eq.z)
 
-        if not field:
+        if field not in EqBPlotParam.FIELD:
             self.plot_plasma_current()
             self.plot_psi()
-        else:
-            self.plot_Bp()
+        elif field is EqBPlotParam.BP:
+            self.plot_B_component()
+        elif field is EqBPlotParam.BT:
+            self.plot_B_component(poloidal=False)
         self.plot_LCFS()
 
     def plot_LCFS(self):
@@ -569,7 +602,7 @@ class EquilibriumPlotter(EquilibriumPlotterMixin, Plotter):
         *,
         plasma=False,
         show_ox=True,
-        field=False,
+        field: EqBPlotParam = EqBPlotParam.PSI,
     ):
         super().__init__(ax)
         self.eq = equilibrium
@@ -595,11 +628,13 @@ class EquilibriumPlotter(EquilibriumPlotterMixin, Plotter):
             )
             self.op_psi = np.amin(self.psi)
 
-        if not field:
+        if field not in EqBPlotParam.FIELD:
             self.plot_plasma_current()
             self.plot_psi()
-        else:
-            self.plot_Bp()
+        elif field is EqBPlotParam.BP:
+            self.plot_B_component()
+        elif field is EqBPlotParam.BT:
+            self.plot_B_component(poloidal=False)
 
         if self.o_points and self.x_points:
             # Only plot if we can normalise psi
@@ -691,7 +726,7 @@ class EquilibriumPlotter(EquilibriumPlotterMixin, Plotter):
 
 class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
     """
-    FIXME
+    Utility class for Equilibrium comparison plotting
     """
 
     def __init__(
@@ -730,7 +765,7 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
             return
         x, z = ref_lcfs.xz
 
-        if self.diag_ops.split_psi_plots:
+        if self.diag_ops.split_psi_plots is EqSubplots.XZ_COMPONENT_PSI:
             for i in range(2):
                 self.ax[i].plot(
                     x,
@@ -763,7 +798,7 @@ class EquilibriumComparisonBasePlotter(EquilibriumPlotterMixin, Plotter):
             return
         x, z = lcfs.xz
 
-        if self.diag_ops.split_psi_plots:
+        if self.diag_ops.split_psi_plots is EqSubplots.XZ_COMPONENT_PSI:
             for i in range(2):
                 self.ax[i].plot(
                     x,
@@ -1070,7 +1105,7 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
 
     def _clean_plots(self):
         if self.i == 0 and (self.diag_ops.psi_diff in PsiPlotType.DIFF):
-            if self.diag_ops.split_psi_plots:
+            if self.diag_ops.split_psi_plotsis is EqSubplots.XZ_COMPONENT_PSI:
                 self.cax1 = make_axes_locatable(self.ax[0]).append_axes(
                     "right", size="5%", pad="2%"
                 )
@@ -1083,14 +1118,14 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
                 )
         else:
             if self.diag_ops.psi_diff in PsiPlotType.DIFF:
-                if self.diag_ops.split_psi_plots:
+                if self.diag_ops.split_psi_plots is EqSubplots.XZ_COMPONENT_PSI:
                     self.cax1.clear()
                     self.cax2.clear()
 
                 else:
                     self.cax.clear()
 
-            if self.diag_ops.split_psi_plots:
+            if self.diag_ops.split_psi_plots is EqSubplots.XZ_COMPONENT_PSI:
                 for _ax in self.ax:
                     _ax.clear()
                     if legend := _ax.get_legend():
@@ -1105,7 +1140,7 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
         self._clean_plots()
 
         # update the plot
-        if self.diag_ops.split_psi_plots:
+        if self.diag_ops.split_psi_plots is EqSubplots.XZ_COMPONENT_PSI:
             self.plot_psi_coilset()
             self.plot_psi_plasma()
             legend = self.ax[0].legend()
@@ -1141,6 +1176,12 @@ class EquilibriumComparisonPlotter(EquilibriumComparisonBasePlotter):
 
 
 class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
+    """
+    Class for comparing equilibria during post opt. anaylsys.
+    Allows for different equilibrium types, grid sizes, etc.,
+    to be compared to each other.
+    """
+
     def __init__(
         self,
         equilibrium,
@@ -1163,7 +1204,7 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         self.mask = self.make_lcfs_mask()
         if self.diag_ops.psi_diff in PsiPlotType.DIFF:
             self.calculate_psi_diff()
-            if self.diag_ops.split_psi_plots:
+            if self.diag_ops.split_psi_plots is EqSubplots.XZ_COMPONENT_PSI:
                 self.cax1 = make_axes_locatable(self.ax[0]).append_axes(
                     "right", size="5%", pad="2%"
                 )
@@ -1178,6 +1219,11 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
     def make_comparison_grid(self):
         """
         If the grids are different, make a new one to interpolate over.
+
+        Returns
+        -------
+        :
+            new Grid
         """
         x_min = np.max([self.reference_eq.grid.x_min, self.eq.grid.x_min])
         x_max = np.min([self.reference_eq.grid.x_max, self.eq.grid.x_max])
@@ -1188,7 +1234,15 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         return Grid(x_min, x_max, z_min, z_max, nx, nz)
 
     def interpolate_psi(self, psi, psi_grid):
-        """Interpolate psi over new comparision grid"""
+        """
+        Interpolate psi over new comparision grid
+
+        Returns
+        -------
+        :
+            iterpolated psi values
+
+        """
         psi_func = RectBivariateSpline(psi_grid.x[:, 0], psi_grid.z[0, :], psi)
         return psi_func.ev(self.grid.x, self.grid.z)
 
@@ -1277,13 +1331,13 @@ class EquilibriumComparisonPostOptPlotter(EquilibriumComparisonBasePlotter):
         else:
             self.total_psi = diff_total_psi
 
-    def plot_compare_psi(self, mask_type=None):
-        """FIXME"""
+    def plot_compare_psi(self):
+        """Plot flux differnces"""
         # Apply mask
-        if mask_type is not None:
-            self.apply_mask(mask_type)
+        if self.diag_ops.lcfs_mask is not None:
+            self.apply_mask(self.diag_ops.lcfs_mask)
 
-        if self.diag_ops.split_psi_plots:
+        if self.diag_ops.split_psi_plots is EqSubplots.XZ_COMPONENT_PSI:
             self.plot_psi_coilset(self.grid)
             self.plot_psi_plasma(self.grid)
             legend = self.ax[0].legend()
@@ -1434,15 +1488,27 @@ class CorePlotter(Plotter):
     profiles.
     """
 
-    def __init__(self, results):
-        r, c = int((len(results.__dict__) - 1) / 2) + 1, 2
-        gs = GridSpec(r, c)
-        self.ax = [plt.subplot(gs[i]) for i in range(r * c)]
-        ccycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
-        for i, (k, v) in enumerate(results.__dict__.items()):
-            color = next(ccycle)
-            self.ax[i].plot(results.psi_n, v, label=str_to_latex(k), color=color)
-            self.ax[i].legend()
+    def __init__(self, results, ax=None, eq_name=None):
+        num_plots = len(results.__dict__)
+        r, c = int((num_plots - 1) / 2) + 1, 2
+        super().__init__(ax, subplots=EqSubplots.VS_PSI_NORM, nrows=r, ncols=c)
+        self.plot_core(results, eq_name)
+        for a in self.ax[num_plots:]:
+            a.axis("off")
+
+    def plot_core(self, results, eq_name=None):
+        if eq_name is None:
+            ccycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
+            for i, (k, v) in enumerate(results.__dict__.items()):
+                color = next(ccycle)
+                self.ax[i].plot(results.psi_n, v, label=str_to_latex(k), color=color)
+                self.ax[i].legend()
+        else:
+            for i, (k, v) in enumerate(results.__dict__.items()):
+                self.ax[i].plot(results.psi_n, v)
+                self.ax[i].set_ylabel(str_to_latex(k))
+            self.ax[0].legend()
+            self.ax[0].set_label(eq_name)
 
 
 class CorePlotter2(Plotter):
@@ -1450,7 +1516,14 @@ class CorePlotter2(Plotter):
     Utility class for plotting plasma equilibrium cross-core profiles.
     """
 
-    def __init__(self, eq):
+    def __init__(self, eq, ax=None, n=50):
+        super().__init__(ax, subplots=EqSubplots.VS_X, nrows=3, ncols=1)
+        self.plot_core2(eq, n)
+
+    def plot_core2(self, eq, n=50):
+        """
+        Plot the plasma equilibrium cross-core profiles.
+        """
         jfunc = RectBivariateSpline(eq.x[:, 0], eq.z[0, :], eq._jtor)
         p = eq.pressure_map()
         pfunc = RectBivariateSpline(eq.x[:, 0], eq.z[0, :], p)
@@ -1460,11 +1533,8 @@ class CorePlotter2(Plotter):
         n = 50
         xx = np.linspace(eq.grid.x_min, eq.grid.x_max, n)
         zz = np.linspace(zmag, zmag, n)
-        gs = GridSpec(3, 1)
-        ccycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
-
         psi = eq.psi(xx, zz) * 2 * np.pi
-        self.ax = [plt.subplot(gs[i]) for i in range(3)]
+        ccycle = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
         self.ax[0].plot(xx, pfunc(xx, zz, grid=False), color=next(ccycle))
         self.ax[0].annotate("$p$", xy=[0.05, 0.8], xycoords="axes fraction")
         self.ax[0].set_ylabel("[Pa]")

@@ -297,7 +297,6 @@ unconstrained_iterator = PicardIterator(
     eq,
     unconstrained_cop,
     fixed_coils=True,
-    plot=False,
     relaxation=0.3,
     convergence=DudsonConvergence(1e-6),
 )
@@ -380,7 +379,6 @@ constrained_iterator = PicardIterator(
     eq,
     opt_problem,
     fixed_coils=True,
-    plot=False,
     relaxation=0.1,
     maxiter=100,
     convergence=DudsonConvergence(1e-4),

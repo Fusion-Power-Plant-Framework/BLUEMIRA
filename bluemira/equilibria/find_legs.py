@@ -91,7 +91,6 @@ class LegFlux:
         self.x_points = x_points[:2]
         self.rtol = rtol
         self.x_range_lcfs = [min(lcfs.x), max(lcfs.x)]
-        self.abs_z_lcfs = [abs(min(lcfs.z)), abs(max(lcfs.z))]
         self.delta = np.max(eq.grid.x) - np.min(eq.grid.x)
         self.delta_offsets = eq.grid.dx
         self.dx_offsets = None
@@ -120,10 +119,15 @@ class LegFlux:
             self.x_points.sort(key=lambda x_point: x_point.z)
             # Check to determine configuration (separatrix list is sorted by
             # loop length when it is found (longest first), so use [0])
-            z_sep = min(abs(min(self.separatrix[0].z)), abs(max(self.separatrix[0].z)))
-            legs_upper_lower = np.isclose(
-                z_sep, self.abs_z_lcfs[0], rtol=self.rtol
-            ) or np.isclose(z_sep, self.abs_z_lcfs[1], rtol=self.rtol)
+            z0 = self.separatrix[0].z[
+                (self.separatrix[0].x > self.x_range_lcfs[0])
+                & (self.separatrix[0].x < self.x_range_lcfs[1])
+            ]
+            z1 = self.separatrix[1].z[
+                (self.separatrix[1].x > self.x_range_lcfs[0])
+                & (self.separatrix[1].x < self.x_range_lcfs[1])
+            ]
+            legs_upper_lower = (max(z0) < min(z1)) or (min(z0) > max(z1))
             if legs_upper_lower:
                 # Sort LOWER then UPPER when use get_legs
                 # self.separatrix remains sorted by loop length
@@ -142,18 +146,19 @@ class LegFlux:
         for name in leg_dict:
             leg = leg_dict[name]
             direction = -1 if name.find("inner") != -1 else 1
-            if leg[0] is not None:
-                leg.extend(
-                    _extract_offsets(
-                        self.eq,
-                        leg[0],
-                        direction,
-                        self.o_point,
-                        self.dx_offsets,
-                        self.delta_offsets,
+            if len(leg) > 0:  # noqa: SIM102
+                if leg[0] is not None:
+                    leg.extend(
+                        _extract_offsets(
+                            self.eq,
+                            leg[0],
+                            direction,
+                            self.o_point,
+                            self.dx_offsets,
+                            self.delta_offsets,
+                        )
                     )
-                )
-                leg_dict[name] = leg
+                    leg_dict[name] = leg
         return leg_dict
 
     def get_legs(
