@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
 import numba as nb
 import numpy as np
-import numpy.typing as npt
 from eqdsk import EQDSKInterface
 from scipy.integrate import quad
 from scipy.interpolate import interp1d
@@ -32,6 +31,8 @@ from bluemira.equilibria.plotting import ProfilePlotter
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
+
+    import numpy.typing as npt
 
     from bluemira.equilibria.find import Xpoint
 
