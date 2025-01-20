@@ -23,6 +23,7 @@ from bluemira.base.look_and_feel import (
     bluemira_warn,
 )
 from bluemira.equilibria.constants import DPI_GIF, PLT_PAUSE, PSI_REL_TOL
+from bluemira.equilibria.profiles import OPointCalcOptions
 from bluemira.optimisation.error import OptimisationError
 from bluemira.utilities.plot_tools import make_gif, save_figure
 
@@ -469,6 +470,7 @@ class PicardIterator:
         gif: bool = False,
         figure_folder: str | None = None,
         plot_name: str = "default_0",
+        o_point_fallback: OPointCalcOptions = OPointCalcOptions.RAISE,
     ):
         self.eq = eq
         self.coilset = self.eq.coilset
@@ -486,6 +488,7 @@ class PicardIterator:
 
         self.relaxation = relaxation
         self.maxiter = maxiter
+        self.o_point_fallback = o_point_fallback
         self.plot_flag = plot or (gif and not plot)
         self.gif_flag = gif
         if figure_folder is None:
@@ -680,5 +683,10 @@ class PicardIterator:
         """
         o_points, x_points = self.eq.get_OX_points(force_update=True)
         self.eq._jtor = self.eq.profiles.jtor(
-            self.eq.x, self.eq.z, self.eq.psi(), o_points, x_points
+            self.eq.x,
+            self.eq.z,
+            self.eq.psi(),
+            o_points,
+            x_points,
+            o_point_fallback=self.o_point_fallback,
         )
