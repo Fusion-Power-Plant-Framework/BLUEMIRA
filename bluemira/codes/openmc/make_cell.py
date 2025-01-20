@@ -6,26 +6,27 @@
 """
 Create csg geometry by converting from bluemira geometry objects made of wires. All units
 in this module are in SI (distrance:[m]) unless otherwise specified by the docstring.
+
+Despite having a similar structure to
+:mod:bluemira.radiation_transport.neutronics.make_pre_cell, we do not merge these two
+modules together to ensure modularity, i.e. we can replace this file with a different csg
+neutronics plugin than openmc later if the need arises.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from itertools import chain, pairwise
 from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
 import openmc
 import openmc.region
 
 from bluemira.codes.openmc.material import CellType
-from bluemira.geometry.constants import D_TOLERANCE
 from bluemira.geometry.error import GeometryError
 from bluemira.geometry.solid import BluemiraSolid
 from bluemira.geometry.tools import (
     is_convex,
-    make_circle_arc_3P,
     make_polygon,
     polygon_revolve_signed_volume,
     revolve_shape,
@@ -33,19 +34,17 @@ from bluemira.geometry.tools import (
 from bluemira.geometry.wire import BluemiraWire
 from bluemira.radiation_transport.neutronics.constants import (
     DTOL_CM,
-    to_cm,
     to_cm3,
-    to_m,
 )
 from bluemira.radiation_transport.neutronics.radial_wall import Vert
-from bluemira.radiation_transport.neutronics.wires import CircleInfo
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterator
 
     import numpy.typing as npt
 
     from bluemira.codes.openmc.material import MaterialsLibrary
+    from bluemira.codes.openmc.tools import OpenMCEnvironment
     from bluemira.geometry.coordinates import Coordinates
     from bluemira.radiation_transport.neutronics.geometry import (
         DivertorThickness,
@@ -57,146 +56,12 @@ if TYPE_CHECKING:
         PreCell,
         PreCellArray,
     )
-    from bluemira.radiation_transport.neutronics.neutronics_axisymmetric import (
-        NeutronicsReactor,
-    )
-    from bluemira.radiation_transport.neutronics.wires import (
-        StraightLineInfo,
-        WireInfoList,
-    )
-
-
-# Found to work by trial and error. I'm sorry.
-SHRINK_DISTANCE = 0.0005  # [m] = 0.05cm = 0.5 mm
-
-
-@dataclass
-class CellStage:
-    """Stage of making cells."""
-
-    blanket: BlanketCellArray
-    divertor: DivertorCellArray
-    tf_coils: list[openmc.Cell]
-    cs_coil: openmc.Cell
-    plasma: openmc.Cell
-    radiation_shield: openmc.Cell
-    ext_void: openmc.Cell
-    universe: openmc.region.Intersection
-
-    @property
-    def cells(self):
-        """Get the list of all cells."""
-        return (
-            *chain.from_iterable((*self.blanket, *self.divertor)),
-            *self.tf_coils,
-            self.cs_coil,
-            self.plasma,
-            self.radiation_shield,
-            self.ext_void,
-        )
-
-    def get_all_hollow_merged_cells(self):
-        """Blanket and divertor cells"""
-        return [
-            *[openmc.Cell(region=stack.get_overall_region()) for stack in self.blanket],
-            *[openmc.Cell(region=stack.get_overall_region()) for stack in self.divertor],
-        ]
-
-    def set_volumes(self):
-        """
-        Sets the volume of the voids. Not necessary/ used anywhere yet.
-        """
-        ext_vertices = exterior_vertices(self.blanket, self.divertor)
-        total_universe_volume = (
-            #  top - bottom
-            (self.universe[0].surface.z0 - self.universe[1].surface.z0)
-            * np.pi
-            * self.universe[2].surface.r ** 2  # cylinder
-        )  # cm^3
-
-        # is this needed?
-        # self.universe.volume = total_universe_volume
-
-        outer_boundary_volume = to_cm3(
-            polygon_revolve_signed_volume(ext_vertices[:, ::2])
-        )
-        ext_void_volume = total_universe_volume - outer_boundary_volume
-        if self.tf_coils:
-            for coil in self.tf_coils:
-                ext_void_volume -= coil.volume
-        if self.cs_coil:
-            ext_void_volume -= self.cs_coil.volume
-        self.ext_void.volume = ext_void_volume
-        blanket_volumes = sum(cell.volume for cell in chain.from_iterable(self.blanket))
-        divertor_volumes = sum(
-            cell.volume for cell in chain.from_iterable(self.divertor)
-        )
-        self.plasma.volume = outer_boundary_volume - blanket_volumes - divertor_volumes
+    from bluemira.radiation_transport.neutronics.wires import WireInfoList
 
 
 def is_monotonically_increasing(series):
     """Check if a series is monotonically increasing"""  # or decreasing
     return all(np.diff(series) >= 0)  # or all(diff<0)
-
-
-def plot_surfaces(surfaces_list: list[openmc.Surface], ax=None):
-    """
-    Plot a list of surfaces in matplotlib.
-    """
-    if not ax:
-        ax = plt.axes()
-    # ax.set_aspect(1.0) # don't do this as it makes the plot hard to read.
-    for i, surface in enumerate(surfaces_list):
-        plot_surface_at_1000cm(ax, surface, color_num=i)
-    ax.legend()
-    ax.set_aspect("equal")
-    ax.set_ylim([-1000, 1000])
-    ax.set_xlim([-1000, 1000])
-    return ax
-
-
-def plot_surface_at_1000cm(ax, surface: openmc.Surface, color_num: int):
-    """
-    In the range [-1000, 1000], plot the RZ cross-section of the ZCylinder/ZPlane/ZCone.
-    """
-    if isinstance(surface, openmc.ZCylinder):
-        ax.plot(
-            [surface.x0, surface.x0],
-            [-1000, 1000],
-            label=f"{surface.id}: {surface.name}",
-            color=f"C{color_num}",
-        )
-    elif isinstance(surface, openmc.ZPlane):
-        ax.plot(
-            [-1000, 1000],
-            [surface.z0, surface.z0],
-            label=f"{surface.id}: {surface.name}",
-            color=f"C{color_num}",
-        )
-    elif isinstance(surface, openmc.ZCone):
-        intercept = surface.z0
-        slope = 1 / np.sqrt(surface.r2)
-
-        def equation_pos(x):
-            return slope * np.array(x) + intercept
-
-        def equation_neg(x):
-            return -slope * np.array(x) + intercept
-
-        y_pos, y_neg = equation_pos([-1000, 1000]), equation_neg([-1000, 1000])
-        ax.plot(
-            [-1000, 1000],
-            y_pos,
-            label=f"{surface.id}: {surface.name} (upper)",
-            color=f"C{color_num}",
-        )
-        ax.plot(
-            [-1000, 1000],
-            y_neg,
-            label=f"{surface.id}: {surface.name} (lower)",
-            linestyle="--",
-            color=f"C{color_num}",
-        )
 
 
 def get_depth_values(
@@ -711,7 +576,7 @@ def make_void_cells(
 
 def make_cell_arrays(
     pre_cell_reactor: NeutronicsReactor,
-    csg: BluemiraNeutronicsCSG,
+    csg: OpenMCEnvironment,
     materials: MaterialsLibrary,
     *,
     control_id: bool = False,
@@ -824,7 +689,7 @@ def make_cell_arrays(
     return cell_stage
 
 
-class BluemiraNeutronicsCSG:
+class OpenMCEnvironment:
     """Container for CSG planes to enable reuse of planes, very eco friendly"""
 
     def __init__(self):
@@ -1096,7 +961,7 @@ class BluemiraNeutronicsCSG:
             array of shape (?, 3), that the final region should include.
         control_id
             Passed as argument onto
-            :meth:`~bluemira.radiation_transport.neutronics.make_csg.BluemiraNeutronicsCSG.choose_region_cone`
+            :meth:`~bluemira.radiation_transport.neutronics.make_csg.OpenMCEnvironment.choose_region_cone`
 
         Returns
         -------
@@ -1141,7 +1006,7 @@ class BluemiraNeutronicsCSG:
         series_of_surfaces
             Each of them can be a None, a 1-tuple of surface, a 2-tuple of surfaces, or a
             surface. For the last 3 options, see
-            :func:`~bluemira.radiation_transport.neutronics.make_csg.BluemiraNeutronicsCSG.choose_region`
+            :func:`~bluemira.radiation_transport.neutronics.make_csg.OpenMCEnvironment.choose_region`
             for more.
 
         vertices_array
@@ -1149,7 +1014,7 @@ class BluemiraNeutronicsCSG:
             least on the edge of the returned Region.
         control_id
             Passed as argument onto
-            :meth:`~bluemira.radiation_transport.neutronics.make_csg.BluemiraNeutronicsCSG.choose_region_cone`
+            :meth:`~bluemira.radiation_transport.neutronics.make_csg.OpenMCEnvironment.choose_region_cone`
 
         Returns
         -------
@@ -1183,7 +1048,7 @@ class BlanketCell(openmc.Cell):
         cw_surface: openmc.Surface,
         interior_surface: openmc.Surface | None,
         vertices: Coordinates,
-        csg: BluemiraNeutronicsCSG,
+        csg: OpenMCEnvironment,
         cell_id: int | None = None,
         name: str = "",
         fill: openmc.Material | None = None,
@@ -1220,13 +1085,12 @@ class BlanketCell(openmc.Cell):
         self.cw_surface = cw_surface
         self.interior_surface = interior_surface
         self.vertex = vertices
-        self.csg = csg
 
         super().__init__(
             cell_id=cell_id,
             name=name,
             fill=fill,
-            region=self.csg.region_from_surface_series(
+            region=csg.region_from_surface_series(
                 [exterior_surface, ccw_surface, cw_surface, interior_surface],
                 self.vertex.T,  # We just assume it is convex
                 control_id=bool(cell_id),
@@ -1244,7 +1108,7 @@ class BlanketCellStack:
     closest to the exterior. They should all be situated at the same poloidal angle.
     """
 
-    def __init__(self, cell_stack: list[BlanketCell]):
+    def __init__(self, cell_stack: list[BlanketCell], csg: OpenMCEnvironment):
         """
         The shared surface between adjacent cells must be the SAME one, i.e. same id and
         hash, not just identical.
@@ -1269,6 +1133,7 @@ class BlanketCellStack:
             Contiguous stack of cells expected
         """
         self.cell_stack = cell_stack
+        self._csg = csg
         for int_cell, ext_cell in pairwise(cell_stack):
             if int_cell.exterior_surface is not ext_cell.interior_surface:
                 raise ValueError("Expected a contiguous stack of cells!")
@@ -1350,9 +1215,7 @@ class BlanketCellStack:
             self._interfaces.append(self.cell_stack[-1].exterior_surface)
         return self._interfaces
 
-    def get_overall_region(
-        self, csg: BluemiraNeutronicsCSG, *, control_id: bool = False
-    ) -> openmc.Region:
+    def get_overall_region(self, *, control_id: bool = False) -> openmc.Region:
         """
         Calculate the region covering the entire cell stack.
 
@@ -1360,7 +1223,7 @@ class BlanketCellStack:
         ----------
         control_id
             Passed as argument onto
-            :meth:`~bluemira.radiation_transport.neutronics.make_csg.BluemiraNeutronicsCSG.region_from_surface_series`
+            :meth:`~bluemira.radiation_transport.neutronics.csg_env.OpenMCEnvironment.region_from_surface_series`
 
         Raises
         ------
@@ -1373,7 +1236,7 @@ class BlanketCellStack:
         ))
         if not is_convex(vertices):
             raise GeometryError(f"{self}'s vertices need to be convex!")
-        return csg.region_from_surface_series(
+        return self._csg.region_from_surface_series(
             [
                 self.exterior_surface,
                 self.ccw_surface,
@@ -1391,7 +1254,7 @@ class BlanketCellStack:
         ccw_surface: openmc.Surface,
         cw_surface: openmc.Surface,
         depth_series: npt.NDArray,
-        csg: BluemiraNeutronicsCSG,
+        csg: OpenMCEnvironment,
         fill_lib: MaterialsLibrary,
         *,
         inboard: bool,
@@ -1554,12 +1417,12 @@ class BlanketCellStack:
             int_surf = ext_surf
         int_surf.name = "vacuum-vessel-facing surface"
 
-        return cls(cell_stack)
+        return cls(cell_stack, csg)
 
 
 class BlanketCellArray:
     """
-    An array of BlanketCellStack. Interior and exterior curve are both assumed convex.
+    An array of BlanketCellStack. Interior and exterior curve both should be convex.
 
     Parameters
     ----------
@@ -1569,7 +1432,7 @@ class BlanketCellArray:
     """
 
     def __init__(
-        self, blanket_cell_array: list[BlanketCellStack], csg: BluemiraNeutronicsCSG
+        self, blanket_cell_array: list[BlanketCellStack], csg: OpenMCEnvironment
     ):
         """
         Create array from a list of BlanketCellStack
@@ -1582,7 +1445,7 @@ class BlanketCellArray:
         self.blanket_cell_array = blanket_cell_array
         self.poloidal_surfaces = [self.blanket_cell_array[0].ccw_surface]
         self.radial_surfaces = []
-        self.csg = csg
+        self._csg = csg
         for i, this_stack in enumerate(self.blanket_cell_array):
             self.poloidal_surfaces.append(this_stack.cw_surface)
             self.radial_surfaces.append(this_stack.interfaces)
@@ -1595,6 +1458,16 @@ class BlanketCellArray:
                         f"Neighbouring BlanketCellStack [{i}] and "
                         f"[{i + 1}] are not aligned!"
                     )
+        if not is_convex(self.exterior_vertices()):
+            raise GeometryError(
+                "The exterior vertices of all of the cell-stack should"
+                "form a convex curve!"
+            )
+        if not is_convex(self.interior_vertices()):
+            raise GeometryError(
+                "The interior vertices of all of the cell-stack should"
+                "form a convex curve!"
+            )
 
     def __len__(self) -> int:
         """Number of cell stacks"""
@@ -1673,7 +1546,7 @@ class BlanketCellArray:
         ----------
         control_id
             Passed as argument onto
-            :meth:`~bluemira.radiation_transport.neutronics.make_csg.BluemiraNeutronicsCSG.region_from_surface_series`.
+            :meth:`~bluemira.radiation_transport.neutronics.csg_env.OpenMCEnvironment.region_from_surface_series`.
 
         Raises
         ------
@@ -1690,7 +1563,7 @@ class BlanketCellArray:
                 raise GeometryError(f"{self}'s vertices need to be convex!")
 
             exclusion_zone_by_stack.append(
-                self.csg.region_from_surface_series(
+                self._csg.region_from_surface_series(
                     [stack.cw_surface, stack.ccw_surface, stack.interior_surface],
                     stack_vertices,
                     control_id=control_id,
@@ -1704,7 +1577,7 @@ class BlanketCellArray:
         pre_cell_array: PreCellArray,
         materials: MaterialsLibrary,
         blanket_dimensions: TokamakDimensions,
-        csg: BluemiraNeutronicsCSG,
+        csg: OpenMCEnvironment,
         *,
         control_id: bool = False,
     ) -> BlanketCellArray:
@@ -1726,7 +1599,7 @@ class BlanketCellArray:
             recording the dimensions of the blanket in SI units (unit: [m]).
         control_id
             Passed as argument onto
-            :meth:`~bluemira.radiation_transport.neutronics.make_csg.BluemiraNeutronicsCSG.region_from_surface_series`.
+            :meth:`~bluemira.radiation_transport.neutronics.csg_env.OpenMCEnvironment.region_from_surface_series`.
         """
         cell_walls = pre_cell_array.cell_walls
         # TODO @je-cook: when contorl_id, we're forced to start at id=0
@@ -1779,7 +1652,7 @@ class DivertorCell(openmc.Cell):
         interior_surfaces: list[tuple[openmc.Surface]],
         exterior_wire: WireInfoList,
         interior_wire: WireInfoList,
-        csg: BluemiraNeutronicsCSG,
+        csg: OpenMCEnvironment,
         subtractive_region: openmc.Region | None = None,
         cell_id: int | None = None,
         name: str = "",
@@ -1792,9 +1665,9 @@ class DivertorCell(openmc.Cell):
         self.interior_surfaces = interior_surfaces
         self.exterior_wire = exterior_wire
         self.interior_wire = interior_wire
-        self.csg = csg
+        self._csg = csg
 
-        region = self.csg.region_from_surface_series(
+        region = self._csg.region_from_surface_series(
             [
                 self.cw_surface,
                 self.ccw_surface,
@@ -1881,7 +1754,7 @@ class DivertorCell(openmc.Cell):
         ----------
         control_id
             Passed as argument onto
-            :func:`~bluemira.radiation_transport.neutronics.make_csg.region_from_surface_series`
+            :func:`~bluemira.radiation_transport.neutronics.csg_env.region_from_surface_series`
 
         Raises
         ------
@@ -1897,7 +1770,7 @@ class DivertorCell(openmc.Cell):
                 raise GeometryError(
                     f"{self} (excluding the surface)'s vertices needs to be convex!"
                 )
-            return self.csg.region_from_surface_series(
+            return self._csg.region_from_surface_series(
                 [self.cw_surface, self.ccw_surface, *self.interior_surfaces],
                 vertices_array,
                 control_id=control_id,
@@ -1911,7 +1784,7 @@ class DivertorCell(openmc.Cell):
             raise GeometryError(
                 f"{self} (excluding the vacuum vessel)'s vertices needs to be convex!"
             )
-        return self.csg.region_from_surface_series(
+        return self._csg.region_from_surface_series(
             [self.cw_surface, self.ccw_surface, *self.exterior_surfaces],
             vertices_array,
             control_id=control_id,
@@ -1926,11 +1799,9 @@ class DivertorCellStack:
     poloidal angle.
     """
 
-    def __init__(
-        self, divertor_cell_stack: list[DivertorCell], csg: BluemiraNeutronicsCSG
-    ):
+    def __init__(self, divertor_cell_stack: list[DivertorCell], csg: OpenMCEnvironment):
         self.cell_stack = divertor_cell_stack
-        self.csg = csg
+        self._csg = csg
         # This check below is invalid because of how we subtract region instead.
         # for int_cell, ext_cell in pairwise(self.cell_stack):
         #     if int_cell.exterior_surfaces is not ext_cell.interior_surfaces:
@@ -2014,7 +1885,7 @@ class DivertorCellStack:
         ----------
         control_id
             Passed as argument onto
-            :func:`~bluemira.radiation_transport.neutronics.make_csg.region_from_surface_series`
+            :func:`~bluemira.radiation_transport.neutronics.csg_env.region_from_surface_series`
 
         Raises
         ------
@@ -2025,7 +1896,7 @@ class DivertorCellStack:
         if not is_convex(all_vertices):
             raise GeometryError(f"overall_region of {self} needs to be convex!")
 
-        return self.csg.region_from_surface_series(
+        return self._csg.region_from_surface_series(
             [
                 self.cw_surface,
                 self.ccw_surface,
@@ -2043,7 +1914,7 @@ class DivertorCellStack:
         cw_surface: openmc.Surface,
         ccw_surface: openmc.Surface,
         materials: MaterialsLibrary,
-        csg: BluemiraNeutronicsCSG,
+        csg: OpenMCEnvironment,
         armour_thickness: float = 0,
         stack_num: str | int = "",
     ) -> DivertorCellStack:
@@ -2249,7 +2120,7 @@ class DivertorCellArray:
         ----------
         control_id
             Passed as argument onto
-            :func:`~bluemira.radiation_transport.neutronics.make_csg.region_from_surface_series`
+            :func:`~bluemira.radiation_transport.neutronics.csg_env.region_from_surface_series`
         """
         return openmc.Union([
             stack[0].exclusion_zone(
@@ -2266,7 +2137,7 @@ class DivertorCellArray:
         pre_cell_array: DivertorPreCellArray,
         materials: MaterialsLibrary,
         divertor_thickness: DivertorThickness,
-        csg: BluemiraNeutronicsCSG,
+        csg: OpenMCEnvironment,
         override_start_end_surfaces: tuple[openmc.Surface, openmc.Surface] | None = None,
     ) -> DivertorCellArray:
         """
@@ -2286,6 +2157,11 @@ class DivertorCellArray:
         override_start_end_surfaces
             openmc.Surfaces that would be used as the first cw_surface and last
             ccw_surface
+
+        Returns
+        -------
+        :
+            DivertorCellArray that matches the divertor pre-cell array given.
         """
         stack_list = []
 

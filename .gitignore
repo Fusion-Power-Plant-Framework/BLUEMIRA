@@ -179,6 +179,7 @@ autoapi
 generated_data
 !generated_data/naughty_geometry/README.md
 tests/bluemira/test_generated_data
+tests/radiation_transport/neutronics/step_test/
 cross_section_data
 plasmod_*.dat
 tmp_env.yml

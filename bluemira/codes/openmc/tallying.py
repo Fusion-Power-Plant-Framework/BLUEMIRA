@@ -9,7 +9,7 @@ from itertools import chain
 
 import openmc
 
-from bluemira.codes.openmc.make_csg import BlanketCellArray, DivertorCellArray
+from bluemira.codes.openmc.make_cell import BlanketCellArray, DivertorCellArray
 
 
 def filter_cells(

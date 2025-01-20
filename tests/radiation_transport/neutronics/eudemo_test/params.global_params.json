@@ -1,0 +1,1124 @@
+{
+  "A": {
+    "value": 3.1,
+    "unit": "dimensionless",
+    "source": "PROCESS",
+    "long_name": "Plasma aspect ratio"
+  },
+  "B_0": {
+    "value": 5.062979206851104,
+    "unit": "T",
+    "source": "PROCESS",
+    "long_name": "Toroidal field at R_0"
+  },
+  "B_premag_stray_max": {
+    "value": 0.003,
+    "unit": "T",
+    "source": "Input",
+    "long_name": "Maximum field inside the breakdown region during premagnetisation"
+  },
+  "B_tf_peak": {
+    "value": 12.0,
+    "unit": "T",
+    "source": "Input",
+    "long_name": "Peak field inside the TF coil winding pack"
+  },
+  "beta_p": {
+    "value": 1.2321698070868237,
+    "unit": "dimensionless",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "Ratio of plasma pressure to poloidal magnetic pressure"
+  },
+  "beta": {
+    "value": 0.034134274293387286,
+    "unit": "dimensionless",
+    "source": "PROCESS",
+    "long_name": "Total ratio of plasma pressure to magnetic pressure"
+  },
+  "bb_min_angle": {
+    "value": 70.0,
+    "unit": "deg",
+    "source": "Input",
+    "long_name": "Minimum breeding blanket angle"
+  },
+  "C_Ejima": {
+    "value": 0.3,
+    "unit": "dimensionless",
+    "source": "Input (Ejima, et al., Volt-second analysis and consumption in Doublet III plasmas, Nuclear Fusion 22, 1313 (1982))",
+    "long_name": "Ejima constant"
+  },
+  "condrad_cryo_heat": {
+    "value": 19868.356085624124,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Conduction and radiation heat loads on cryogenic components"
+  },
+  "CS_bmax": {
+    "value": 13.0,
+    "unit": "T",
+    "source": "Input",
+    "long_name": "Maximum peak field to use in CS modules"
+  },
+  "CS_jmax": {
+    "value": 16500000.0,
+    "unit": "A/m\u00b2",
+    "source": "Input",
+    "long_name": "Maximum current density to use in CS modules"
+  },
+  "delta_95": {
+    "value": 0.2812424924016969,
+    "unit": "dimensionless",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "95th percentile plasma triangularity"
+  },
+  "delta": {
+    "value": 0.33575069678835223,
+    "unit": "dimensionless",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "Last closed surface plasma triangularity"
+  },
+  "e_mult": {
+    "value": 1.35,
+    "unit": "dimensionless",
+    "source": "Input (HCPB classic)",
+    "description": "Instantaneous energy multiplication due to neutron multiplication and the like",
+    "long_name": "Energy multiplication factor"
+  },
+  "e_nbi": {
+    "value": 1.6021766339999998e-13,
+    "unit": "J",
+    "source": "Input",
+    "long_name": "Neutral beam energy"
+  },
+  "eta_nb": {
+    "value": 0.3,
+    "unit": "dimensionless",
+    "source": "Input",
+    "description": "Check units!",
+    "long_name": "NB electrical efficiency"
+  },
+  "f_bs": {
+    "value": 0.39753585849626205,
+    "unit": "dimensionless",
+    "source": "PROCESS",
+    "long_name": "Bootstrap fraction"
+  },
+  "f_ni": {
+    "value": 0.1,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Non-inductive current drive fraction"
+  },
+  "g_cr_rs": {
+    "value": 0.3,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gap between Cyrostat and radiation shield"
+  },
+  "g_cr_ts": {
+    "value": 0.3,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gap between Cyrostat and Cryostat thermal shield"
+  },
+  "g_cs_mod": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gap between CS modules"
+  },
+  "g_cs_tf": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Gap between CS and TF"
+  },
+  "g_ts_pf": {
+    "value": 0.3,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gap between TS and PF"
+  },
+  "g_ts_tf": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Gap between TS and TF"
+  },
+  "g_vv_bb": {
+    "value": 0.02,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Gap between VV and BB"
+  },
+  "g_vv_ts": {
+    "value": 0.02,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Gap between VV and TS"
+  },
+  "h_cp_top": {
+    "value": 6.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Height of the TF coil inboard Tapered section end"
+  },
+  "H_star": {
+    "value": 1.1,
+    "unit": "dimensionless",
+    "source": "PROCESS",
+    "long_name": "H factor (radiation corrected)"
+  },
+  "h_tf_max_in": {
+    "value": 6.5,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Plasma side TF coil maximum height"
+  },
+  "I_p": {
+    "value": 17782933.152555503,
+    "unit": "A",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "Plasma current"
+  },
+  "ib_offset_angle": { "value": 45.0, "unit": "deg", "source": "Input" },
+  "kappa_95": {
+    "value": 1.6295113629201632,
+    "unit": "dimensionless",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "95th percentile plasma elongation"
+  },
+  "kappa": {
+    "value": 1.6576825391343308,
+    "unit": "dimensionless",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "Last closed surface plasma elongation"
+  },
+  "m_s_limit": {
+    "value": 0.1,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Margin to vertical stability criterion"
+  },
+  "l_i": {
+    "value": 0.8070007330767863,
+    "unit": "dimensionless",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "Normalised internal plasma inductance"
+  },
+  "n_CS": {
+    "value": 5,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Number of CS coil divisions"
+  },
+  "n_PF": {
+    "value": 6,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Number of PF coils"
+  },
+  "n_TF": {
+    "value": 16,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Number of TF coils"
+  },
+  "ob_offset_angle": { "value": 175.0, "unit": "deg", "source": "Input" },
+  "P_bd_in": {
+    "value": 51000000.00065688,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "total auxiliary injected power"
+  },
+  "P_brehms": {
+    "value": 66897488.71055535,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Bremsstrahlung"
+  },
+  "P_el_net": {
+    "value": 499999970.46689856,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Net electrical power output"
+  },
+  "P_fus_DD": {
+    "value": 2233198.454535157,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "D-D fusion power"
+  },
+  "P_fus_DT": {
+    "value": 1902314418.477131,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "D-T fusion power"
+  },
+  "P_fus": {
+    "value": 1904547616.931666,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Total fusion power"
+  },
+  "P_hcd_ss": {
+    "value": 51000000.0,
+    "unit": "W",
+    "source": "Input",
+    "long_name": "Steady-state HCD power"
+  },
+  "P_line": {
+    "value": 203127926.70964327,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Line radiation"
+  },
+  "P_rad_core": {
+    "value": 110465790.77434999,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Core radiation power"
+  },
+  "P_rad_edge": {
+    "value": 172980205.49398223,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Edge radiation power"
+  },
+  "P_rad": {
+    "value": 283445996.26833224,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Radiation power"
+  },
+  "P_sep": {
+    "value": 130946753.98514909,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Separatrix power"
+  },
+  "P_sync": {
+    "value": 13420580.848133558,
+    "unit": "W",
+    "source": "PROCESS",
+    "long_name": "Synchrotron radiation"
+  },
+  "PF_bmax": {
+    "value": 11.0,
+    "unit": "T",
+    "source": "Input",
+    "long_name": "Maximum peak field to use in PF modules"
+  },
+  "PF_jmax": {
+    "value": 12500000.0,
+    "unit": "A/m\u00b2",
+    "source": "Input",
+    "long_name": "Maximum current density to use in PF modules"
+  },
+  "q_0": {
+    "value": 1.0,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Plasma safety factor on axis"
+  },
+  "q_95": {
+    "value": 3.4189037642112075,
+    "unit": "dimensionless",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "Plasma safety factor at the 95th percentile flux surface"
+  },
+  "R_0": {
+    "value": 8.700355554832445,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Major radius"
+  },
+  "r_cs_corner": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "CS coil corner radius"
+  },
+  "r_pf_corner": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "PF coil corner radius"
+  },
+  "r_cp_top": {
+    "value": null,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Radial Position of Top of TF coil taper"
+  },
+  "r_cs_in": {
+    "value": 2.013289133863411,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Central Solenoid inner radius"
+  },
+  "r_fw_ib_in": {
+    "value": 5.668789246822285,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard first wall inner radius"
+  },
+  "r_fw_ob_in": {
+    "value": 11.731921862843217,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Outboard first wall inner radius"
+  },
+  "r_tf_in_centre": {
+    "value": 3.22574730058284,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard TF leg centre radius"
+  },
+  "r_tf_in": {
+    "value": 2.5957053543433943,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard radius of the TF coil inboard leg"
+  },
+  "r_tf_inboard_out": {
+    "value": 0.6265,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Outboard Radius of the TF coil inboard leg tapered region"
+  },
+  "r_tf_out_centre": {
+    "value": 16.182764597194996,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Outboard TF leg centre radius"
+  },
+  "r_ts_ib_in": {
+    "value": 3.9557892468222855,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard TS inner radius"
+  },
+  "r_vv_ib_in": {
+    "value": 4.875789246822285,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard vessel inner radius"
+  },
+  "r_vv_ob_in": {
+    "value": 12.751921862843217,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Outboard vessel inner radius"
+  },
+  "sigma_cs_wp_max": {
+    "value": 660000000.0,
+    "unit": "Pa",
+    "source": "Input",
+    "long_name": "Maximum von Mises stress in the CS coil winding pack"
+  },
+  "sigma_tf_case_max": {
+    "value": 580000000.0,
+    "unit": "Pa",
+    "source": "Input",
+    "long_name": "Maximum von Mises stress in the TF coil case nose"
+  },
+  "sigma_tf_wp_max": {
+    "value": 580000000.0,
+    "unit": "Pa",
+    "source": "Input",
+    "long_name": "Maximum von Mises stress in the TF coil winding pack"
+  },
+  "T_e": {
+    "value": 2.0828296242e-15,
+    "unit": "J",
+    "source": "Input",
+    "long_name": "Average plasma electron temperature"
+  },
+  "tau_e": {
+    "value": 3.64039982956618,
+    "unit": "s",
+    "source": "PROCESS",
+    "long_name": "Energy confinement time"
+  },
+  "tau_flattop": {
+    "value": 7200.000224871346,
+    "unit": "s",
+    "source": "PROCESS",
+    "long_name": "Flat-top duration"
+  },
+  "TF_currpt_ob": {
+    "value": 68827.68635363776,
+    "unit": "A",
+    "source": "PROCESS",
+    "long_name": "TF coil current per turn"
+  },
+  "TF_E_stored": {
+    "value": 138711273819.72586,
+    "unit": "J",
+    "source": "PROCESS",
+    "long_name": "total stored energy in the toroidal field"
+  },
+  "TF_res_bus": {
+    "value": null,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "TF Bus resistance"
+  },
+  "TF_res_tot": {
+    "value": null,
+    "unit": "\u03a9",
+    "source": "PROCESS",
+    "long_name": "Total resistance for TF coil set"
+  },
+  "TF_respc_ob": {
+    "value": null,
+    "unit": "\u03a9",
+    "source": "PROCESS",
+    "long_name": "TF coil leg resistance"
+  },
+  "TF_ripple_limit": {
+    "value": 0.6,
+    "unit": "%",
+    "source": "Input",
+    "long_name": "TF coil ripple limit"
+  },
+  "tf_wp_depth": {
+    "value": 1.1046246189996365,
+    "unit": "m",
+    "source": "PROCESS",
+    "description": "Including insulation",
+    "long_name": "TF coil winding pack depth (in y)"
+  },
+  "tf_wp_width": {
+    "value": 0.6936728774783929,
+    "unit": "m",
+    "source": "PROCESS",
+    "description": "Including insulation",
+    "long_name": "TF coil winding pack radial width"
+  },
+  "tk_bb_ib": {
+    "value": 0.7550000000000001,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard blanket thickness"
+  },
+  "tk_bb_ob": {
+    "value": 0.982,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Outboard blanket thickness"
+  },
+  "tk_cr_vv": {
+    "value": 0.15,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Cryostat VV thickness"
+  },
+  "tk_cs_casing": {
+    "value": 0.02,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Thickness of the CS coil casing"
+  },
+  "tk_cs_insulation": {
+    "value": 0.005,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Thickness of the CS coil insulation"
+  },
+  "tk_cs": {
+    "value": 0.4634935037278078,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Central Solenoid radial thickness"
+  },
+  "tk_pf_casing": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "PF coil casing thickness"
+  },
+  "tk_pf_insulation": {
+    "value": 0.01,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "PF coil insulation thickness"
+  },
+  "tk_fw_in": {
+    "value": 0.018000000000000002,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard first wall thickness"
+  },
+  "tk_fw_out": {
+    "value": 0.018000000000000002,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Outboard first wall thickness"
+  },
+  "tk_rs": {
+    "value": 2.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "thickness of the radiation shield"
+  },
+  "tk_sh_bot": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "description": "DO NOT USE - PROCESS has VV = VV + shield",
+    "long_name": "Lower shield thickness"
+  },
+  "tk_sh_in": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "description": "DO NOT USE - PROCESS has VV = VV + shield",
+    "long_name": "Inboard shield thickness"
+  },
+  "tk_sh_out": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "description": "DO NOT USE - PROCESS has VV = VV + shield",
+    "long_name": "Outboard shield thickness"
+  },
+  "tk_sh_top": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "description": "DO NOT USE - PROCESS has VV = VV + shield",
+    "long_name": "Upper shield thickness"
+  },
+  "tk_sol_ib": {
+    "value": 0.225,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard SOL thickness"
+  },
+  "tk_sol_ob": {
+    "value": 0.225,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Outboard SOL thickness"
+  },
+  "tk_tf_front_ib": {
+    "value": 0.06,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "TF coil inboard steel front plasma-facing"
+  },
+  "tk_tf_inboard": {
+    "value": 1.2600838924788915,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "TF coil inboard thickness"
+  },
+  "tk_tf_ins": {
+    "value": 0.008,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "TF coil ground insulation thickness"
+  },
+  "tk_tf_insgap": {
+    "value": 0.01,
+    "unit": "m",
+    "source": "PROCESS",
+    "description": "Backfilled with epoxy resin (impregnation). This is an average value; can be less or more due to manufacturing tolerances",
+    "long_name": "TF coil WP insertion gap"
+  },
+  "tk_tf_nose": {
+    "value": 0.43232310579856886,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "TF coil inboard nose thickness"
+  },
+  "tk_tf_outboard": {
+    "value": 1.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "TF coil outboard thickness"
+  },
+  "tk_tf_side": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "TF coil inboard case minimum side wall thickness"
+  },
+  "tk_ts": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "TS thickness"
+  },
+  "tk_vv_bot": {
+    "value": 0.6,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Lower vacuum vessel thickness"
+  },
+  "tk_vv_in": {
+    "value": 0.6000000000000001,
+    "unit": "m",
+    "source": "PROCESS",
+    "long_name": "Inboard vacuum vessel thickness"
+  },
+  "tk_vv_out": {
+    "value": 1.1,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Outboard vacuum vessel thickness"
+  },
+  "tk_vv_top": {
+    "value": 0.6,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Upper vacuum vessel thickness"
+  },
+  "v_burn": {
+    "value": 0.02817312010320175,
+    "unit": "kg\u00b7m\u00b2/A/s\u00b3",
+    "source": "PROCESS",
+    "long_name": "Loop voltage during burn"
+  },
+  "V_p": {
+    "value": 2400.0,
+    "unit": "m\u00b3",
+    "source": "Calculated",
+    "long_name": "Plasma volume"
+  },
+  "well_depth": {
+    "value": 5.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "cryostat well depth"
+  },
+  "Z_eff": {
+    "value": 3.65318594652e-27,
+    "unit": "kg",
+    "source": "Input",
+    "long_name": "Effective particle radiation atomic mass"
+  },
+  "T_e_ped": {
+    "value": 8.811971486999999e-16,
+    "unit": "J",
+    "source": "Input",
+    "long_name": "Electrons/ions temperature at pedestal"
+  },
+  "q_control": {
+    "value": 50000000.0,
+    "unit": "W",
+    "source": "Input",
+    "long_name": "Control HCD power"
+  },
+  "eta_ecrh": {
+    "value": 0.4,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Electron cyclotron resonce heating wallplug efficiency"
+  },
+  "gamma_ecrh": {
+    "value": 3e19,
+    "unit": "A\u00b7s\u00b3/kg/m\u2074",
+    "source": "Input",
+    "long_name": "Electron cyclotron resonce heating current drive efficiency"
+  },
+  "div_L2D_ib": {
+    "value": 1.1,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Inboard divertor leg length"
+  },
+  "div_L2D_ob": {
+    "value": 1.45,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Outboard divertor leg length"
+  },
+  "shaf_shift": {
+    "value": 0.5573375910781934,
+    "unit": "m",
+    "source": "ReferenceFreeBoundaryEquilibriumDesigner",
+    "long_name": "Shafranov shift of plasma (geometric=>magnetic)"
+  },
+  "fw_psi_n": {
+    "value": 1.07,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Normalised psi boundary to fit FW to"
+  },
+  "div_type": {
+    "value": "SN",
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Divertor single (SN) or double (DN) null"
+  },
+  "div_Ltarg": {
+    "value": 0.5,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Divertor target length"
+  },
+  "div_open": {
+    "value": false,
+    "unit": "dimensionless",
+    "source": "unit enforcement",
+    "long_name": "Divertor open/closed configuration"
+  },
+  "c_rm": {
+    "value": 0.02,
+    "unit": "m",
+    "source": "Input",
+    "description": "Distance between IVCs",
+    "long_name": "Remote maintenance clearance"
+  },
+  "vv_in_off_deg": {
+    "value": 80.0,
+    "unit": "deg",
+    "source": "Input",
+    "description": "The angle on the inboard at which the VV offset starts increasing",
+    "long_name": "Vacuum vessel inboard offset angle"
+  },
+  "vv_out_off_deg": {
+    "value": 160.0,
+    "unit": "deg",
+    "source": "Input",
+    "description": "The angle on the outboard at which the VV offset stops increasing",
+    "long_name": "Vacuum vessel outboard offset angle"
+  },
+  "n_div_cassettes": {
+    "value": 3,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Number of divertor cassettes per sector"
+  },
+  "n_bb_inboard": {
+    "value": 2,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Number of inboard blanket segments"
+  },
+  "n_bb_outboard": {
+    "value": 3,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Number of outboard blanket segments"
+  },
+  "r_tf_current_ib": {
+    "value": 1.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Radius of the TF coil current centroid on the inboard"
+  },
+  "tk_tf_wp_y": {
+    "value": 0.5,
+    "unit": "m",
+    "source": "Input",
+    "description": "Excluding insulation",
+    "long_name": "TF coil winding pack toroidal thickness"
+  },
+  "tk_tf_wp": {
+    "value": 0.5,
+    "unit": "m",
+    "source": "Input",
+    "description": "Excluding insulation",
+    "long_name": "TF coil winding pack radial thickness"
+  },
+  "z_0": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Vertical offset of plasma centreline"
+  },
+  "tk_ois": {
+    "value": 0.3,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Outer inter-coil casing thickness"
+  },
+  "g_ois_tf_edge": {
+    "value": 0.2,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gap between outer inter-coil casing and TF edge"
+  },
+  "min_OIS_length": {
+    "value": 1.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Minimum outer inter-coil casing length"
+  },
+  "F_cs_sepmax": {
+    "value": 350000000.0,
+    "unit": "kg\u00b7m/s\u00b2",
+    "source": "Input",
+    "long_name": "Maximum separation force between CS modules"
+  },
+  "F_cs_ztotmax": {
+    "value": 300000000.0,
+    "unit": "kg\u00b7m/s\u00b2",
+    "long_name": "Maximum total vertical force in the CS stack"
+  },
+  "F_pf_zmax": {
+    "value": 450000000.0,
+    "unit": "kg\u00b7m/s\u00b2",
+    "source": "Input",
+    "long_name": "Maximum vertical force on a single PF coil"
+  },
+  "pf_s_tk_plate": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "PF support rib plate thickness"
+  },
+  "pf_s_n_plate": {
+    "value": 5,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Number of PF support rib plates"
+  },
+  "pf_s_g": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gap between PF and PF support"
+  },
+  "x_g_support": {
+    "value": 13.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gravity support radius. Used for TF and VV supports (assuming a supporting ring)"
+  },
+  "x_gs_kink_diff": {
+    "value": 2.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Lower port kink radius offset from the gravity support radius."
+  },
+  "z_gs": {
+    "value": -15.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gravity support vertical position at the ground"
+  },
+  "tf_gs_tk_plate": {
+    "value": 0.075,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "TF gravity support rib plate thickness"
+  },
+  "tf_gs_g_plate": {
+    "value": 0.05,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Gap between ITER-like TF gravity support rib plates"
+  },
+  "tf_gs_base_depth": {
+    "value": 1.3,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "ITER-like TF gravity support base plate depth"
+  },
+  "tk_vv_single_wall": {
+    "value": 0.06,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Vacuum vessel single-walled shell thickness"
+  },
+  "tk_vv_double_wall": {
+    "value": 0.2,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Vacuum vessel double-walled shell thickness"
+  },
+  "lower_port_angle": {
+    "value": -15.0,
+    "unit": "deg",
+    "source": "Input",
+    "long_name": "Lower port angle (downwards from 0 degrees to -90)"
+  },
+  "bb_p_inlet": {
+    "value": 8000000.0,
+    "unit": "Pa",
+    "source": "Input",
+    "long_name": "Breeding blanket inlet pressure"
+  },
+  "bb_p_outlet": {
+    "value": 7500000.0,
+    "unit": "Pa",
+    "source": "Input",
+    "long_name": "Breeding blanket outlet pressure"
+  },
+  "bb_pump_eta_el": {
+    "value": 0.87,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Breeding blanket pumping electrical efficiency"
+  },
+  "bb_pump_eta_isen": {
+    "value": 0.9,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Breeding blanket pumping isentropic efficiency"
+  },
+  "bb_t_inlet": {
+    "value": 573.15,
+    "unit": "K",
+    "source": "Input",
+    "long_name": "Breeding blanket inlet temperature"
+  },
+  "bb_t_outlet": {
+    "value": 773.15,
+    "unit": "K",
+    "source": "Input",
+    "long_name": "Breeding blanket outlet temperature"
+  },
+  "blanket_type": {
+    "value": "HCPB",
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Blanket Type"
+  },
+  "div_pump_eta_el": {
+    "value": 0.87,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Divertor pumping electrical efficiency"
+  },
+  "div_pump_eta_isen": {
+    "value": 0.99,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Divertor pumping isentropic efficiency"
+  },
+  "e_decay_mult": {
+    "value": 1.0175,
+    "unit": "dimensionless",
+    "source": "Input (HCPB classic)",
+    "description": "Quasi-instantaneous energy multiplication; still present when plasma is off (PPCS FWBL Helium Cooled Model P PPCS04 D5part1)",
+    "long_name": "Decay heat multiplication factor"
+  },
+  "f_core_rad_fw": {
+    "value": 0.9,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Fraction of core radiation power that is distributed to the blanket FW"
+  },
+  "f_fw_aux": {
+    "value": 0.09,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Fraction of first wall power that goes into auxiliary systems"
+  },
+  "f_sol_ch_fw": {
+    "value": 0.8,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Fraction of SOL charged particle power that is distributed to the blanket FW"
+  },
+  "f_sol_rad": {
+    "value": 0.75,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Fraction of SOL power radiated"
+  },
+  "f_sol_rad_fw": {
+    "value": 0.8,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "Fraction of radiated SOL power that is distributed to the blanket FW"
+  },
+  "vvpfrac": {
+    "value": 0.04,
+    "unit": "kg\u00b7m\u00b2/A/s\u00b3",
+    "source": "Input",
+    "long_name": "Fraction of neutrons deposited in VV"
+  },
+  "P_hcd_ss_el": {
+    "value": 150000000.0,
+    "unit": "W",
+    "source": "Input",
+    "long_name": "Steady-state heating and current drive electrical power"
+  },
+  "fw_a_max": {
+    "value": 25.0,
+    "unit": "deg",
+    "source": "Input",
+    "description": "Maximum turning angle (clockwise tail-to-tail angle) between adjacent first wall panels",
+    "long_name": "Maximum panel angle"
+  },
+  "fw_dL_min": {
+    "value": 0.3,
+    "unit": "m",
+    "source": "Input",
+    "description": "Minimum length of an individual first wall panel",
+    "long_name": "Minimum panel length"
+  },
+  "reactor_power": {
+    "value": 1998000000.0,
+    "unit": "W",
+    "source": "Input",
+    "long_name": "neutronics reactor power"
+  },
+  "peaking_factor": {
+    "value": 1.508,
+    "unit": "dimensionless",
+    "source": "Input",
+    "long_name": "neutronics peaking factor"
+  },
+  "vertical_shift": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "neutronics plasma vertical shift"
+  },
+  "inboard_fw_tk": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "First wall inboard thickness"
+  },
+  "outboard_fw_tk": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "First wall outboard thickness"
+  },
+  "fw_blanket_surface_tk": {
+    "value": 0.01,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "First wall blanket surface thickness"
+  },
+  "fw_divertor_surface_tk": {
+    "value": 0.1,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "First wall divertor surface thickness"
+  },
+  "inboard_breeding_tk": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Blanket breeding zone inboard thickness"
+  },
+  "outboard_breeding_tk": {
+    "value": 0.0,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Blanket breeding zone outboard thickness"
+  },
+  "blk_ib_manifold": {
+    "value": 0.02,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Blanket manifold inboard thickness"
+  },
+  "blk_ob_manifold": {
+    "value": 0.2,
+    "unit": "m",
+    "source": "Input",
+    "long_name": "Blanket manifold outboard thickness"
+  }
+}

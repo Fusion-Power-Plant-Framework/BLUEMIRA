@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 import bluemira.codes._freecadapi as cadapi
 from bluemira.base.look_and_feel import LOGGER, bluemira_warn
 from bluemira.codes.error import FreeCADError
@@ -26,8 +28,6 @@ from bluemira.geometry.error import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-    import numpy as np
 
 __all__ = ["BluemiraWire"]
 
@@ -254,6 +254,41 @@ class BluemiraWire(BluemiraGeo):
             )
         except FreeCADError as e:
             raise GeometryError(e.args[0]) from None
+
+    def parameter_nearest_to_point(self, point: np.ndarray | Coordinates) -> float:
+        """
+        Parameters
+        ----------
+        point:
+            point of interest, that we want to get as close to as possible.
+
+        Returns
+        -------
+        :
+            The parameter of the point on the wire itself, that's nearest to the point of
+            interest.
+
+        Raises
+        ------
+        GeometryError
+            Reference point must be a single 3D point.
+        """
+        # Convert point into something that cadapi can use.
+        if isinstance(point, Coordinates):
+            if np.shape(point) != (3, 1):
+                raise GeometryError("Can only measure distance to a single 3D point!")
+            point = point.points[0]
+        if len(point) != 3:  # noqa: PLR2004
+            raise GeometryError("Points must be 3-dimensional.")
+        cad_point = cadapi.apiVertex(*point)
+
+        # dist_to_shape gives the (distance, (start point, end point)).
+        nearest_to_point = cadapi.dist_to_shape(self, cad_point)[1][0]
+        return self.parameter_at(nearest_to_point)
+
+    def intersect_wire(self, other_wire: BluemiraWire) -> Coordinates:
+        """Find the point at which other_wire intersects with self."""
+        ...
 
     def start_point(self) -> Coordinates:
         """

@@ -1,0 +1,15 @@
+{
+  "cross_section_xml": "/home/ocean/Others/cross_section_data/cross_section_data/cross_sections.xml",
+  "particles": 16800,
+  "batches": 3,
+  "photon_transport": true,
+  "electron_treatment": "ttb",
+  "run_mode": "run_and_plot",
+  "openmc_write_summary": false,
+  "parametric_source": true,
+  "blanket_type": "HCPB",
+  "plot_axis": "xz",
+  "plot_pixel_per_metre": 100,
+  "neutronics_output_path": "/home/ocean/Others/bluemira/eudemo/config/neutronics",
+  "show_data": false
+}

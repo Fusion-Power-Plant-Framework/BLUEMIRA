@@ -24,7 +24,7 @@ from bluemira.geometry.plane import (
     xz_plane_from_2_points,
     z_plane,
 )
-from bluemira.geometry.tools import get_wire_plane_intersect, make_polygon
+from bluemira.geometry.tools import get_wire_plane_intersect, is_convex, make_polygon
 from bluemira.radiation_transport.neutronics.constants import (
     DISCRETISATION_LEVEL,
     TOLERANCE_DEGREES,
@@ -403,6 +403,8 @@ class PanelsAndExteriorCurve:
         ------
         ValueError
             panel_break_points array shape incorrect
+        GeometryError
+            panel_break_points array is not convex
         """
         self.vv_interior = vv_interior
         self.vv_exterior = vv_exterior
@@ -412,6 +414,10 @@ class PanelsAndExteriorCurve:
             raise ValueError(
                 "Expected an input np.ndarray of breakpoints of shape = "
                 f"(N+1, 2). Instead received shape = {np.shape(panel_break_points)}."
+            )
+        if not is_convex(self.interior_panels[:, ::2]):  # this enforce STRICT convexity.
+            raise GeometryError(
+                "The first wall panels outline is expected to form a convex hull!"
             )
 
     def get_bisection_line(
@@ -541,8 +547,8 @@ class PanelsAndExteriorCurve:
     def execute_curve_cut(
         self,
         discretisation_level: int,
-        starting_cut: npt.NDArray[np.float64] | None = None,
-        ending_cut: npt.NDArray[np.float64] | None = None,
+        starting_cut: npt.NDArray[np.float64],
+        ending_cut: npt.NDArray[np.float64],
         snap_to_horizontal_angle: float = 30.0,
     ) -> tuple[list[BluemiraWire], ...]:
         """
@@ -747,8 +753,8 @@ class DivertorWireAndExteriorCurve:
 
     def calculate_cut_points(
         self,
-        starting_cut: npt.NDArray[np.float64] | None,
-        ending_cut: npt.NDArray[np.float64] | None,
+        starting_cut: npt.NDArray[np.float64],
+        ending_cut: npt.NDArray[np.float64],
     ) -> tuple[list[npt.NDArray[np.float64]], ...]:
         """
         Cut the curves up into N segments to match the N convex chunks of the
@@ -827,8 +833,8 @@ class DivertorWireAndExteriorCurve:
     def execute_curve_cut(
         self,
         discretisation_level: int,
-        starting_cut: npt.NDArray[np.float64] | None,
-        ending_cut: npt.NDArray[np.float64] | None,
+        starting_cut: npt.NDArray[np.float64],
+        ending_cut: npt.NDArray[np.float64],
     ) -> tuple[list[WireInfoList], ...]:
         """
         Cut the vacuum vessel curves into a series return these segments.

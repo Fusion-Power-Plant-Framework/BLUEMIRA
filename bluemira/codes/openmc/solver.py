@@ -10,7 +10,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, fields
-from enum import auto
 from operator import attrgetter
 from pathlib import Path
 from typing import Literal
@@ -29,12 +28,8 @@ from bluemira.codes.interface import (
     CodesTask,
     CodesTeardown,
 )
-from bluemira.codes.openmc.make_csg import (
-    BlanketCellArray,
-    BluemiraNeutronicsCSG,
-    DivertorCellArray,
-    make_cell_arrays,
-)
+from bluemira.codes.openmc.csg_reactor import OpenMCReactor
+from bluemira.codes.openmc.make_cell import BlanketCellArray, DivertorCellArray
 from bluemira.codes.openmc.material import MaterialsLibrary
 from bluemira.codes.openmc.output import OpenMCResult
 from bluemira.codes.openmc.params import (
@@ -49,7 +44,7 @@ class OpenMCRunModes(BaseRunMode):
     """OpenMC run modes"""
 
     RUN = openmc.settings.RunMode.FIXED_SOURCE.value
-    RUN_AND_PLOT = auto()
+    RUN_AND_PLOT = "run and plot"
     PLOT = openmc.settings.RunMode.PLOT.value
     VOLUME = openmc.settings.RunMode.VOLUME.value
 
@@ -432,8 +427,8 @@ class OpenMCNeutronicsSolver(CodesSolver):
             self.pre_cell_model.material_library
         )
 
-        self.cell_arrays = make_cell_arrays(
-            self.pre_cell_model, BluemiraNeutronicsCSG(), self.materials, control_id=True
+        self.cell_arrays = OpenMCReactor.from_pre_cell_reactor(
+            self.pre_cell_model, self.materials, control_id=True
         )
 
         self.tally_function = filter_cells if tally_function is None else tally_function

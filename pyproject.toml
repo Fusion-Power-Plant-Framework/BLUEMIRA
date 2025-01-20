@@ -358,8 +358,6 @@ ignore-names = [
 "tests/codes/plasmod/test_profiles.py" = ["E221", "E501"]
 "tests/geometry/test_private_tools.py" = ["E501"]
 "tests/utilities/test_opt_variables.py" = ["E501"]
-
-# TODO future removal
 "bluemira/structural/*" = ["DOC201"]  # 22
 "bluemira/codes/openmc/{make_csg.py,output.py,solver.py}" = ["DOC201"]
 "bluemira/codes/process/{_plotting.py,_profiles.py}" = ["DOC201"]

@@ -33,7 +33,7 @@ class StraightLineInfo(NamedTuple):
     end_point: Iterable[float]  # 3D coordinates
 
     def reverse(self) -> StraightLineInfo:
-        """Flip the wire's direction"""  # noqa: DOC201
+        """Flip the wire's direction"""
         return StraightLineInfo(self.end_point, self.start_point)
 
 
@@ -46,7 +46,7 @@ class CircleInfo(NamedTuple):
     radius: float  # scalar
 
     def reverse(self) -> CircleInfo:
-        """Flip the wire's direction"""  # noqa: DOC201
+        """Flip the wire's direction"""
         return CircleInfo(self.end_point, self.start_point, self.center, self.radius)
 
 
@@ -69,7 +69,7 @@ class WireInfo:
     wire: BluemiraWire | None = None
 
     def reverse(self) -> WireInfo:
-        """Flip the wire's direction"""  # noqa: DOC201
+        """Flip the wire's direction"""
         return type(self)(
             self.key_points.reverse(), [-t for t in self.tangents[::-1]], None
         )
@@ -108,15 +108,15 @@ class WireInfoList:
                 raise GeometryError(f"wire {i + 1} must start where the wire {i} stops.")
 
     def __len__(self) -> int:
-        """Number of wire infos"""  # noqa: DOC201
+        """Number of wire infos"""
         return len(self.info_list)
 
     def __getitem__(self, index_or_slice) -> list[WireInfo] | WireInfo:
-        """Get a WireInfo"""  # noqa: DOC201
+        """Get a WireInfo"""
         return self.info_list[index_or_slice]
 
     def __repr__(self) -> str:
-        """String representation"""  # noqa: DOC201
+        """String representation"""
         return super().__repr__().replace(" at ", f" of {len(self)} WireInfo at ")
 
     def pop(self, index: int) -> WireInfo:
@@ -177,7 +177,7 @@ class WireInfoList:
         )
 
     def reverse(self) -> WireInfoList:
-        """Flip this list of wires"""  # noqa: DOC201
+        """Flip this list of wires"""
         return WireInfoList([info.reverse() for info in self.info_list[::-1]])
 
     def restore_to_wire(self) -> BluemiraWire:

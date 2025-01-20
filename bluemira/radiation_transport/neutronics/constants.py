@@ -75,12 +75,12 @@ def to_cm3(m3):
 ALHPA_MOLAR_MASS = HE_MOLAR_MASS - ELECTRON_MOLAR_MASS
 
 # ignoring the binding energy of the electron, too minute.
-dt_neutron_energy = E_DT_fusion() * (
+DT_NEUTRON_ENERGY = E_DT_fusion() * (
     ALHPA_MOLAR_MASS / (ALHPA_MOLAR_MASS + NEUTRON_MOLAR_MASS)
 )  # [J]
 
 # Energy required to displace an Fe atom in Fe. See docstring of DPACoefficients
-dpa_Fe_threshold_eV = 40  # Source cites 40 eV.
+DPA_FE_THRESHOLD_EV = 40  # Source cites 40 eV.
 
 # how many degrees misalignment tolerated while merging almost-parallel wires into one.
 TOLERANCE_DEGREES = 6.0
@@ -91,8 +91,8 @@ DISCRETISATION_LEVEL = 10
 
 
 # The following material science constants are in cgs.
-Fe_molar_mass_g = elements.isotope("Fe").mass
-Fe_density_g_cc = elements.isotope("Fe").density
+FE_MOLAR_MASS_G = elements.isotope("Fe").mass
+FE_DENSITY_G_CC = elements.isotope("Fe").density
 
 
 class DPACoefficients:
@@ -115,9 +115,9 @@ class DPACoefficients:
 
     def __init__(
         self,
-        density_g_cc: float = Fe_density_g_cc,
-        molar_mass_g: float = Fe_molar_mass_g,
-        dpa_threshold_eV: float = dpa_Fe_threshold_eV,
+        density_g_cc: float = FE_DENSITY_G_CC,
+        molar_mass_g: float = FE_MOLAR_MASS_G,
+        dpa_threshold_eV: float = DPA_FE_THRESHOLD_EV,
     ):
         """
         Parameters
