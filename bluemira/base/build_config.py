@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, RootModel
 
 
@@ -6,6 +8,7 @@ class ParamsModel(BaseModel):
     unit: str
     source: str = ""
     long_name: str = ""
+    description: str = ""
 
 
 class MaterialModel(BaseModel):
@@ -23,18 +26,26 @@ class MixtureModel(BaseModel):
 
 
 class MaterialsModel(BaseModel):
-    materials: str | MaterialModel | None = None
-    mixtures: str | MixtureModel | None = None
+    materials: str | dict[str, MaterialModel] | None = None
+    mixtures: str | dict[str, MixtureModel] | None = None
 
 
 class DesignerConfig(BaseModel):
-    params: ParamsModel | None = None
+    params: dict[str, ParamsModel] | str | None = None
     run_mode: str = "run"
+    extra_keys: dict[str, Any] = {}
+
+    class Config:
+        extra = "allow"
 
 
 class BuilderConfig(BaseModel):
-    params: ParamsModel | None = None
+    params: dict[str, ParamsModel] | str | None = None
     material: dict[str, str] | str | None = None
+    extra_keys: dict[str, Any] = {}
+
+    class Config:
+        extra = "allow"
 
 
 class BuildStageConfig(BaseModel):
@@ -43,9 +54,26 @@ class BuildStageConfig(BaseModel):
 
 
 class BuildConfig(RootModel):
-    params: ParamsModel | None = None
-    materials_path: MaterialsModel | None = None
-    root: dict[str, DesignerConfig | BuilderConfig | BuildStageConfig] | None = None
+    root: dict[
+        str,
+        dict[str, ParamsModel]
+        | str
+        | MaterialsModel
+        | DesignerConfig
+        | BuilderConfig
+        | BuildStageConfig,
+    ]
 
     def __getitem__(self, item):
         return self.root[item]
+
+    def __getattr__(self, item):
+        try:
+            return self[item]
+        except KeyError:
+            try:
+                item = item.replace("_", " ")
+                return self[item]
+            except KeyError:
+                pass
+        return super().__getattr__(self, item)
