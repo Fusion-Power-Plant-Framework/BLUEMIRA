@@ -266,6 +266,8 @@ class EqAnalysis:
         chosen Equilibrium
     file_path:
         file path to chosen equilibrium
+    eq_name:
+        Name to be used for plots and tables.
     fixed_or_free:
         fixed or free plasma boundary
     dummy_coils:
@@ -293,6 +295,7 @@ class EqAnalysis:
         diag_ops: EqDiagnosticOptions,
         eq: MHDState | None = None,
         file_path: str | None = None,
+        eq_name: str | None = None,
         fixed_or_free=FixedOrFree.FREE,
         dummy_coils=None,
         from_cocos=3,
@@ -330,13 +333,23 @@ class EqAnalysis:
                 "or eqdsk file path as an input."
             )
 
+        self.eq_name = eq_name or "Eq_input"
+
         if diag_ops.reference_eq:
             self.reference_profiles = self.diag_ops.reference_eq.profiles
 
-    def plot(self):
-        """Plot equilibria"""
-        self._eq.plot()
+    def plot(self, ax=None):
+        """
+        Plot equilibria.
+
+        Returns
+        -------
+        ax:
+            Matplotlib Axes object
+        """
+        self._eq.plot(ax=ax)
         plt.show()
+        return ax
 
     def plot_field(self, ax=None):
         """
@@ -346,6 +359,11 @@ class EqAnalysis:
         ------
         BluemiraError
             if wrong number of axes is input
+
+        Returns
+        -------
+        ax:
+            Matplotlib Axes object
         """
         n_ax = 2
         if ax is not None:
@@ -353,31 +371,40 @@ class EqAnalysis:
                 raise BluemiraError(
                     f"There are 2 subplots, you have provided settings for {len(ax)}."
                 )
-            ax1, ax2 = ax[0], ax[1]
+            ax = ax[0], ax[1]
         else:
-            _, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.set_xlabel("$x$ [m]")
-        ax1.set_ylabel("$z$ [m]")
-        ax1.set_title("Poloidal")
-        ax1.set_aspect("equal")
-        ax2.set_xlabel("$x$ [m]")
-        ax2.set_ylabel("$z$ [m]")
-        ax2.set_title("Toroidal")
-        ax2.set_aspect("equal")
+            _, ax = plt.subplots(1, 2)
+        ax[0].set_xlabel("$x$ [m]")
+        ax[0].set_ylabel("$z$ [m]")
+        ax[0].set_title("Poloidal")
+        ax[0].set_aspect("equal")
+        ax[1].set_xlabel("$x$ [m]")
+        ax[1].set_ylabel("$z$ [m]")
+        ax[1].set_title("Toroidal")
+        ax[1].set_aspect("equal")
 
         EquilibriumPlotter(
-            self._eq, ax=ax1, plasma=False, show_ox=True, field=EqBPlotParam.BP
+            self._eq, ax=ax[0], plasma=False, show_ox=True, field=EqBPlotParam.BP
         )
         EquilibriumPlotter(
-            self._eq, ax=ax2, plasma=False, show_ox=True, field=EqBPlotParam.BT
+            self._eq, ax=ax[1], plasma=False, show_ox=True, field=EqBPlotParam.BT
         )
+        return ax
 
-    def plot_profiles(self):
-        """Plot profiles"""
-        self._profiles.plot()
+    def plot_profiles(self, ax=None):
+        """
+        Plot profiles.
+
+        Returns
+        -------
+        ax:
+            Matplotlib Axes object
+        """
+        self._profiles.plot(ax=ax)
         plt.show()
+        return ax
 
-    def plot_eq_core_analysis(self) -> CoreResults:
+    def plot_eq_core_analysis(self, ax=None) -> CoreResults:
         """
         Plot characteristics of the plasma core and return results.
         Currently only works for free boundary equilibria.
@@ -386,20 +413,21 @@ class EqAnalysis:
         -------
         :
             Dataclass for core results.
+        :
+            Matplotlib Axes object
 
         Raises
         ------
         BluemiraError
             If the equilibrium is fixed boundary.
-
         """
         if self.fixed_or_free is FixedOrFree.FIXED:
             raise BluemiraError(
                 "This function can only be used for Free Boundary Equilbria."
             )
-        return self._eq.analyse_core()
+        return self._eq.analyse_core(ax=ax)
 
-    def plot_eq_core_mag_axis(self):
+    def plot_eq_core_mag_axis(self, ax=None):
         """
         Plot a 1-D section through the magnetic axis.
         Currently only works for free boundary equilibria.
@@ -408,15 +436,14 @@ class EqAnalysis:
         ------
         BluemiraError
             If the equilibrium is fixed boundary.
-
         """
         if self.fixed_or_free is FixedOrFree.FIXED:
             raise BluemiraError(
                 "This function can only be used for Free Boundary Equilbria."
             )
-        self._eq.plot_core()
+        self._eq.plot_core(ax=ax)
 
-    def physics_info_table(self, equilibrium_name="Eq_input"):
+    def physics_info_table(self):
         """
         Create a Pandas dataframe with the physics information
         from the Equilbria of interest.
@@ -441,7 +468,7 @@ class EqAnalysis:
         summary_dict = [self._eq.analyse_plasma()]
         pd.set_option("display.float_format", "{:.2f}".format)
         dataframe = pd.DataFrame(summary_dict).T
-        dataframe.columns = [equilibrium_name]
+        dataframe.columns = [self.eq_name]
         return dataframe
 
     def plot_equilibria_with_profiles(self, title=None, ax=None, show=True):  # noqa: FBT002
@@ -497,7 +524,6 @@ class EqAnalysis:
         title=None,
         ax=None,
         show=True,  # noqa: FBT002
-        equilibrium_name="Eq_input",
     ):
         """
         Plot separatrices.
@@ -520,7 +546,7 @@ class EqAnalysis:
             Matplotlib Axes object
 
         """
-        label = equilibrium_name + " LCFS"
+        label = self.eq_name + " LCFS"
         if ax is None:
             _, ax = plt.subplots()
 
@@ -603,7 +629,6 @@ class EqAnalysis:
 
     def plot_compare_profiles(
         self,
-        equilibrium_names=None,
         reference_profile_sign=None,
         ax=None,
         diff=True,  # noqa: FBT002
@@ -639,8 +664,7 @@ class EqAnalysis:
                 "or Reference eqdsk file path in EqDiagnosticOptions."
             )
             return
-        if equilibrium_names is None:
-            equilibrium_names = ["Eq_reference", "Eq_input"]
+        equilibrium_names = ["Eq_reference", self.eq_name]
 
         n_prof = 5
         if reference_profile_sign is None:
@@ -704,7 +728,6 @@ class EqAnalysis:
         target_coords: Coordinates,
         n_layers=10,
         vertical=False,  # noqa: FBT002
-        equilibrium_name="Eq_input",
         ax=None,
         show=True,  # noqa: FBT002
     ):
@@ -736,7 +759,7 @@ class EqAnalysis:
             Matplotlib Axes object
 
         """
-        label = equilibrium_name + " LCFS"
+        label = self.eq_name + " LCFS"
         if ax is None:
             _, ax = plt.subplots()
 

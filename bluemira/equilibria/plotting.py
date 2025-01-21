@@ -164,7 +164,7 @@ class Plotter:
                 a.set_xlabel("$x$ [m]")
 
         else:
-            BluemiraError(f"{subplots} is not a valid option for subplots.")
+            raise BluemiraError(f"{subplots} is not a valid option for subplots.")
 
 
 class GridPlotter(Plotter):
@@ -1505,10 +1505,9 @@ class CorePlotter(Plotter):
                 self.ax[i].legend()
         else:
             for i, (k, v) in enumerate(results.__dict__.items()):
-                self.ax[i].plot(results.psi_n, v)
+                self.ax[i].plot(results.psi_n, v, label=eq_name)
                 self.ax[i].set_ylabel(str_to_latex(k))
             self.ax[0].legend()
-            self.ax[0].set_label(eq_name)
 
 
 class CorePlotter2(Plotter):
@@ -1530,7 +1529,6 @@ class CorePlotter2(Plotter):
         o_points, _ = eq.get_OX_points()
         xmag, zmag = o_points[0].x, o_points[0].z
         _psia, psib = eq.get_OX_psis()
-        n = 50
         xx = np.linspace(eq.grid.x_min, eq.grid.x_max, n)
         zz = np.linspace(zmag, zmag, n)
         psi = eq.psi(xx, zz) * 2 * np.pi

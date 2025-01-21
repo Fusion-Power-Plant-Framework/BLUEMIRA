@@ -105,7 +105,7 @@ eq_analysis_1.plot()
 
 # %%
 # Plot field components
-eq_analysis_1.plot_field()
+ax = eq_analysis_1.plot_field()
 
 # %%
 # Plot equilibrium normalised profiles
@@ -128,7 +128,8 @@ eq_analysis_1b.plot_compare_profiles()
 
 # %%
 # Plot an assortment of physics parameters for the plamsa core
-ax = eq_analysis_1.plot_eq_core_analysis()
+# Note that the dataclass with the results is also output
+core_results, ax = eq_analysis_1.plot_eq_core_analysis(ax=None)
 
 # %%
 # Key parameters as a table
