@@ -146,8 +146,7 @@ class LegFlux:
         for name in leg_dict:
             leg = leg_dict[name]
             direction = -1 if name.find("inner") != -1 else 1
-            if len(leg) > 0:  # noqa: SIM102
-                if leg[0] is not None:
+            if len(leg) > 0 and leg[0] is not None:
                     leg.extend(
                         _extract_offsets(
                             self.eq,
