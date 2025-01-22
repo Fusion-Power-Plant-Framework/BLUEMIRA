@@ -3,15 +3,18 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 from pathlib import Path
 
+import pytest
 from matplotlib.pyplot import Axes
 from pandas import DataFrame
 
 from bluemira.base.file import get_bluemira_path
-from bluemira.equilibria.analysis import EqAnalysis, select_eq
+from bluemira.equilibria.analysis import EqAnalysis, MultiEqAnalysis, select_eq
 from bluemira.equilibria.diagnostics import (
+    DivLegsToPlot,
     EqDiagnosticOptions,
     EqSubplots,
     FixedOrFree,
+    FluxSurfaceType,
     LCFSMask,
     PsiPlotType,
 )
@@ -20,6 +23,8 @@ from bluemira.equilibria.flux_surfaces import CoreResults
 from bluemira.geometry.coordinates import Coordinates
 
 TEST_PATH = get_bluemira_path("equilibria/test_data", subfolder="tests")
+# MAST-like-DN
+masty_path = Path(TEST_PATH, "SH_test_file.json")
 # DEMO-like-SN
 single_demoish_path = Path(TEST_PATH, "eqref_OOB.json")
 # DEMO-like-DN
@@ -121,3 +126,50 @@ class TestEqAnalysis:
         assert plot_6b is None
         assert isinstance(plot_9b, Axes)
         assert plot_10b is None
+
+
+class TestMultiEqAnalysis:
+    """
+    Tests for MultiEqAnalysis.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        paths = [masty_path, double_demoish_path, single_demoish_path]
+        equilibrium_names = ["Little DN", "Big DN", "Big SN"]
+        cls.multi_analysis = MultiEqAnalysis(
+            paths, equilibrium_names=equilibrium_names, from_cocos=[3, 3, 7]
+        )
+
+    def test_plotting(self):
+        ax1 = self.multi_analysis.plot_physics()
+        ax2 = self.multi_analysis.plot_compare_profiles()
+        ax3 = self.multi_analysis.plot_compare_flux_surfaces()
+        ax4 = self.multi_analysis.plot_compare_flux_surfaces(
+            flux_surface=FluxSurfaceType.PSI_NORM, psi_norm=1.05
+        )
+        assert isinstance(ax1[0], Axes)
+        assert len(ax1) == 18
+        assert isinstance(ax2[0], Axes)
+        assert len(ax2) == 6
+        assert isinstance(ax3, Axes)
+        assert isinstance(ax4, Axes)
+
+    @pytest.mark.parametrize(
+        "legs_to_plot", [DivLegsToPlot.ALL, DivLegsToPlot.UP, DivLegsToPlot.LW]
+    )
+    def test_div_info_plot(self, legs_to_plot):
+        pfb_masty = Coordinates({
+            "x": [1.75, 1.75, 0.0, 0.0, 1.75],
+            "z": [-1.75, 1.75, 1.75, -1.75, -1.75],
+        })
+        pfb_demoish = Coordinates({
+            "x": [14.5, 14.5, 5.75, 5.75, 14.5],
+            "z": [-7.5, 7.5, 7.5, -7.5, -7.5],
+        })
+        ax = self.multi_analysis.plot_divertor_length_angle(
+            plasma_facing_boundary_list=[pfb_masty, pfb_demoish, pfb_demoish],
+            legs_to_plot=legs_to_plot,
+        )
+        ax_num = 2 if legs_to_plot in DivLegsToPlot.PAIR else 4
+        assert len(ax) == ax_num
