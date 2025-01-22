@@ -64,9 +64,7 @@ def test_isoflux_constrained_tikhonov_current_optimisation(request):
     opt_problem = TikhonovCurrentCOP(eq.coilset, eq, targets, gamma=1e-8)
     diagnostic_plotting = PicardDiagnosticOptions(plot=PicardDiagnostic.EQ)
     program = add_plot_title(PicardIterator, request)(
-        
         eq, opt_problem, relaxation=0.1, diagnostic_plotting=diagnostic_plotting
-    
     )
     program()
     np.testing.assert_almost_equal(

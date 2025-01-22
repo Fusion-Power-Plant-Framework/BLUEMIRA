@@ -133,7 +133,23 @@ def xz_plot_setup(
     save: bool = False,
     split_psi_plots: bool = False,
 ) -> dict:
-    """Set up for an xz plot (poloidal slice)."""
+    """
+    Set up for an xz plot (poloidal slice).
+
+    Returns
+    -------
+    f:
+        figure
+    ax:
+        axis
+    pname:
+        plot name
+    folder:
+        plot folder
+    save:
+        to save or not to save
+
+    """
     if folder is None:
         folder = try_get_bluemira_path(
             "", subfolder="generated_data", allow_missing=not save

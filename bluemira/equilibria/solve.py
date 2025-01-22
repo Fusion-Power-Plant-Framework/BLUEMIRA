@@ -119,7 +119,6 @@ class ConvergenceCriterion(ABC):
         """
         if ax is None:
             _f, ax = plt.subplots()
-        ax.semilogy(self.progress)
         ax.semilogy([0, len(self.progress)], [self.limit, self.limit])
         ax.grid(visible=True, which="both")
         ax.set_xlabel("Iterations [n]")

@@ -294,12 +294,7 @@ ref_opt_problem = UnconstrainedTikhonovCurrentGradientCOP(
     gamma=1e-7,
 )
 
-program = PicardIterator(
-    reference_eq,
-    ref_opt_problem,
-    fixed_coils=True,
-    relaxation=0.2,
-)
+program = PicardIterator(reference_eq, ref_opt_problem, fixed_coils=True, relaxation=0.2)
 program()
 
 sof_psi_boundary = PsiBoundaryConstraint(

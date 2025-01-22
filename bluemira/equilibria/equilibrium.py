@@ -28,6 +28,7 @@ from bluemira.base.look_and_feel import bluemira_print_flush, bluemira_warn
 from bluemira.equilibria.boundary import FreeBoundary, apply_boundary
 from bluemira.equilibria.coils import CoilSet, symmetrise_coilset
 from bluemira.equilibria.constants import BLUEMIRA_DEFAULT_COCOS, PSI_NORM_TOL
+from bluemira.equilibria.diagnostics import EqBPlotParam
 from bluemira.equilibria.error import EquilibriaError
 from bluemira.equilibria.find import (
     Opoint,
@@ -2001,7 +2002,7 @@ class Equilibrium(CoilSetMHDState):
             ax,
             plasma=False,
             show_ox=show_ox,
-            field=True,
+            field=EqBPlotParam.BP,
         )
 
     def plot_core(self, ax=None):
