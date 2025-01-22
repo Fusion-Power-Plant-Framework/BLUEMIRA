@@ -328,7 +328,7 @@ class EqAnalysis:
                 qpsi_positive=qpsi_positive,
             )
         else:
-            BluemiraError(
+            raise BluemiraError(
                 "Please provide either an Equilibrium object "
                 "or eqdsk file path as an input."
             )
@@ -618,11 +618,10 @@ class EqAnalysis:
 
         """
         if self.diag_ops.reference_eq is None:
-            BluemiraError(
+            raise BluemiraError(
                 "Please provide a reference Equilibrium object "
                 "or Reference eqdsk file path in EqDiagnosticOptions."
             )
-            return None
         return EquilibriumComparisonPostOptPlotter(
             equilibrium=self._eq, diag_ops=self.diag_ops, ax=ax
         ).plot_compare_psi()
@@ -659,11 +658,10 @@ class EqAnalysis:
             if the profile sign array provided is an incorrect length
         """
         if self.diag_ops.reference_eq is None:
-            BluemiraError(
+            raise BluemiraError(
                 "Please provide a reference Equilibrium object "
                 "or Reference eqdsk file path in EqDiagnosticOptions."
             )
-            return
         equilibrium_names = ["Eq_reference", self.eq_name]
 
         n_prof = 5
