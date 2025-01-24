@@ -242,8 +242,7 @@ def get_target_flux(eq, target, target_coords, n_layers, vertical=False):  # noq
                 else (fs_x >= eq._x_points[0].x)
             )
             select_idx &= select_idx_x
-        fs = Coordinates({"x": fs_x[select_idx], "z": fs_z[select_idx]})
-        fs_list.append(fs)
+        fs_list.append(Coordinates({"x": fs_x[select_idx], "z": fs_z[select_idx]}))
 
     return fs_list
 
