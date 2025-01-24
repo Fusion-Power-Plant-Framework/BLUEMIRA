@@ -36,9 +36,6 @@ from bluemira.equilibria.diagnostics import (
 )
 from bluemira.geometry.coordinates import Coordinates
 
-# %%
-# %pdb
-
 # %% [markdown]
 # ### Analysis Examples
 #
