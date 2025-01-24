@@ -1,4 +1,5 @@
 # ---
+# jupyter:
 #   jupytext:
 #     cell_metadata_filter: tags,-all
 #     notebook_metadata_filter: -jupytext.text_representation.jupytext_version
