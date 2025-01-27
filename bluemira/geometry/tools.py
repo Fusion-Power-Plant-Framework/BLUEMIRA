@@ -1876,6 +1876,54 @@ def raise_error_if_overlap(
         raise GeometryError(f"{origin_name} and {target_name} partially/fully overlaps!")
 
 
+def connect_shapes(
+    shapes: Iterable[BluemiraGeo], tolerance: float = 0.0, label: str = ""
+) -> BluemiraGeo:
+    """
+    Connect (imprint) a list of shapes together.
+
+    This is similar to a boolean fuse operation, but connects the interior walls
+    of solid or shells (removeing the excess).
+
+    For wires it will fuse them, keeping the biggest joined piece.
+
+    Parameters
+    ----------
+    shapes:
+        List of shape objects to be saved
+    label:
+        Label for the resulting shape
+
+    Returns
+    -------
+    Result of the connect operation.
+
+    Raises
+    ------
+    GeometryError
+        In case the boolean operation fails.
+    ValueError
+        All shapes (2 or more) must be the same type
+    """
+    shapes = iterable_to_list(shapes)
+
+    if len(shapes) < 2:  # noqa: PLR2004
+        raise ValueError("At least 2 shapes must be given")
+
+    # check that all the shapes are of the same time
+    _type = type(shapes[0])
+    if not all(isinstance(s, _type) for s in shapes):
+        raise ValueError(f"All instances in {shapes} must be of the same type.")
+
+    api_shapes = [s.shape for s in shapes]
+    try:
+        connected_shape = cadapi.join_connect(api_shapes, dist_tolerance=tolerance)
+        return convert(connected_shape, label)
+
+    except Exception as e:  # noqa: BLE001
+        raise GeometryError(f"Connect operation failed: {e}") from None
+
+
 # ======================================================================================
 # Boolean operations
 # ======================================================================================

@@ -2189,6 +2189,40 @@ def fillet_wire_2D(wire: apiWire, radius: float, *, chamfer: bool = False) -> ap
     return result
 
 
+def join_connect(shapes: Iterable[apiShape], dist_tolerance: float) -> apiShape:
+    """
+    Connects the interiors of two walled objects (e.g. pipes).
+    It can also join shells and wires.
+
+    Returns
+    -------
+    :
+        Result of the join connect operation.
+
+    Raises
+    ------
+    FreeCADError
+        In case the boolean operation fails.
+    TypeError
+        Shapes must be in a list
+    ValueError
+        At least 2 shapes must be given
+
+    Notes
+    -----
+    See https://wiki.freecad.org/Part_JoinConnect
+    """
+    if not isinstance(shapes, list):
+        raise TypeError(f"{shapes} is not a list.")
+
+    if len(shapes) < 2:  # noqa: PLR2004
+        raise ValueError("At least 2 shapes must be given")
+
+    _check_shapes_same_type(shapes)
+
+    return BOPTools.JoinAPI.connect(shapes, tolerance=dist_tolerance)
+
+
 # ======================================================================================
 # Boolean operations
 # ======================================================================================
