@@ -32,6 +32,7 @@ from bluemira.equilibria.profiles import (
     CustomProfile,
     DoublePowerFunc,
     LaoPolynomialFunc,
+    OPointCalcOptions,
 )
 from bluemira.equilibria.shapes import flux_surface_kuiroukidis
 from bluemira.equilibria.solve import DudsonConvergence, PicardIterator
@@ -296,8 +297,11 @@ class TestSolveEquilibrium:
         program()
         assert program.check_converged()
 
+    @pytest.mark.parametrize(
+        "o_point_fallback", [OPointCalcOptions.GRID_CENTRE, OPointCalcOptions.RAISE]
+    )
     @pytest.mark.parametrize("shape", shape_funcs)
-    def test_betapliip_profile(self, shape):
+    def test_betapliip_profile(self, shape, o_point_fallback):
         rel_tol = 0.015
         profiles = BetaLiIpProfile(
             self.beta_p,
@@ -321,6 +325,7 @@ class TestSolveEquilibrium:
             relaxation=0.2,
             plot=False,
             gif=False,
+            o_point_fallback=o_point_fallback,
         )
         program()
         assert abs_rel_difference(calc_li3(eq), self.l_i) <= rel_tol
