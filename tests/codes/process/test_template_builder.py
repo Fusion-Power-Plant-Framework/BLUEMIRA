@@ -28,7 +28,6 @@ from bluemira.codes.process.model_mapping import (
     CostModel,
     CurrentDriveEfficiencyModel,
     DensityLimitModel,
-    EPEDScalingModel,
     OperationModel,
     OutputCostsSwitch,
     PFSuperconductorModel,
@@ -300,7 +299,7 @@ class TestInDatOneForOne:
         template_builder.adjust_variable(
             "flhthresh", 1.2, lower_bound=1.1, upper_bound=1.2
         )
-        template_builder.adjust_variable("ftburn", 1.0, upper_bound=1.0)
+        template_builder.adjust_variable("ft_burn", 1.0, upper_bound=1.0)
 
         # Modifying the initial variable vector to improve convergence
         template_builder.adjust_variable("fpnetel", 1.0)
@@ -311,7 +310,7 @@ class TestInDatOneForOne:
         template_builder.adjust_variable("fjohc", 0.57941, upper_bound=1.0)
         template_builder.adjust_variable("fjohc0", 0.53923, upper_bound=1.0)
         template_builder.adjust_variable("foh_stress", 1.0)
-        template_builder.adjust_variable("fbetatry", 0.48251)
+        template_builder.adjust_variable("fbeta_max", 0.48251)
         template_builder.adjust_variable("fwalld", 0.131)
         template_builder.adjust_variable("fmaxvvstress", 1.0)
         template_builder.adjust_variable("fpsepbqar", 1.0)
@@ -328,7 +327,6 @@ class TestInDatOneForOne:
             PlasmaProfileModel.CONSISTENT,
             PlasmaPedestalModel.PEDESTAL_GW,
             PlasmaNullConfigurationModel.SINGLE_NULL,
-            EPEDScalingModel.SAARELMA,
             BetaLimitModel.THERMAL,
             DensityLimitModel.GREENWALD,
             AlphaPressureModel.WARD,
@@ -371,13 +369,13 @@ class TestInDatOneForOne:
             "fgwped": 0.85,
             "neped": 0.678e20,
             "nesep": 0.2e20,
-            "dnbeta": 3.0,
+            "beta_norm_max": 3.0,
             # Plasma impurity stuff
             "coreradius": 0.75,
             "coreradiationfraction": 0.6,
             # Important stuff
             "pnetelin": 500.0,
-            "tbrnmn": 7.2e3,
+            "t_burn_min": 7.2e3,
             "sig_tf_case_max": 5.8e8,
             "sig_tf_wp_max": 5.8e8,
             "alstroh": 6.6e8,
@@ -406,7 +404,7 @@ class TestInDatOneForOne:
             "gapomin": 0.2,
             # Vertical build inputs
             "d_vv_top": 0.3,
-            "vgap2": 0.05,
+            "vgap_vv_thermalshield": 0.05,
             "shldtth": 0.3,
             "divfix": 0.621,
             "d_vv_bot": 0.3,
@@ -414,14 +412,14 @@ class TestInDatOneForOne:
             "pinjalw": 51.0,
             "gamma_ecrh": 0.3,
             "etaech": 0.4,
-            "bscfmax": 0.99,
+            "bootstrap_current_fraction_max": 0.99,
             # BOP inputs
             "etath": 0.375,
             "etahtp": 0.87,
             "etaiso": 0.9,
             "vfshld": 0.6,
-            "tdwell": 0.0,
-            "tramp": 500.0,
+            "t_between_pulse": 0.0,
+            "t_precharge": 500.0,
             # CS / PF coil inputs
             "t_crack_vertical": 0.4e-3,
             "fcuohsu": 0.7,
@@ -525,5 +523,5 @@ class TestInDatOneForOne:
                 )
 
     def test_no_extra_inputs(self):
-        for k in self.template:
-            assert k in self.true_data
+        vals = [k for k in self.template if k not in self.true_data]
+        assert len(vals) == 0

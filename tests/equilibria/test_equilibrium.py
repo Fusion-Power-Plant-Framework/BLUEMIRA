@@ -357,7 +357,10 @@ class TestEquilibrium:
 
     @pytest.mark.parametrize("grouping", [CoilSet, CoilGroup])
     def test_woops_no_coils(self, grouping):
-        testfile = Path(get_bluemira_path("eqdsk", subfolder="data"), "jetto.eqdsk_out")
+        testfile = Path(
+            get_bluemira_path("equilibria/test_data", subfolder="tests"),
+            "jetto.eqdsk_out",
+        )
         e = EQDSKInterface.from_file(testfile, from_cocos=11)
         coil = grouping.from_group_vecs(e)
         assert isinstance(coil, grouping), "Check classmethod is making the right class"

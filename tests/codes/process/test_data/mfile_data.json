@@ -747,7 +747,7 @@
     "var_mod": "Plasma",
     "scan01": 3896.6
   },
-  "icurr": {
+  "i_plasma_current": {
     "var_mod": "Plasma",
     "scan01": 4.0
   },
@@ -795,7 +795,7 @@
     "var_mod": "Plasma",
     "scan01": 0.067018
   },
-  "betap": {
+  "beta_poloidal": {
     "var_mod": "Plasma",
     "scan01": 1.3307
   },
@@ -803,11 +803,15 @@
     "var_mod": "Plasma",
     "scan01": 0.070573
   },
-  "betaft": {
+  "beta_fast_alpha": {
     "var_mod": "Plasma",
     "scan01": 0.010009
   },
-  "betanb": {
+  "beta_beam": {
+    "var_mod": "Plasma",
+    "scan01": 0.0
+  },
+  "beam_energy": {
     "var_mod": "Plasma",
     "scan01": 0.0
   },
@@ -827,7 +831,7 @@
     "var_mod": "Plasma",
     "scan01": 0.060033
   },
-  "eps*betap": {
+  "eps*beta_poloidal": {
     "var_mod": "Plasma",
     "scan01": 0.55564
   },
@@ -835,7 +839,7 @@
     "var_mod": "Plasma",
     "scan01": 1.38
   },
-  "dnbeta": {
+  "beta_norm_max": {
     "var_mod": "Plasma",
     "scan01": 4.5554
   },
@@ -847,7 +851,7 @@
     "var_mod": "Plasma",
     "scan01": 4.0526
   },
-  "betalim": {
+  "beta_max": {
     "var_mod": "Plasma",
     "scan01": 0.075333
   },
@@ -855,7 +859,7 @@
     "var_mod": "Plasma",
     "scan01": 2376000000.0
   },
-  "total_plasma_internal_energy": {
+  "e_plasma_beta": {
     "var_mod": "Plasma",
     "scan01": 2793100000.0
   },
@@ -1019,10 +1023,6 @@
     "var_mod": "Plasma",
     "scan01": 0.94
   },
-  "ieped": {
-    "var_mod": "Plasma",
-    "scan01": 1.0
-  },
   "teped": {
     "var_mod": "Plasma",
     "scan01": 6.129
@@ -1075,23 +1075,23 @@
     "var_mod": "Plasma",
     "scan01": 5.9206e19
   },
-  "fdeut": {
+  "f_deuterium": {
     "var_mod": "Plasma",
     "scan01": 0.5
   },
-  "ftrit": {
+  "f_tritium": {
     "var_mod": "Plasma",
     "scan01": 0.5
   },
-  "powfmw": {
+  "fusion_power": {
     "var_mod": "Plasma",
     "scan01": 3072.9
   },
-  "pdt": {
+  "dt_power": {
     "var_mod": "Plasma",
     "scan01": 3068.0
   },
-  "pdd": {
+  "dd_power": {
     "var_mod": "Plasma",
     "scan01": 4.9193
   },
@@ -1099,15 +1099,15 @@
     "var_mod": "Plasma",
     "scan01": 0.0
   },
-  "palpmw": {
+  "alpha_power_total": {
     "var_mod": "Plasma",
     "scan01": 613.6
   },
-  "palpnb": {
+  "alpha_power_beams": {
     "var_mod": "Plasma",
     "scan01": 0.0
   },
-  "pneutmw": {
+  "non_alpha_charged_power": {
     "var_mod": "Plasma",
     "scan01": 2456.2
   },
@@ -1119,7 +1119,7 @@
     "var_mod": "Plasma",
     "scan01": 811.09
   },
-  "pbrempv*vol": {
+  "pbrempv*plasma_volume": {
     "var_mod": "Plasma",
     "scan01": 193.25
   },
@@ -1143,11 +1143,11 @@
     "var_mod": "Plasma",
     "scan01": 0.6
   },
-  "pcoreradmw": {
+  "pinnerzoneradmw": {
     "var_mod": "Plasma",
     "scan01": 261.1
   },
-  "pedgeradmw": {
+  "pouterzoneradmw": {
     "var_mod": "Plasma",
     "scan01": 385.78
   },
@@ -1155,7 +1155,7 @@
     "var_mod": "Plasma",
     "scan01": 646.88
   },
-  "rad_fraction_core": {
+  "rad_fraction_LCFS": {
     "var_mod": "Plasma",
     "scan01": 0.79754
   },
@@ -1163,7 +1163,7 @@
     "var_mod": "Plasma",
     "scan01": 0.8
   },
-  "rad_fraction": {
+  "rad_fraction_total": {
     "var_mod": "Plasma",
     "scan01": 0.95951
   },
@@ -1223,15 +1223,15 @@
     "var_mod": "Plasma",
     "scan01": 1.4837e-10
   },
-  "falpha": {
+  "f_alpha_plasma": {
     "var_mod": "Plasma",
     "scan01": 0.95
   },
-  "falpe": {
+  "f_alpha_electron": {
     "var_mod": "Plasma",
     "scan01": 0.64064
   },
-  "falpi": {
+  "f_alpha_ion": {
     "var_mod": "Plasma",
     "scan01": 0.35936
   },
@@ -1259,11 +1259,11 @@
     "var_mod": "Plasma",
     "scan01": 164.21
   },
-  "pdivt/rmajor": {
+  "pdivmax_over_rmajor": {
     "var_mod": "Plasma",
     "scan01": 18.694
   },
-  "pdivtbt/qar": {
+  "pdivtbt_over_qar": {
     "var_mod": "Plasma",
     "scan01": 9.2
   },
@@ -1483,7 +1483,7 @@
     "var_mod": "Plasma",
     "scan01": -0.0060317
   },
-  "bootipf.": {
+  "bootstrap_current_fraction.": {
     "var_mod": "Plasma",
     "scan01": 0.525
   },
@@ -1563,7 +1563,7 @@
     "var_mod": "Current Drive System",
     "scan01": 0.4
   },
-  "bootipf": {
+  "bootstrap_current_fraction": {
     "var_mod": "Current Drive System",
     "scan01": 0.525
   },
@@ -1607,11 +1607,11 @@
     "var_mod": "Current Drive System",
     "scan01": 562.5
   },
-  "tramp": {
+  "t_precharge": {
     "var_mod": "Times",
     "scan01": 50.043
   },
-  "tohs": {
+  "t_current_ramp_up": {
     "var_mod": "Times",
     "scan01": 50.043
   },
@@ -1619,25 +1619,21 @@
     "var_mod": "Times",
     "scan01": 10.0
   },
-  "tburn": {
+  "t_burn": {
     "var_mod": "Times",
     "scan01": 10000.0
   },
-  "tqnch": {
+  "t_ramp_down": {
     "var_mod": "Times",
     "scan01": 50.043
   },
-  "tdwell": {
+  "t_between_pulse": {
     "var_mod": "Times",
     "scan01": 0.0
   },
   "tcycle": {
     "var_mod": "Times",
     "scan01": 10160.0
-  },
-  "kallenbach_switch": {
-    "var_mod": "Times",
-    "scan01": 0.0
   },
   "bore": {
     "var_mod": "Radial Build",
@@ -1663,7 +1659,15 @@
     "var_mod": "Radial Build",
     "scan01": 0.05
   },
-  "thshield": {
+  "thshield_ib": {
+    "var_mod": "Radial Build",
+    "scan01": 0.05
+  },
+  "thshield_ob": {
+    "var_mod": "Radial Build",
+    "scan01": 0.05
+  },
+  "thshield_vb": {
     "var_mod": "Radial Build",
     "scan01": 0.05
   },
@@ -1727,7 +1731,7 @@
     "var_mod": "Vertical Build",
     "scan01": 1.0
   },
-  "vgap2": {
+  "vgap_vv_thermalshield": {
     "var_mod": "Vertical Build",
     "scan01": 0.05
   },
@@ -1738,10 +1742,6 @@
   "shldtth": {
     "var_mod": "Vertical Build",
     "scan01": 0.3
-  },
-  "blnktth": {
-    "var_mod": "Vertical Build",
-    "scan01": 0.8685
   },
   "fwtth": {
     "var_mod": "Vertical Build",
@@ -1755,7 +1755,7 @@
     "var_mod": "Vertical Build",
     "scan01": 6.778
   },
-  "vgap": {
+  "vgap_xpoint_divertor": {
     "var_mod": "Vertical Build",
     "scan01": 2.0024
   },
@@ -1911,7 +1911,11 @@
     "var_mod": "Divertor build and plasma position",
     "scan01": 2.0024
   },
-  "alstrtf": {
+  "sig_tf_case_max": {
+    "var_mod": "TF coils",
+    "scan01": 580000000.0
+  },
+  "sig_tf_wp_max": {
     "var_mod": "TF coils",
     "scan01": 580000000.0
   },
@@ -1971,7 +1975,7 @@
     "var_mod": "TF coils",
     "scan01": 0.00081368
   },
-  "windstrain": {
+  "str_tf_con_res": {
     "var_mod": "TF coils",
     "scan01": 0.0017814
   },
@@ -2299,7 +2303,7 @@
     "var_mod": "TF coils",
     "scan01": 0.6
   },
-  "sigvvall": {
+  "max_vv_stress": {
     "var_mod": "TF coils",
     "scan01": 93000000.0
   },
@@ -2343,7 +2347,7 @@
     "var_mod": "Superconducting TF Coils",
     "scan01": 0.35804
   },
-  "strncon_tf": {
+  "str_tf_con_res": {
     "var_mod": "Superconducting TF Coils",
     "scan01": -0.005
   },
@@ -2479,7 +2483,7 @@
     "var_mod": "Central Solenoid and PF Coils",
     "scan01": -812070000.0
   },
-  "strncon_cs": {
+  "str_cs_con_res": {
     "var_mod": "Central Solenoid and PF Coils",
     "scan01": -0.005
   },
@@ -2730,10 +2734,6 @@
   "fcohbop": {
     "var_mod": "Waveforms",
     "scan01": 0.9349
-  },
-  "fcohbof": {
-    "var_mod": "Waveforms",
-    "scan01": 1.0
   },
   "ncirt": {
     "var_mod": "PF Circuit Waveform Data",
@@ -3347,11 +3347,11 @@
     "var_mod": "Vacuum System",
     "scan01": 0.0
   },
-  "tdwell.": {
+  "t_between_pulse.": {
     "var_mod": "Vacuum System",
     "scan01": 0.0
   },
-  "tramp.": {
+  "t_precharge.": {
     "var_mod": "Vacuum System",
     "scan01": 50.043
   },
@@ -3667,7 +3667,7 @@
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 811.09
   },
-  "falpha*palpmw": {
+  "f_alpha_plasma*alpha_power_total": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 582.92
   },
@@ -3683,7 +3683,7 @@
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 225.0
   },
-  "powfmw.": {
+  "fusion_power.": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 3072.9
   },
@@ -3743,11 +3743,11 @@
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 2634.7
   },
-  "pnetelmw/(powfmw+emultmw": {
+  "pnetelmw/(fusion_power+emultmw": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 13.67
   },
-  "pnetelmw/powfmw": {
+  "pnetelmw/fusion_power": {
     "var_mod": "Plant Power / Heat Transport Balance",
     "scan01": 16.271
   },

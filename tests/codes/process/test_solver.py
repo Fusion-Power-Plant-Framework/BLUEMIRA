@@ -24,6 +24,9 @@ from tests.codes.process import utilities as utils
 
 class TestSolver:
     MODULE_REF = "bluemira.codes.process._solver"
+    TEARDOWN_MODULE_REF = "bluemira.codes.process._teardown"
+
+    IS_FILE_REF = f"{TEARDOWN_MODULE_REF}.Path.is_file"
 
     @classmethod
     def setup_class(cls):
@@ -63,7 +66,11 @@ class TestSolver:
 
     def test_get_raw_variables_retrieves_parameters(self):
         solver = Solver(self.params, {"read_dir": utils.DATA_DIR})
-        with mock.patch(f"{self.MODULE_REF}.ENABLED", new=True):
+        with (
+            mock.patch(f"{self.MODULE_REF}.ENABLED", new=True),
+            mock.patch(f"{self.TEARDOWN_MODULE_REF}._MFileWrapper", new=utils.mfw()),
+            file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF),
+        ):
             solver.execute(RunMode.READ)
 
         assert solver.get_raw_variables("kappa_95") == [1.65]
@@ -71,12 +78,16 @@ class TestSolver:
     def test_get_raw_variables_CodesError_given_solver_not_run(self):
         solver = Solver(self.params, {"read_dir": utils.DATA_DIR})
 
-        with pytest.raises(CodesError):
+        with pytest.raises(CodesError, match="solver has not been"):
             solver.get_raw_variables("kappa_95")
 
     def test_get_species_fraction_retrieves_parameter_value(self):
         solver = Solver(self.params, {"read_dir": utils.DATA_DIR})
-        with mock.patch(f"{self.MODULE_REF}.ENABLED", new=True):
+        with (
+            mock.patch(f"{self.MODULE_REF}.ENABLED", new=True),
+            mock.patch(f"{self.TEARDOWN_MODULE_REF}._MFileWrapper", new=utils.mfw()),
+            file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF),
+        ):
             solver.execute(RunMode.READ)
 
         assert solver.get_species_fraction("H") == pytest.approx(0.74267)
@@ -87,6 +98,9 @@ class TestSolver:
 class TestSolverIntegration:
     DATA_DIR = Path(Path(__file__).parent, "test_data")
     MODULE_REF = "bluemira.codes.process._setup"
+
+    TEARDOWN_MODULE_REF = "bluemira.codes.process._teardown"
+    IS_FILE_REF = f"{TEARDOWN_MODULE_REF}.Path.is_file"
 
     def setup_method(self):
         self.params = ProcessSolverParams.from_json(utils.PARAM_FILE)
@@ -112,7 +126,13 @@ class TestSolverIntegration:
         assert self.params.r_tf_in_centre.value != pytest.approx(2.6354)
 
         solver = Solver(self.params, {"read_dir": self.DATA_DIR})
-        solver.execute(run_mode)
+
+        with (
+            mock.patch(f"{self.MODULE_REF}.ENABLED", new=True),
+            mock.patch(f"{self.TEARDOWN_MODULE_REF}._MFileWrapper", new=utils.mfw()),
+            file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF),
+        ):
+            solver.execute(run_mode)
 
         # Expected value comes from ./test_data/MFILE.DAT
         assert solver.params.r_tf_in_centre.value == pytest.approx(2.6354)
@@ -120,7 +140,15 @@ class TestSolverIntegration:
     @pytest.mark.parametrize("run_mode", [RunMode.READ, RunMode.READALL])
     def test_derived_radial_build_params_are_updated(self, run_mode):
         solver = Solver(self.params, {"read_dir": self.DATA_DIR})
-        solver.execute(run_mode)
+        with (
+            mock.patch(f"{self.MODULE_REF}.ENABLED", new=True),
+            mock.patch(
+                f"{self.TEARDOWN_MODULE_REF}._MFileWrapper",
+                new=utils.mfw(radial_override=False),
+            ),
+            file_exists(Path(utils.READ_DIR, "MFILE.DAT"), self.IS_FILE_REF),
+        ):
+            solver.execute(run_mode)
 
         # Expected values come from derivation (I added the numbers up by hand)
         assert solver.params.r_tf_in.value == pytest.approx(1.89236)

@@ -51,3 +51,21 @@ class FakeMFile:
     @classmethod
     def reset_data(cls):
         cls.data = deepcopy(mfile_data())
+
+
+def mfw(*, radial_override: bool = True):
+    from bluemira.codes.process._teardown import _MFileWrapper  # noqa: PLC0415
+
+    class MFW(_MFileWrapper):
+        # Overwrite some methods because data doesnt exist in 'mfile'
+
+        def __init__(self, path, name):
+            self.mfile = FakeMFile(path, name)
+            self._name = name
+
+        if radial_override:
+
+            def _derive_radial_build_params(self, data):  # noqa: ARG002
+                return {}
+
+    return MFW

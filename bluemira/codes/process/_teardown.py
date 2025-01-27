@@ -280,12 +280,7 @@ class _MFileWrapper:
         length) of the TF coil, so this must be taken into consideration
         when translating the geometry into the mid-plane.
         """
-        try:
-            shield_th = data["thshield"]
-        except KeyError:
-            # PROCESS updated their parameter names in v2.4.0, splitting
-            # 'thshield' into 'thshield_ib', 'thshield_ob', and 'thshield_vb'
-            shield_th = data["thshield_ib"]
+        shield_th = data["thshield_ib"]
 
         try:
             rtfin = data["bore"] + data["ohcth"] + data["precomp"] + data["gapoh"]

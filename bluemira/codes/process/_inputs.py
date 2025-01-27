@@ -48,12 +48,12 @@ class ProcessInputs:
     # Top down of PROCESS variables list
 
     # Times
-    tburn: float | None = None
-    tdwell: float | None = None
+    t_burn: float | None = None
+    t_between_pulse: float | None = None
     t_fusion_ramp: float | None = None
-    tohs: float | None = None
-    tqnch: float | None = None
-    tramp: float | None = None
+    t_current_ramp_up: float | None = None
+    t_ramp_down: float | None = None
+    t_precharge: float | None = None
 
     # FWBS
     ibkt_life: int | None = None
@@ -226,6 +226,7 @@ class ProcessInputs:
     casthi: float | None = None
     casths: float | None = None
     tmargmin: float | None = None
+    tmargmin_cs: float | None = None
     oacdcp: float | None = None
     t_turn_tf: int | None = None
 
@@ -345,14 +346,14 @@ class ProcessInputs:
 
     # Constraint variables
     auxmin: float | None = None
-    betpmx: float | None = None
+    beta_poloidal_max: float | None = None
     bigqmin: float | None = None
     bmxlim: float | None = None
     dr_tf_wp: float | None = None
     fauxmn: float | None = None
     fbeta: float | None = None
-    fbetap: float | None = None
-    fbetatry: float | None = None
+    fbeta_poloidal: float | None = None
+    fbeta_max: float | None = None
     fbetatry_lower: float | None = None
     fcwr: float | None = None
     fdene: float | None = None
@@ -391,11 +392,11 @@ class ProcessInputs:
     fstr_wp: float | None = None
     fmaxvvstress: float | None = None
     ftbr: float | None = None
-    ftburn: float | None = None
+    ft_burn: float | None = None
     ftcycl: float | None = None
     ftmargoh: float | None = None
     ftmargtf: float | None = None
-    ftohs: float | None = None
+    ft_current_ramp_up: float | None = None
     ftpeak: float | None = None
     fvdump: float | None = None
     fvs: float | None = None
@@ -415,7 +416,7 @@ class ProcessInputs:
     pseprmax: float | None = None
     ptfnucmax: float | None = None
     tbrmin: float | None = None
-    tbrnmn: float | None = None
+    t_burn_min: float | None = None
     vvhealw: float | None = None
     walalw: float | None = None
     taulimit: float | None = None
@@ -466,8 +467,8 @@ class ProcessInputs:
     thshield_ib: float | None = None
     thshield_ob: float | None = None
     thshield_vb: float | None = None
-    vgap: float | None = None
-    vgap2: float | None = None
+    vgap_xpoint_divertor: float | None = None
+    vgap_vv_thermalshield: float | None = None
     vgaptop: float | None = None
     vvblgap: float | None = None
     plleni: float | None = None
@@ -479,18 +480,19 @@ class ProcessInputs:
 
     # Current drive
     beamwd: float | None = None
-    bscfmax: float | None = None
+    bootstrap_current_fraction_max: float | None = None
     cboot: float | None = None
     harnum: float | None = None
-    enbeam: float | None = None
+    beam_energy: float | None = None
     etaech: float | None = None
     etanbi: float | None = None
     feffcd: float | None = None
     frbeam: float | None = None
-    ftritbm: float | None = None
+    f_tritium_beam: float | None = None
     gamma_ecrh: float | None = None
     xi_ebw: float | None = None
     iefrf: int | None = None
+    wave_mode: int | None = None
     irfcf: int | None = None
     nbshield: float | None = None
     pheat: float | None = None  # Listed as an output
@@ -597,6 +599,7 @@ class ProcessInputs:
     isumatoh: int | None = None
     isumatpf: int | None = None
     i_pf_current: int | None = None
+    i_sup_pf_shape: int | None = None
     ncls: list[int] | None = None
     nfxfh: int | None = None
     ngrp: int | None = None
@@ -629,10 +632,10 @@ class ProcessInputs:
     cvol: float | None = None
     cwrmax: float | None = None
     dene: float | None = None
-    dnbeta: float | None = None
+    beta_norm_max: float | None = None
     epbetmax: float | None = None
-    falpha: float | None = None
-    fdeut: float | None = None
+    f_alpha_plasma: float | None = None
+    f_deuterium: float | None = None
     ftar: float | None = None
     ffwal: float | None = None
     fgwped: float | None = None
@@ -640,21 +643,21 @@ class ProcessInputs:
     fkzohm: float | None = None
     fpdivlim: float | None = None
     fne0: float | None = None
-    ftrit: float | None = None
+    f_tritium: float | None = None
+    f_helium3: float | None = None
     fvsbrnni: float | None = None
     gamma: float | None = None
     hfact: float | None = None
     taumax: float | None = None
-    ibss: int | None = None
-    iculbl: int | None = None  # listed as an output...
-    icurr: int | None = None
-    idensl: int | None = None
-    idia: int | None = None
-    ifalphap: int | None = None
+    i_bootstrap_current: int | None = None
+    i_beta_component: int | None = None  # listed as an output...
+    i_plasma_current: int | None = None
+    i_density_limit: int | None = None
+    i_diamagnetic_current: int | None = None
+    i_beta_fast_alpha: int | None = None
     iinvqd: int | None = None
     ipedestal: int | None = None
-    ieped: int | None = None  # listed as an output...
-    ips: int | None = None
+    i_pfirsch_schluter_current: int | None = None
     eped_sf: float | None = None
     neped: float | None = None
     nesep: float | None = None

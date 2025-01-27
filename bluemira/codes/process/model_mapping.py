@@ -171,26 +171,6 @@ class PlasmaProfileModel(PROCESSModel):
     CONSISTENT = 1, ("q", "q0")
 
 
-class EPEDScalingModel(PROCESSModel):
-    """
-    Switch for the pedestal scaling model
-
-    TODO: This is largely undocumented and bound to some extent with PLASMOD
-    """
-
-    @classproperty
-    def switch_name(self) -> str:
-        """
-        PROCESS switch name
-        """
-        return "ieped"
-
-    UKNOWN_0 = 0, ("teped",)
-    SAARELMA = 1
-    UNKNOWN_1 = 2
-    UNKNOWN_2 = 3
-
-
 class BetaLimitModel(PROCESSModel):
     """
     Switch for the plasma beta limit model
@@ -201,7 +181,7 @@ class BetaLimitModel(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "iculbl"
+        return "i_beta_component"
 
     TOTAL = 0  # Including fast ion contribution
     THERMAL = 1
@@ -211,7 +191,7 @@ class BetaLimitModel(PROCESSModel):
 
 class BetaGScalingModel(PROCESSModel):
     """
-    Switch for the beta g coefficient dnbeta model
+    Switch for the beta g coefficient beta_norm_max model
 
     NOTE: Over-ridden if iprofile = 1
     """
@@ -223,7 +203,7 @@ class BetaGScalingModel(PROCESSModel):
         """
         return "gtscale"
 
-    INPUT = 0, ("dnbeta",)
+    INPUT = 0, ("beta_norm_max",)
     CONVENTIONAL = 1
     MENARD_ST = 2
 
@@ -238,7 +218,7 @@ class AlphaPressureModel(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "ifalphap"
+        return "i_beta_fast_alpha"
 
     HENDER = 0
     WARD = 1
@@ -254,7 +234,7 @@ class DensityLimitModel(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "idensl"
+        return "i_density_limit"
 
     ASDEX = 1
     BORRASS_ITER_I = 2
@@ -275,7 +255,7 @@ class PlasmaCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "icurr"
+        return "i_plasma_current"
 
     PENG = 1
     PENG_DN = 2
@@ -361,7 +341,7 @@ class BootstrapCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "ibss"
+        return "i_bootstrap_current"
 
     ITER = 1, ("cboot",)
     GENERAL = 2
@@ -379,7 +359,7 @@ class DiamagneticCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "idia"
+        return "i_diamagnetic_current"
 
     OFF = 0
     ST_FIT = 1
@@ -396,7 +376,7 @@ class PfirschSchluterCurrentScalingLaw(PROCESSModel):
         """
         PROCESS switch name
         """
-        return "ips"
+        return "i_pfirsch_schluter_current"
 
     OFF = 0
     SCENE_FIT = 1
@@ -895,6 +875,22 @@ class PFCurrentControlModel(PROCESSModel):
     SVD = 1
 
 
+class PFCoilPlacmentModel(PROCESSModel):
+    """Switch for the placement of Location 3 (outboard) PF coils
+    when the TF coils are superconducting (TFCoilConductorTechnology.SC)
+    """
+
+    @classproperty
+    def switch_name(self) -> str:
+        """
+        PROCESS switch name
+        """
+        return "i_sup_pf_shape"
+
+    DEFAULT = 0
+    OUTBOARD_EQUAL = 1, ("i_tf_sup",)
+
+
 class SolenoidSwitchModel(PROCESSModel):
     """
     Switch to control whether or not a central solenoid should be
@@ -1110,6 +1106,22 @@ class CurrentDriveEfficiencyModel(PROCESSModel):
     ECRH_HARE = 11
     EBW_UI = 12
     ECRH_O = 13
+
+
+class ECRHWaveModel(PROCESSModel):
+    """
+    Switch for ECRH wave mode
+    """
+
+    @classproperty
+    def switch_name(self) -> str:
+        """
+        PROCESS switch name
+        """
+        return "wave_mode"
+
+    O_MODE = 0
+    X_MODE = 1
 
 
 class PlasmaIgnitionModel(PROCESSModel):
