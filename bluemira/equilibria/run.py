@@ -40,6 +40,7 @@ from bluemira.equilibria.optimisation.problem import (
     UnconstrainedTikhonovCurrentGradientCOP,
 )
 from bluemira.equilibria.physics import calc_psib
+from bluemira.equilibria.profiles import OPointCalcOptions
 from bluemira.equilibria.solve import (
     ConvergenceCriterion,
     DudsonConvergence,
@@ -135,6 +136,7 @@ class EQSettings:
     gamma: float = 1e-8
     relaxation: float = 0.1
     peak_PF_current_factor: float = 1.5
+    o_point_fallback: OPointCalcOptions = OPointCalcOptions.RAISE
 
 
 @dataclass
@@ -362,6 +364,7 @@ class PulsedCoilsetDesign(ABC):
             relaxation=self.eq_settings.relaxation,
             fixed_coils=True,
             plot=False,
+            o_point_fallback=self.eq_settings.o_point_fallback,
         )
         program()
 
@@ -383,6 +386,7 @@ class PulsedCoilsetDesign(ABC):
             relaxation=self.eq_settings.relaxation,
             fixed_coils=True,
             plot=False,
+            o_point_fallback=self.eq_settings.o_point_fallback,
         )
         program()
 
@@ -506,6 +510,7 @@ class PulsedCoilsetDesign(ABC):
             convergence=self._eq_settings.convergence,
             relaxation=self.eq_settings.relaxation,
             plot=False,
+            o_point_fallback=self.eq_settings.o_point_fallback,
         )
         program()
 

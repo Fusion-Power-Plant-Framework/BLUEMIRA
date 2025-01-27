@@ -32,6 +32,7 @@ from bluemira.equilibria.profiles import (
     CustomProfile,
     DoublePowerFunc,
     LaoPolynomialFunc,
+    OPointCalcOptions,
 )
 from bluemira.equilibria.shapes import flux_surface_kuiroukidis
 from bluemira.equilibria.solve import DudsonConvergence, PicardIterator
@@ -261,7 +262,7 @@ class TestSolveEquilibrium:
             B_0=self.B_0,
             I_p=self.I_p,
         )
-        eq = Equilibrium(deepcopy(self.coilset), self.grid, profiles)
+        eq = Equilibrium(deepcopy(self.coilset), self.grid, deepcopy(profiles))
         opt_problem = UnconstrainedTikhonovCurrentGradientCOP(
             eq.coilset, eq, self.targets, gamma=1e-8
         )
@@ -280,7 +281,7 @@ class TestSolveEquilibrium:
     @pytest.mark.parametrize("shape", shape_funcs)
     def test_betaip_profile(self, shape):
         profiles = BetaIpProfile(self.beta_p, self.I_p, self.R_0, self.B_0, shape=shape)
-        eq = Equilibrium(deepcopy(self.coilset), self.grid, profiles)
+        eq = Equilibrium(deepcopy(self.coilset), self.grid, deepcopy(profiles))
         opt_problem = UnconstrainedTikhonovCurrentGradientCOP(
             eq.coilset, eq, self.targets, gamma=1e-8
         )
@@ -296,8 +297,11 @@ class TestSolveEquilibrium:
         program()
         assert program.check_converged()
 
+    @pytest.mark.parametrize(
+        "o_point_fallback", [OPointCalcOptions.GRID_CENTRE, OPointCalcOptions.RAISE]
+    )
     @pytest.mark.parametrize("shape", shape_funcs)
-    def test_betapliip_profile(self, shape):
+    def test_betapliip_profile(self, shape, o_point_fallback):
         rel_tol = 0.015
         profiles = BetaLiIpProfile(
             self.beta_p,
@@ -309,7 +313,7 @@ class TestSolveEquilibrium:
             li_min_iter=0,
             li_rel_tol=rel_tol,
         )
-        eq = Equilibrium(deepcopy(self.coilset), self.grid, profiles)
+        eq = Equilibrium(deepcopy(self.coilset), self.grid, deepcopy(profiles))
         opt_problem = UnconstrainedTikhonovCurrentGradientCOP(
             eq.coilset, eq, self.targets, gamma=1e-8
         )
@@ -321,6 +325,7 @@ class TestSolveEquilibrium:
             relaxation=0.2,
             plot=False,
             gif=False,
+            o_point_fallback=o_point_fallback,
         )
         program()
         assert abs_rel_difference(calc_li3(eq), self.l_i) <= rel_tol
@@ -392,18 +397,18 @@ class TestEquilibrium:
 class TestEqReadWrite:
     @pytest.mark.parametrize("qpsi_calcmode", [0, 1])
     @pytest.mark.parametrize("file_format", ["json", "eqdsk"])
-    def test_read_write(self, qpsi_calcmode, file_format):
+    def test_read_write(self, qpsi_calcmode, file_format, tmp_path):
         data_path = get_bluemira_path("equilibria/test_data", subfolder="tests")
         file_name = "eqref_OOB.json"
         new_file_name = f"eqref_OOB_temp1.{file_format}"
-        new_file_path = Path(data_path, new_file_name)
+        new_file_path = Path(tmp_path, new_file_name)
 
         eq = Equilibrium.from_eqdsk(
             Path(data_path, file_name), from_cocos=7, to_cocos=None
         )
         # Note we have recalculated the qpsi data here
         eq.to_eqdsk(
-            directory=data_path,
+            directory=tmp_path,
             filename=new_file_name,
             qpsi_calcmode=qpsi_calcmode,
             filetype=file_format,
@@ -417,7 +422,6 @@ class TestEqReadWrite:
             qpsi_positive=None if qpsi_calcmode else False,
         )
         d2 = eq2.to_dict(qpsi_calcmode=qpsi_calcmode)
-        new_file_path.unlink()
         if file_format == "eqdsk":
             d1.pop("coil_names")
             d2.pop("coil_names")
